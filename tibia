@@ -1,0 +1,66 @@
+#!/usr/bin/env node
+
+if (process.argv.length != 5) {
+	console.log("Usage: tibia file1.json,file2.json,...filen.json template outDirectory");
+	process.exit(1);
+}
+
+var fs = require("fs");
+var path = require("path");
+
+var jsonFiles = process.argv[2].split(",");
+var template = process.argv[3];
+var outputDir = process.argv[4];
+
+var data = {};
+for (var i = 0; i < jsonFiles.length; i++) {
+	var d = JSON.parse(fs.readFileSync(jsonFiles[i], { encoding: "utf-8" }));
+	for (var k in d)
+		data[k] = d[k];
+}
+
+var doT = require("dot");
+doT.templateSettings.strip = false;
+
+var api = {
+	// https://coderrocketfuel.com/article/recursively-list-all-the-files-in-a-directory-using-node-js
+	getAllFiles: function (dirPath, arrayOfFiles, relDir) {
+		var files = fs.readdirSync(dirPath);
+
+		var arrayOfFiles = arrayOfFiles || [];
+		var relDir = relDir || "";
+
+		files.forEach(function(file) {
+			if (fs.statSync(dirPath + path.sep + file).isDirectory())
+				arrayOfFiles = api.getAllFiles(dirPath + path.sep + file, arrayOfFiles, relDir + file + path.sep);
+			else
+				arrayOfFiles.push(relDir + file);
+		});
+
+		return arrayOfFiles
+	},
+
+	generateFileFromTemplateFile: function (templateFile, outFile, data) {
+		var dir = outputDir + path.sep + path.dirname(outFile);
+		fs.mkdirSync(dir, { recursive: true });
+		var t = doT.template(fs.readFileSync(template + path.sep + templateFile, { encoding: "utf-8" }));
+		fs.writeFileSync(outputDir + path.sep + outFile, t(data), { encoding: "utf-8" });
+	},
+
+	copyFile: function (inFile, outFile) {
+		var dir = outputDir + path.sep + path.dirname(outFile);
+		fs.mkdirSync(dir, { recursive: true });
+		fs.copyFileSync(template + path.sep + inFile, outputDir + path.sep + outFile);
+	},
+
+	copyFileIfNotExists: function (inFile, outFile) {
+		var p = outputDir + path.sep + outFile;
+		if (fs.existsSync(p))
+			return;
+		var dir = outputDir + path.sep + path.dirname(outFile);
+		fs.mkdirSync(dir, { recursive: true });
+		fs.copyFileSync(template + path.sep + inFile, p);
+	}
+};
+
+require(path.resolve(template + path.sep + "tibia-index.js"))(data, api);

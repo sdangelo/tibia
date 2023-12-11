@@ -1,0 +1,8 @@
+* recursive object merge in tibia
+* copyrights
+* dotjs error on undefined or JSON schema
+* type audio + sidechain + cv... to think about
+* check all return codes and algos wrt official impl
+* escape string and max lengths
+* printf -> trace
+* EXPORT symbols, visibility hidden

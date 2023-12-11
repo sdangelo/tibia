@@ -1,0 +1,45 @@
+{
+	"plugin": {
+		"name":	"Tibia test plugin",
+		"version": "1.0.0.1",
+		"bundleName": "tibia_test",
+		"buses": [
+			{
+				"type":	"audio",
+				"direction": "input",
+				"channels": 1,
+				"name": "Input",
+				"sidechain": false,
+				"cv": false
+			},
+			{
+				"type": "audio",
+				"direction": "output",
+				"channels": 1,
+				"name": "Output",
+				"sidechain": false,
+				"cv": false
+			}
+		],
+		"parameters": [
+			{
+				"name": "Gain",
+				"shortName": "Gain",
+				"units": "dB",
+				"steps": 0,
+				"direction": "input",
+				"isBypass": false,
+				"defaultValue": 1.0
+			},
+			{
+				"name": "Bypass",
+				"shortName": "Bypass",
+				"units": "",
+				"steps": 1,
+				"direction": "input",
+				"isBypass": true,
+				"defaultValue": 0.0
+			}
+		]
+	}
+}
