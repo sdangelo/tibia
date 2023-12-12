@@ -5,8 +5,6 @@
 #include "data.h"
 #include "plugin.h"
 
-#include <stdio.h>
-
 // COM in C doc:
 //   https://github.com/rubberduck-vba/Rubberduck/wiki/COM-in-plain-C
 //   https://devblogs.microsoft.com/oldnewthing/20040205-00/?p=40733
@@ -14,6 +12,7 @@
 #ifdef NDEBUG
 # define TRACE(...)	/* do nothing */
 #else
+# include <stdio.h>
 # define TRACE(...)	printf(__VA_ARGS__)
 #endif
 
@@ -27,6 +26,10 @@ typedef struct pluginInstance {
 	Steinberg_uint32				refs;
 	Steinberg_FUnknown *				context;
 	plugin						p;
+	float						sampleRate;
+#if DATA_PLUGIN_PARAMETERS_N > 0
+	float						parameters[DATA_PLUGIN_PARAMETERS_N];
+#endif
 } pluginInstance;
 
 static Steinberg_Vst_IComponentVtbl pluginVtblIComponent;
@@ -89,7 +92,8 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 	if (p->context != NULL)
 		return Steinberg_kResultFalse;
 	p->context = context;
-	//TBD
+	plugin_init(&p->p);
+	// TODO: set param defaults
 	return Steinberg_kResultOk;
 }
 
@@ -97,7 +101,7 @@ static Steinberg_tresult pluginTerminate(void *thisInterface) {
 	TRACE("plugin terminate\n");
 	pluginInstance *p = (pluginInstance *)thisInterface;
 	p->context = NULL;
-	//TBD
+	plugin_fini(&p->p);
 	return Steinberg_kResultOk;
 }
 
@@ -218,19 +222,64 @@ static Steinberg_tresult pluginActivateBus(void* thisInterface, Steinberg_Vst_Me
 
 static Steinberg_tresult pluginSetActive(void* thisInterface, Steinberg_TBool state) {
 	TRACE("plugin set active\n");
-	//TBD
+	pluginInstance *p = (pluginInstance *)thisInterface;
+	if (state) {
+		plugin_set_sample_rate(&p->p, p->sampleRate);
+		// TODO: mem
+		plugin_reset(&p->p);
+	} else {
+		// TODO: mem
+	}
 	return Steinberg_kResultOk;
 }
 
+// https://stackoverflow.com/questions/2100331/macro-definition-to-determine-big-endian-or-little-endian-machine
+#define IS_BIG_ENDIAN (!(union { uint16_t u16; unsigned char c; }){ .u16 = 1 }.c)
+// https://stackoverflow.com/questions/2182002/how-to-convert-big-endian-to-little-endian-in-c-without-using-library-functions
+#define SWAP_UINT32(x) (((x) >> 24) | (((x) & 0x00FF0000) >> 8) | (((x) & 0x0000FF00) << 8) | ((x) << 24))
+
 static  Steinberg_tresult pluginSetState(void* thisInterface, struct Steinberg_IBStream* state) {
 	TRACE("plugin set state\n");
-	//TBD
+	if (state == NULL)
+		return Steinberg_kResultFalse;
+#if DATA_PLUGIN_PARAMETERS_N > 0
+	pluginInstance *p = (pluginInstance *)thisInterface;
+	for (size_t i = 0; i < DATA_PLUGIN_PARAMETERS_N; i++) {
+		if (parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
+			continue;
+		union { float f; uint32_t u; } v;
+		Steinberg_int32 n;
+		state->lpVtbl->read(state, &v, 4, &n);
+		if (n != 4)
+			return Steinberg_kResultFalse;
+		if (IS_BIG_ENDIAN)
+			v.u = SWAP_UINT32(v.u);
+		p->parameters[i] = v.f;
+		plugin_set_parameter(&p->p, i, v.f);
+	}
+#endif
 	return Steinberg_kResultOk;
 }
 
 static Steinberg_tresult pluginGetState(void* thisInterface, struct Steinberg_IBStream* state) {
 	TRACE("plugin get state\n");
-	//TBD
+	if (state == NULL)
+		return Steinberg_kResultFalse;
+#if DATA_PLUGIN_PARAMETERS_N > 0
+	pluginInstance *p = (pluginInstance *)thisInterface;
+	for (size_t i = 0; i < DATA_PLUGIN_PARAMETERS_N; i++) {
+		if (parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
+			continue;
+		union { float f; uint32_t u; } v;
+		v.f = p->parameters[i];
+		if (IS_BIG_ENDIAN)
+			v.u = SWAP_UINT32(v.u);
+		Steinberg_int32 n;
+		state->lpVtbl->write(state, &v, 4, &n);
+		if (n != 4)
+			return Steinberg_kResultFalse;
+	}
+#endif
 	return Steinberg_kResultOk;
 }
 
@@ -273,20 +322,20 @@ static Steinberg_uint32 pluginIAudioProcessorRelease(void *thisInterface) {
 
 static Steinberg_tresult pluginSetBusArrangements(void* thisInterface, Steinberg_Vst_SpeakerArrangement* inputs, Steinberg_int32 numIns, Steinberg_Vst_SpeakerArrangement* outputs, Steinberg_int32 numOuts) {
 	TRACE("plugin IAudioProcessor set bus arrangements\n");
-	//TBD
-	return Steinberg_kResultOk;
+	if (numIns != DATA_PLUGIN_BUSES_AUDIO_INPUT_N || numOuts != DATA_PLUGIN_BUSES_AUDIO_OUTPUT_N)
+		return Steinberg_kResultFalse;
+	return Steinberg_kResultTrue;
 }
 
 static Steinberg_tresult pluginGetBusArrangement(void* thisInterface, Steinberg_Vst_BusDirection dir, Steinberg_int32 index, Steinberg_Vst_SpeakerArrangement* arr) {
 	TRACE("plugin IAudioProcessor get bus arrangement\n");
-	//TBD
-	return Steinberg_kResultOk;
+	//TBD!
+	return Steinberg_kNotImplemented;
 }
 
 static Steinberg_tresult pluginCanProcessSampleSize(void* thisInterface, Steinberg_int32 symbolicSampleSize) {
 	TRACE("plugin IAudioProcessor can process sample size\n");
-	//TBD
-	return Steinberg_kResultOk;
+	return symbolicSampleSize == Steinberg_Vst_SymbolicSampleSizes_kSample32 ? Steinberg_kResultOk : Steinberg_kNotImplemented;
 }
 
 static Steinberg_uint32 pluginGetLatencySamples(void* thisInterface) {
@@ -297,14 +346,14 @@ static Steinberg_uint32 pluginGetLatencySamples(void* thisInterface) {
 
 static Steinberg_tresult pluginSetupProcessing(void* thisInterface, struct Steinberg_Vst_ProcessSetup* setup) {
 	TRACE("plugin IAudioProcessor setup processing\n");
-	//TBD
+	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIAudioProcessor));
+	p->sampleRate = (float)setup->sampleRate;
 	return Steinberg_kResultOk;
 }
 
 static Steinberg_tresult pluginSetProcessing(void* thisInterface, Steinberg_TBool state) {
 	TRACE("plugin IAudioProcessor set processing\n");
-	//TBD
-	return Steinberg_kResultOk;
+	return Steinberg_kNotImplemented;
 }
 
 static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst_ProcessData* data) {
@@ -369,7 +418,9 @@ typedef struct controller {
 	Steinberg_Vst_IEditControllerVtbl *	vtblIEditController;
 	Steinberg_uint32			refs;
 	Steinberg_FUnknown *			context;
+#if DATA_PLUGIN_PARAMETERS_N > 0
 	double					parameters[DATA_PLUGIN_PARAMETERS_N];
+#endif
 } controller;
 
 static Steinberg_tresult controllerQueryInterface(void* thisInterface, const Steinberg_TUID iid, void** obj) {
@@ -411,7 +462,6 @@ static Steinberg_tresult controllerInitialize(void* thisInterface, struct Steinb
 	if (c->context != NULL)
 		return Steinberg_kResultFalse;
 	c->context = context;
-	//TBD
 	return Steinberg_kResultOk;
 }
 
@@ -419,15 +469,29 @@ static Steinberg_tresult controllerTerminate(void* thisInterface) {
 	TRACE("controller terminate\n");
 	controller *c = (controller *)thisInterface;
 	c->context = NULL;
-	//TBD
 	return Steinberg_kResultOk;
 }
+
+static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue value);
 
 static Steinberg_tresult controllerSetComponentState(void* thisInterface, struct Steinberg_IBStream* state) {
 	TRACE("controller set component state\n");
 	if (state == NULL)
 		return Steinberg_kResultFalse;
-	//TBD
+#if DATA_PLUGIN_PARAMETERS_N > 0
+	for (size_t i = 0; i < DATA_PLUGIN_PARAMETERS_N; i++) {
+		if (parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
+			continue;
+		union { float f; uint32_t u; } v;
+		Steinberg_int32 n;
+		state->lpVtbl->read(state, &v, 4, &n);
+		if (n != 4)
+			return Steinberg_kResultFalse;
+		if (IS_BIG_ENDIAN)
+			v.u = SWAP_UINT32(v.u);
+		controllerSetParamNormalized(thisInterface, i, v.f);
+	}
+#endif
 	return Steinberg_kResultTrue;
 }
 
@@ -556,23 +620,31 @@ static Steinberg_Vst_ParamValue controllerPlainParamToNormalized(void* thisInter
 
 static Steinberg_Vst_ParamValue controllerGetParamNormalized(void* thisInterface, Steinberg_Vst_ParamID id) {
 	TRACE("controller get param normalized\n");
+#if DATA_PLUGIN_PARAMETERS_N > 0
 	controller *c = (controller *)thisInterface;
 	return c->parameters[id];
+#else
+	return 0.0;
+#endif
 }
 
 static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue value) {
 	TRACE("controller set param normalized\n");
+#if DATA_PLUGIN_PARAMETERS_N > 0
 	if (id >= DATA_PLUGIN_PARAMETERS_N)
 		return Steinberg_kResultFalse;
 	controller *c = (controller *)thisInterface;
 	c->parameters[id] = value;
 	return Steinberg_kResultOk;
+#else
+	return Steinberg_kResultFalse;
+#endif
 }
 
 static Steinberg_tresult controllerSetComponentHandler(void* thisInterface, struct Steinberg_Vst_IComponentHandler* handler) {
 	TRACE("controller set component handler\n");
 	//TBD
-	return Steinberg_kResultOk;
+	return Steinberg_kNotImplemented;
 }
 
 static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Steinberg_FIDString name) {
@@ -711,8 +783,10 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 		c->vtblIEditController = &controllerVtbl;
 		c->refs = 1;
 		c->context = NULL;
+#if DATA_PLUGIN_PARAMETERS_N > 0
 		for (int i = 0; i < DATA_PLUGIN_PARAMETERS_N; i++)
 			c->parameters[i] = parameterInfo[i].defaultNormalizedValue;
+#endif
 		*obj = c;
 		TRACE(" instance: %p\n", (void *)c);
 	} else {
