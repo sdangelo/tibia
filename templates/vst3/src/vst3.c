@@ -756,7 +756,7 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 			TRACE("  IAudioProcessor\n");
 			offset = offsetof(pluginInstance, vtblIAudioProcessor);
 		} else if (memcmp(iid, Steinberg_Vst_IProcessContextRequirements_iid, sizeof(Steinberg_TUID)) != 0) {
-			TRACE("  IAudioProcessor\n");
+			TRACE("  IProcessContextRequirements\n");
 			offset = offsetof(pluginInstance, vtblIProcessContextRequirements);
 		} else {
 			TRACE("  INothing :(\n");
@@ -867,7 +867,7 @@ static Steinberg_tresult factoryGetClassInfoUnicode(void* thisInterface, Steinbe
 
 static Steinberg_tresult factorySetHostContext(void* thisInterface, struct Steinberg_FUnknown* context) {
 	TRACE("factory set host context\n");
-	return Steinberg_kResultOk;
+	return Steinberg_kNotImplemented;
 }
 
 static Steinberg_IPluginFactory3Vtbl factoryVtbl = {
