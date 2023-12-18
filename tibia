@@ -12,11 +12,22 @@ var jsonFiles = process.argv[2].split(",");
 var template = process.argv[3];
 var outputDir = process.argv[4];
 
+var schema = JSON.parse(fs.readFileSync(__dirname + path.sep + "schema.json", { encoding: "utf-8" }));
+var Ajv = require("ajv");
+var ajv = new Ajv();
+var ajvValidate = ajv.compile(schema);
+
 var data = {};
 for (var i = 0; i < jsonFiles.length; i++) {
 	var d = JSON.parse(fs.readFileSync(jsonFiles[i], { encoding: "utf-8" }));
 	for (var k in d)
 		data[k] = d[k];
+}
+
+var ajvValid = ajvValidate(data);
+if (!ajvValid) {
+	console.log(ajvValidate.errors);
+	process.exit(1);
 }
 
 var doT = require("dot");
@@ -60,6 +71,50 @@ var api = {
 		var dir = outputDir + path.sep + path.dirname(outFile);
 		fs.mkdirSync(dir, { recursive: true });
 		fs.copyFileSync(template + path.sep + inFile, p);
+	}
+};
+
+data.tibia = {
+	CGetUTF8StringLiteral: function (string, maxLength) {
+		if (!maxLength)
+			maxLength = Infinity;
+		var v = (new TextEncoder()).encode(string);
+		var s = "";
+		for (var i = 0; i < maxLength && i < v.length; ) {
+			if (!(v[i] & 0x80)) {
+				if (v[i] < 0x20 || v[i] == 0x7f) {
+					s += "\\" + v[i].toString(8).padStart(3, "0");
+				} else if (v[i] == 0x22)
+					s += "\\\"";
+				else if (v[i] == 0x5c)
+					s += "\\\\";
+				else
+					s += String.fromCharCode(v[i]);
+				i++;
+			} else if ((v[i] & 0xe0) == 0xc0) {
+				if (maxLength - i < 2)
+					break;
+				for (var j = 0; j < 2; j++) {
+					s += "\\" + v[i].toString(8).padStart(3, "0");
+					i++;
+				}
+			} else if ((v[i] & 0xf0) == 0xe0) {
+				if (maxLength - i < 3)
+					break;
+				for (var j = 0; j < 3; j++) {
+					s += "\\" + v[i].toString(8).padStart(3, "0");
+					i++;
+				}
+			} else if ((v[i] & 0xf8) == 0xf0) {
+				if (maxLength - i < 4)
+					break;
+				for (var j = 0; j < 4; j++) {
+					s += "\\" + v[i].toString(8).padStart(3, "0");
+					i++;
+				}
+			}
+		}
+		return s;
 	}
 };
 

@@ -1,9 +1,17 @@
-#define DATA_COMPANY_NAME			"{{=it.company.name}}"
-#define DATA_COMPANY_URL			"{{=it.company.url}}"
-#define DATA_COMPANY_EMAIL			"{{=it.company.email}}"
+#define DATA_COMPANY_NAME			"{{=it.tibia.CGetUTF8StringLiteral(it.company.name, 63)}}"
+#define DATA_COMPANY_URL			"{{=it.tibia.CGetUTF8StringLiteral(it.company.url, 255)}}"
+#define DATA_COMPANY_EMAIL			"{{=it.tibia.CGetUTF8StringLiteral(it.company.email, 127)}}"
 
-#define DATA_PLUGIN_NAME			"{{=it.plugin.name}}"
-#define DATA_PLUGIN_VERSION			"{{=it.plugin.version}}"
+#define DATA_PRODUCT_NAME			"{{=it.tibia.CGetUTF8StringLiteral(it.product.name, 63)}}"
+#define DATA_PRODUCT_VERSION			"{{=(it.product.version + '.' + it.product.buildVersion).substring(0, 63)}}"
+
+static Steinberg_char16 dataProductNameW[64] = { {{~Array.from(it.product.name).slice(0, 63) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
+static Steinberg_char16 dataProductVersionW[64] = { {{~Array.from(it.product.version + "." + it.product.buildVersion).slice(0, 63) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
+
+#define DATA_VST3_SDK_VERSION			"VST 3.7.4 | Tibia"
+static Steinberg_char16 dataVST3SDKVersionW[64] = { {{~Array.from("VST 3.7.4 | Tibia") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
+
+static Steinberg_char16 dataVST3ControllerNameW[64] = { {{~Array.from(it.product.name + " Controller").slice(0, 63) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
 
 #define DATA_VST3_PLUGIN_CID_1			0x{{=it.vst3.plugin.cid.substring(0, 8)}}
 #define DATA_VST3_PLUGIN_CID_2			0x{{=it.vst3.plugin.cid.substring(8, 16)}}
@@ -17,14 +25,14 @@
 
 #define DATA_VST3_SUBCATEGORY			"{{=it.vst3.subCategory}}"
 
-#define DATA_PLUGIN_BUSES_AUDIO_INPUT_N		{{=it.plugin.buses.filter(x => x.type == "audio" && x.direction == "input").length}}
-#define DATA_PLUGIN_BUSES_AUDIO_OUTPUT_N	{{=it.plugin.buses.filter(x => x.type == "audio" && x.direction == "output").length}}
-#define DATA_PLUGIN_BUSES_EVENT_INPUT_N		{{=it.plugin.buses.filter(x => x.type == "event" && x.direction == "input").length}}
-#define DATA_PLUGIN_BUSES_EVENT_OUTPUT_N	{{=it.plugin.buses.filter(x => x.type == "event" && x.direction == "output").length}}
+#define DATA_PLUGIN_BUSES_AUDIO_INPUT_N		{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length}}
+#define DATA_PLUGIN_BUSES_AUDIO_OUTPUT_N	{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "output").length}}
+#define DATA_PLUGIN_BUSES_EVENT_INPUT_N		{{=it.product.buses.filter(x => x.type == "event" && x.direction == "input").length}}
+#define DATA_PLUGIN_BUSES_EVENT_OUTPUT_N	{{=it.product.buses.filter(x => x.type == "event" && x.direction == "output").length}}
 
 #if DATA_PLUGIN_BUSES_AUDIO_INPUT_N > 0
 static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PLUGIN_BUSES_AUDIO_INPUT_N] = {
-{{~it.plugin.buses.filter(x => x.type == "audio" && x.direction == "input") :b}}
+{{~it.product.buses.filter(x => x.type == "audio" && x.direction == "input") :b}}
 	{
 		/* .mediaType		= */ Steinberg_Vst_MediaTypes_kAudio,
 		/* .direction		= */ Steinberg_Vst_BusDirections_kInput,
@@ -39,7 +47,7 @@ static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PLUGIN_BUSES_AUDIO_IN
 
 #if DATA_PLUGIN_BUSES_AUDIO_OUTPUT_N > 0
 static struct Steinberg_Vst_BusInfo busInfoAudioOutput[DATA_PLUGIN_BUSES_AUDIO_OUTPUT_N] = {
-{{~it.plugin.buses.filter(x => x.type == "audio" && x.direction == "output") :b}}
+{{~it.product.buses.filter(x => x.type == "audio" && x.direction == "output") :b}}
 	{
 		/* .mediaType		= */ Steinberg_Vst_MediaTypes_kAudio,
 		/* .direction		= */ Steinberg_Vst_BusDirections_kOutput,
@@ -54,7 +62,7 @@ static struct Steinberg_Vst_BusInfo busInfoAudioOutput[DATA_PLUGIN_BUSES_AUDIO_O
 
 #if DATA_PLUGIN_BUSES_EVENT_INPUT_N > 0
 static struct Steinberg_Vst_BusInfo busInfoEventInput[DATA_PLUGIN_BUSES_EVENT_INPUT_N] = {
-{{~it.plugin.buses.filter(x => x.type == "event" && x.direction == "input") :b}}
+{{~it.product.buses.filter(x => x.type == "event" && x.direction == "input") :b}}
 	{
 		/* .mediaType		= */ Steinberg_Vst_MediaTypes_kEvent,
 		/* .direction		= */ Steinberg_Vst_BusDirections_kInput,
@@ -69,7 +77,7 @@ static struct Steinberg_Vst_BusInfo busInfoEventInput[DATA_PLUGIN_BUSES_EVENT_IN
 
 #if DATA_PLUGIN_BUSES_EVENT_OUTPUT_N > 0
 static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PLUGIN_BUSES_EVENT_OUTPUT_N] = {
-{{~it.plugin.buses.filter(x => x.type == "event" && x.direction == "output") :b}}
+{{~it.product.buses.filter(x => x.type == "event" && x.direction == "output") :b}}
 	{
 		/* .mediaType		= */ Steinberg_Vst_MediaTypes_kEvent,
 		/* .direction		= */ Steinberg_Vst_BusDirections_kOutput,
@@ -82,11 +90,11 @@ static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PLUGIN_BUSES_EVENT_OU
 };
 #endif
 
-#define DATA_PLUGIN_PARAMETERS_N		{{=it.plugin.parameters.length}}
+#define DATA_PLUGIN_PARAMETERS_N		{{=it.product.parameters.length}}
 
 #if DATA_PLUGIN_PARAMETERS_N > 0
 static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PLUGIN_PARAMETERS_N] = {
-{{~it.plugin.parameters :p:i}}
+{{~it.product.parameters :p:i}}
 	{
 		/* .id				= */ {{=i}},
 		/* .title			= */ { {{~Array.from(p.name) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },

@@ -9,6 +9,7 @@
 //   https://github.com/rubberduck-vba/Rubberduck/wiki/COM-in-plain-C
 //   https://devblogs.microsoft.com/oldnewthing/20040205-00/?p=40733
 
+
 #ifdef NDEBUG
 # define TRACE(...)	/* do nothing */
 #else
@@ -683,8 +684,8 @@ static Steinberg_tresult factoryQueryInterface(void *thisInterface, const Steinb
 	TRACE("factory queryInterface\n");
 	if (memcmp(iid, Steinberg_FUnknown_iid, sizeof(Steinberg_TUID))
 	    && memcmp(iid, Steinberg_IPluginFactory_iid, sizeof(Steinberg_TUID))
-	    && memcmp(iid, Steinberg_IPluginFactory2_iid, sizeof(Steinberg_TUID))) {
-	    //&& memcmp(iid, Steinberg_IPluginFactory3_iid, sizeof(Steinberg_TUID))) {
+	    && memcmp(iid, Steinberg_IPluginFactory2_iid, sizeof(Steinberg_TUID))
+	    && memcmp(iid, Steinberg_IPluginFactory3_iid, sizeof(Steinberg_TUID))) {
 		TRACE(" not supported\n");
 		*obj = NULL;
 		return Steinberg_kNoInterface;
@@ -725,14 +726,14 @@ static Steinberg_tresult factoryGetClassInfo(void *thisInterface, Steinberg_int3
 		memcpy(info->cid, pluginCID, sizeof(Steinberg_TUID));
 		info->cardinality = Steinberg_PClassInfo_ClassCardinality_kManyInstances;
 		strcpy(info->category, "Audio Module Class");
-		strcpy(info->name, DATA_PLUGIN_NAME);
+		strcpy(info->name, DATA_PRODUCT_NAME);
 		break;
 	case 1:
 		TRACE(" class 1\n");
 		memcpy(info->cid, controllerCID, sizeof(Steinberg_TUID));
 		info->cardinality = Steinberg_PClassInfo_ClassCardinality_kManyInstances;
 		strcpy(info->category, "Component Controller Class");
-		strcpy(info->name, DATA_PLUGIN_NAME " Controller");
+		strcpy(info->name, DATA_PRODUCT_NAME " Controller");
 		break;
 	default:
 		return Steinberg_kInvalidArgument;
@@ -804,24 +805,24 @@ static Steinberg_tresult factoryGetClassInfo2(void* thisInterface, Steinberg_int
 		memcpy(info->cid, pluginCID, sizeof(Steinberg_TUID));
 		info->cardinality = Steinberg_PClassInfo_ClassCardinality_kManyInstances;
 		strcpy(info->category, "Audio Module Class");
-		strcpy(info->name, DATA_PLUGIN_NAME);
+		strcpy(info->name, DATA_PRODUCT_NAME);
 		info->classFlags = Steinberg_Vst_ComponentFlags_kDistributable;
 		strcpy(info->subCategories, DATA_VST3_SUBCATEGORY);
 		*info->vendor = '\0';
-		strcpy(info->version, DATA_PLUGIN_VERSION);
-		strcpy(info->sdkVersion, "VST 3.7.4 | Tibia");
+		strcpy(info->version, DATA_PRODUCT_VERSION);
+		strcpy(info->sdkVersion, "VST " DATA_VST3_SDK_VERSION " | Tibia");
 		break;
 	case 1:
 		TRACE(" class 1\n");
 		memcpy(info->cid, controllerCID, sizeof(Steinberg_TUID));
 		info->cardinality = Steinberg_PClassInfo_ClassCardinality_kManyInstances;
 		strcpy(info->category, "Component Controller Class");
-		strcpy(info->name, DATA_PLUGIN_NAME " Controller");
+		strcpy(info->name, DATA_PRODUCT_NAME " Controller");
 		info->classFlags = 0;
 		*info->subCategories = '\0';
 		*info->vendor = '\0';
-		strcpy(info->version, DATA_PLUGIN_VERSION);
-		strcpy(info->sdkVersion, "VST 3.7.4 | Tibia");
+		strcpy(info->version, DATA_PRODUCT_VERSION);
+		strcpy(info->sdkVersion, "VST " DATA_VST3_SDK_VERSION " | Tibia");
 		break;
 	default:
 		return Steinberg_kInvalidArgument;
@@ -832,6 +833,35 @@ static Steinberg_tresult factoryGetClassInfo2(void* thisInterface, Steinberg_int
 
 static Steinberg_tresult factoryGetClassInfoUnicode(void* thisInterface, Steinberg_int32 index, struct Steinberg_PClassInfoW* info) {
 	TRACE("getClassInfo unicode\n");
+	switch (index) {
+	case 0:
+		TRACE(" class 0\n");
+		memcpy(info->cid, pluginCID, sizeof(Steinberg_TUID));
+		info->cardinality = Steinberg_PClassInfo_ClassCardinality_kManyInstances;
+		strcpy(info->category, "Audio Module Class");
+		memcpy(info->name, dataProductNameW, 64 * sizeof(Steinberg_char16));
+		info->classFlags = Steinberg_Vst_ComponentFlags_kDistributable;
+		strcpy(info->subCategories, DATA_VST3_SUBCATEGORY);
+		*info->vendor = '\0';
+		memcpy(info->version, dataProductVersionW, 64 * sizeof(Steinberg_char16));
+		memcpy(info->sdkVersion, dataVST3SDKVersionW, 64 * sizeof(Steinberg_char16));
+		break;
+	case 1:
+		TRACE(" class 1\n");
+		memcpy(info->cid, controllerCID, sizeof(Steinberg_TUID));
+		info->cardinality = Steinberg_PClassInfo_ClassCardinality_kManyInstances;
+		strcpy(info->category, "Component Controller Class");
+		memcpy(info->name, dataVST3ControllerNameW, 64 * sizeof(Steinberg_char16));
+		info->classFlags = 0;
+		*info->subCategories = '\0';
+		*info->vendor = '\0';
+		memcpy(info->version, dataProductVersionW, 64 * sizeof(Steinberg_char16));
+		memcpy(info->sdkVersion, dataVST3SDKVersionW, 64 * sizeof(Steinberg_char16));
+		break;
+	default:
+		return Steinberg_kInvalidArgument;
+		break;
+	}
 	return Steinberg_kResultOk;
 }
 
@@ -840,7 +870,7 @@ static Steinberg_tresult factorySetHostContext(void* thisInterface, struct Stein
 	return Steinberg_kResultOk;
 }
 
-static Steinberg_IPluginFactory2Vtbl factoryVtbl = {
+static Steinberg_IPluginFactory3Vtbl factoryVtbl = {
 	/* FUnknown */
 	/* .queryInterface	= */ factoryQueryInterface,
 	/* .addRef		= */ factoryAddRef,
@@ -856,10 +886,10 @@ static Steinberg_IPluginFactory2Vtbl factoryVtbl = {
 	/* .getClassInfo2	= */ factoryGetClassInfo2,
 
 	/* IPluginFactory3 */
-	/* .getClassInfoUnicode	= */ //factoryGetClassInfoUnicode,
-	/* .setHostContext	= */ //factorySetHostContext
+	/* .getClassInfoUnicode	= */ factoryGetClassInfoUnicode,
+	/* .setHostContext	= */ factorySetHostContext
 };
-static Steinberg_IPluginFactory2 factory = { &factoryVtbl };
+static Steinberg_IPluginFactory3 factory = { &factoryVtbl };
 
 Steinberg_IPluginFactory * GetPluginFactory() {
 	return (Steinberg_IPluginFactory *)&factory;

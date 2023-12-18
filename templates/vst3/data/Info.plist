@@ -3,10 +3,10 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>{{=it.plugin.bundleName}}</string>
+    <string>{{=it.product.bundleName}}</string>
 
     <key>CFBundleExecutable</key>
-    <string>{{=it.plugin.bundleName}}</string>
+    <string>{{=it.product.bundleName}}</string>
 
 </dict>
 </plist>

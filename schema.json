@@ -1,0 +1,54 @@
+{
+	"title": "Tibia data",
+	"type":	"object",
+	"properties": {
+		"company": {
+			"type":	"object",
+			"properties": {
+				"name": {
+					"type": "string",
+					"description": "Company name",
+					"pattern": "^[\u0000-\ud7ff\ue000-\uffff]+$"
+				},
+				"url": {
+					"type": "string",
+					"description": "Company website URL",
+					"pattern": "^[\u0000-\ud7ff\ue000-\uffff]+$"
+				},
+				"email": {
+					"type": "string",
+					"description": "Company email",
+					"pattern": "^[\u0000-\ud7ff\ue000-\uffff]+$"
+				}
+			},
+			"required" : [ "name", "url", "email" ]
+		},
+		"product": {
+			"type":	"object",
+			"properties": {
+				"name": {
+					"type": "string",
+					"description": "Product name",
+					"pattern": "^[\u0000-\ud7ff\ue000-\uffff]+$"
+				},
+				"version": {
+					"type": "string",
+					"description": "Product version in MAJOR.MINOR.PATCH format (all numeric decimal)",
+					"pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+				},
+				"buildVersion": {
+					"type": "string",
+					"description": "Product build version (numeric decimal)",
+					"pattern": "^(0|[1-9][0-9]*)$"
+				},
+				"bundleName": {
+					"type": "string",
+					"description": "Product bundle name base",
+					"pattern": "^[_0-9a-zA-Z]+$"
+				}
+			},
+			"required": [ "name", "version", "buildVersion", "bundleName" ]
+		}
+	},
+	"required":	[ "company", "product" ]
+}

@@ -1,7 +1,8 @@
 {
-	"plugin": {
-		"name":	"Tibia test plugin",
-		"version": "1.0.0.1",
+	"product": {
+		"name":	"Tibia test product",
+		"version": "1.0.0",
+		"buildVersion": "1",
 		"bundleName": "tibia_test",
 		"buses": [
 			{
