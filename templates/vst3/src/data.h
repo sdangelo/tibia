@@ -23,6 +23,9 @@ static Steinberg_char16 dataVST3ControllerNameW[64] = { {{~Array.from(it.product
 #define DATA_VST3_CONTROLLER_CID_3		0x{{=it.vst3.controller.cid.substring(16, 24)}}
 #define DATA_VST3_CONTROLLER_CID_4		0x{{=it.vst3.controller.cid.substring(24, 32)}}
 
+static const Steinberg_TUID dataPluginCID = SMTG_INLINE_UID(DATA_VST3_PLUGIN_CID_1, DATA_VST3_PLUGIN_CID_2, DATA_VST3_PLUGIN_CID_3, DATA_VST3_PLUGIN_CID_4);
+static const Steinberg_TUID dataControllerCID = SMTG_INLINE_UID(DATA_VST3_CONTROLLER_CID_1, DATA_VST3_CONTROLLER_CID_2, DATA_VST3_CONTROLLER_CID_3, DATA_VST3_CONTROLLER_CID_4);
+
 #define DATA_VST3_SUBCATEGORY			"{{=it.vst3.subCategory}}"
 
 #define DATA_PLUGIN_BUSES_AUDIO_INPUT_N		{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length}}

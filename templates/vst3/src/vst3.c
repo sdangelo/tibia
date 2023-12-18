@@ -17,9 +17,6 @@
 # define TRACE(...)	printf(__VA_ARGS__)
 #endif
 
-static const Steinberg_TUID pluginCID = SMTG_INLINE_UID(DATA_VST3_PLUGIN_CID_1, DATA_VST3_PLUGIN_CID_2, DATA_VST3_PLUGIN_CID_3, DATA_VST3_PLUGIN_CID_4);
-static const Steinberg_TUID controllerCID = SMTG_INLINE_UID(DATA_VST3_CONTROLLER_CID_1, DATA_VST3_CONTROLLER_CID_2, DATA_VST3_CONTROLLER_CID_3, DATA_VST3_CONTROLLER_CID_4);
-
 typedef struct pluginInstance {
 	Steinberg_Vst_IComponentVtbl *			vtblIComponent;
 	Steinberg_Vst_IAudioProcessorVtbl *		vtblIAudioProcessor;
@@ -109,7 +106,7 @@ static Steinberg_tresult pluginTerminate(void *thisInterface) {
 static Steinberg_tresult pluginGetControllerClassId(void *thisInterface, Steinberg_TUID classId) {
 	TRACE("plugin get controller class id %p %p\n", thisInterface, classId);
 	if (classId != NULL) {
-		memcpy(classId, controllerCID, sizeof(Steinberg_TUID));
+		memcpy(classId, dataControllerCID, sizeof(Steinberg_TUID));
 		return Steinberg_kResultTrue;
 	}
 	return Steinberg_kResultFalse;
@@ -723,14 +720,14 @@ static Steinberg_tresult factoryGetClassInfo(void *thisInterface, Steinberg_int3
 	switch (index) {
 	case 0:
 		TRACE(" class 0\n");
-		memcpy(info->cid, pluginCID, sizeof(Steinberg_TUID));
+		memcpy(info->cid, dataPluginCID, sizeof(Steinberg_TUID));
 		info->cardinality = Steinberg_PClassInfo_ClassCardinality_kManyInstances;
 		strcpy(info->category, "Audio Module Class");
 		strcpy(info->name, DATA_PRODUCT_NAME);
 		break;
 	case 1:
 		TRACE(" class 1\n");
-		memcpy(info->cid, controllerCID, sizeof(Steinberg_TUID));
+		memcpy(info->cid, dataControllerCID, sizeof(Steinberg_TUID));
 		info->cardinality = Steinberg_PClassInfo_ClassCardinality_kManyInstances;
 		strcpy(info->category, "Component Controller Class");
 		strcpy(info->name, DATA_PRODUCT_NAME " Controller");
@@ -744,7 +741,7 @@ static Steinberg_tresult factoryGetClassInfo(void *thisInterface, Steinberg_int3
 
 static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FIDString cid, Steinberg_FIDString iid, void ** obj) {
 	TRACE("createInstance\n");
-	if (memcmp(cid, pluginCID, sizeof(Steinberg_TUID)) == 0) {
+	if (memcmp(cid, dataPluginCID, sizeof(Steinberg_TUID)) == 0) {
 		TRACE(" plugin\n");
 		size_t offset; // FIXME: does it actually work like this? or is offset always 0?
 		if ((memcmp(iid, Steinberg_FUnknown_iid, sizeof(Steinberg_TUID)) == 0)
@@ -772,7 +769,7 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 		p->context = NULL;
 		*obj = (void *)((char *)p + offset);
 		TRACE(" instance: %p\n", (void *)p);
-	} else if (memcmp(cid, controllerCID, sizeof(Steinberg_TUID)) == 0) {
+	} else if (memcmp(cid, dataControllerCID, sizeof(Steinberg_TUID)) == 0) {
 		TRACE(" controller\n");
 		if (memcmp(iid, Steinberg_FUnknown_iid, sizeof(Steinberg_TUID))
 		    && memcmp(iid, Steinberg_IPluginBase_iid, sizeof(Steinberg_TUID))
@@ -802,7 +799,7 @@ static Steinberg_tresult factoryGetClassInfo2(void* thisInterface, Steinberg_int
 	switch (index) {
 	case 0:
 		TRACE(" class 0\n");
-		memcpy(info->cid, pluginCID, sizeof(Steinberg_TUID));
+		memcpy(info->cid, dataPluginCID, sizeof(Steinberg_TUID));
 		info->cardinality = Steinberg_PClassInfo_ClassCardinality_kManyInstances;
 		strcpy(info->category, "Audio Module Class");
 		strcpy(info->name, DATA_PRODUCT_NAME);
@@ -814,7 +811,7 @@ static Steinberg_tresult factoryGetClassInfo2(void* thisInterface, Steinberg_int
 		break;
 	case 1:
 		TRACE(" class 1\n");
-		memcpy(info->cid, controllerCID, sizeof(Steinberg_TUID));
+		memcpy(info->cid, dataControllerCID, sizeof(Steinberg_TUID));
 		info->cardinality = Steinberg_PClassInfo_ClassCardinality_kManyInstances;
 		strcpy(info->category, "Component Controller Class");
 		strcpy(info->name, DATA_PRODUCT_NAME " Controller");
@@ -836,7 +833,7 @@ static Steinberg_tresult factoryGetClassInfoUnicode(void* thisInterface, Steinbe
 	switch (index) {
 	case 0:
 		TRACE(" class 0\n");
-		memcpy(info->cid, pluginCID, sizeof(Steinberg_TUID));
+		memcpy(info->cid, dataPluginCID, sizeof(Steinberg_TUID));
 		info->cardinality = Steinberg_PClassInfo_ClassCardinality_kManyInstances;
 		strcpy(info->category, "Audio Module Class");
 		memcpy(info->name, dataProductNameW, 64 * sizeof(Steinberg_char16));
@@ -848,7 +845,7 @@ static Steinberg_tresult factoryGetClassInfoUnicode(void* thisInterface, Steinbe
 		break;
 	case 1:
 		TRACE(" class 1\n");
-		memcpy(info->cid, controllerCID, sizeof(Steinberg_TUID));
+		memcpy(info->cid, dataControllerCID, sizeof(Steinberg_TUID));
 		info->cardinality = Steinberg_PClassInfo_ClassCardinality_kManyInstances;
 		strcpy(info->category, "Component Controller Class");
 		memcpy(info->name, dataVST3ControllerNameW, 64 * sizeof(Steinberg_char16));
