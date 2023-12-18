@@ -46,6 +46,9 @@ static Steinberg_tresult pluginQueryInterface(pluginInstance *p, const Steinberg
 		offset = offsetof(pluginInstance, vtblIProcessContextRequirements);
 	else {
 		TRACE(" not supported\n");
+		for (int i = 0; i < 16; i++)
+			TRACE(" %x", iid[i]);
+		TRACE("\n");
 		*obj = NULL;
 		return Steinberg_kNoInterface;
 	}
@@ -419,6 +422,7 @@ typedef struct controller {
 #if DATA_PLUGIN_PARAMETERS_N > 0
 	double					parameters[DATA_PLUGIN_PARAMETERS_N];
 #endif
+	struct Steinberg_Vst_IComponentHandler* componentHandler;
 } controller;
 
 static Steinberg_tresult controllerQueryInterface(void* thisInterface, const Steinberg_TUID iid, void** obj) {
@@ -426,7 +430,10 @@ static Steinberg_tresult controllerQueryInterface(void* thisInterface, const Ste
 	if (memcmp(iid, Steinberg_FUnknown_iid, sizeof(Steinberg_TUID))
 	    && memcmp(iid, Steinberg_IPluginBase_iid, sizeof(Steinberg_TUID))
 	    && memcmp(iid, Steinberg_Vst_IEditController_iid, sizeof(Steinberg_TUID))) {
-TRACE(" oooo\n");
+		TRACE(" none\n");
+		for (int i = 0; i < 16; i++)
+			TRACE(" %x", iid[i]);
+		TRACE("\n");
 		*obj = NULL;
 		return Steinberg_kNoInterface;
 	}
@@ -460,6 +467,10 @@ static Steinberg_tresult controllerInitialize(void* thisInterface, struct Steinb
 	if (c->context != NULL)
 		return Steinberg_kResultFalse;
 	c->context = context;
+#if DATA_PLUGIN_PARAMETERS_N > 0
+	for (int i = 0; i < DATA_PLUGIN_PARAMETERS_N; i++)
+		c->parameters[i] = parameterInfo[i].defaultNormalizedValue;
+#endif
 	return Steinberg_kResultOk;
 }
 
@@ -473,7 +484,7 @@ static Steinberg_tresult controllerTerminate(void* thisInterface) {
 static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue value);
 
 static Steinberg_tresult controllerSetComponentState(void* thisInterface, struct Steinberg_IBStream* state) {
-	TRACE("controller set component state\n");
+	TRACE("controller set component state %p %p\n", thisInterface, (void *)state);
 	if (state == NULL)
 		return Steinberg_kResultFalse;
 #if DATA_PLUGIN_PARAMETERS_N > 0
@@ -490,6 +501,7 @@ static Steinberg_tresult controllerSetComponentState(void* thisInterface, struct
 		controllerSetParamNormalized(thisInterface, i, v.f);
 	}
 #endif
+	TRACE(" ok\n");
 	return Steinberg_kResultTrue;
 }
 
@@ -513,7 +525,7 @@ static Steinberg_tresult controllerGetParameterInfo(void* thisInterface, Steinbe
 	if (paramIndex < 0 || paramIndex >= DATA_PLUGIN_PARAMETERS_N)
 		return Steinberg_kResultFalse;
 	*info = parameterInfo[paramIndex];
-	return Steinberg_kResultOk;
+	return Steinberg_kResultTrue;
 }
 
 static void dToStr(double v, Steinberg_Vst_String128 s, int precision) {
@@ -564,7 +576,7 @@ static Steinberg_tresult controllerGetParamStringByValue(void* thisInterface, St
 		return Steinberg_kResultFalse;
 	//mapping TBD
 	dToStr(valueNormalized, string, 2);
-	return Steinberg_kResultOk;
+	return Steinberg_kResultTrue;
 }
 
 void TCharToD(Steinberg_Vst_TChar* s, double *v) {
@@ -601,7 +613,7 @@ static Steinberg_tresult controllerGetParamValueByString(void* thisInterface, St
 		return Steinberg_kResultFalse;
 	//mapping TBD
 	TCharToD(string, valueNormalized);
-	return Steinberg_kResultOk;
+	return Steinberg_kResultTrue;
 }
 
 static Steinberg_Vst_ParamValue controllerNormalizedParamToPlain(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue valueNormalized) {
@@ -633,7 +645,7 @@ static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Stein
 		return Steinberg_kResultFalse;
 	controller *c = (controller *)thisInterface;
 	c->parameters[id] = value;
-	return Steinberg_kResultOk;
+	return Steinberg_kResultTrue;
 #else
 	return Steinberg_kResultFalse;
 #endif
@@ -641,8 +653,15 @@ static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Stein
 
 static Steinberg_tresult controllerSetComponentHandler(void* thisInterface, struct Steinberg_Vst_IComponentHandler* handler) {
 	TRACE("controller set component handler\n");
-	//TBD
-	return Steinberg_kNotImplemented;
+	controller *c = (controller *)thisInterface;
+	if (c->componentHandler != handler) {
+		if (c->componentHandler != NULL)
+			c->componentHandler->lpVtbl->release(c->componentHandler);
+		c->componentHandler = handler;
+		if (c->componentHandler != NULL)
+			c->componentHandler->lpVtbl->addRef(c->componentHandler);
+	}
+	return Steinberg_kResultTrue;
 }
 
 static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Steinberg_FIDString name) {
@@ -757,6 +776,9 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 			offset = offsetof(pluginInstance, vtblIProcessContextRequirements);
 		} else {
 			TRACE("  INothing :(\n");
+			for (int i = 0; i < 16; i++)
+				TRACE(" %x", iid[i]);
+			TRACE("\n");
 			return Steinberg_kNoInterface;
 		}
 		pluginInstance *p = malloc(sizeof(pluginInstance));
@@ -781,10 +803,7 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 		c->vtblIEditController = &controllerVtbl;
 		c->refs = 1;
 		c->context = NULL;
-#if DATA_PLUGIN_PARAMETERS_N > 0
-		for (int i = 0; i < DATA_PLUGIN_PARAMETERS_N; i++)
-			c->parameters[i] = parameterInfo[i].defaultNormalizedValue;
-#endif
+		c->componentHandler = NULL;
 		*obj = c;
 		TRACE(" instance: %p\n", (void *)c);
 	} else {
