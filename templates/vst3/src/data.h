@@ -104,7 +104,7 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PLUGIN_PARAMETERS_N
 		/* .shortTitle			= */ { {{~Array.from(p.shortName) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { {{~Array.from(p.units) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .stepCount			= */ {{=p.steps}},
-		/* .defaultNormalizedValue	= */ {{=p.defaultValue}},
+		/* .defaultNormalizedValue	= */ {{=p.defaultValue.toExponential()}},
 		/* .unitId			= */ 0,
 		/* .flags			= */ {{?p.isBypass}}Steinberg_Vst_ParameterInfo_ParameterFlags_kIsBypass | {{?}}{{?p.direction == "input"}}Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate{{??}}Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly{{?}}
 	},

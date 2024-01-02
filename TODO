@@ -4,5 +4,8 @@
 * type audio + sidechain + cv... to think about
 * check all return codes and algos wrt official impl
 * escape string and max lengths
-* printf -> trace
 * EXPORT symbols, visibility hidden
+* vst3: IEditController2, IUnitInfo, IConnectionPoint
+* lv2: RDF/Turtle escape etc
+* lv2: extra data, see also - should use plugin.ttl?
+* lv2: i18n?

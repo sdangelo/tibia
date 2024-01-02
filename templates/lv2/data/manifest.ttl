@@ -1,0 +1,31 @@
+{{~it.tibia.lv2.prefixes :p}}
+@prefix {{=p.id}}: <{{=p.uri}}> .
+{{~}}
+
+{{=it.tibia.lv2.ttlURI(it.lv2.uri)}}
+	a lv2:Plugin ;
+{{~it.lv2.types :t}}
+	a {{=it.tibia.lv2.ttlURI(t)}} ;
+{{~}}
+{{?it.lv2.project}}
+	lv2:project {{=it.tibia.lv2.ttlURI(it.lv2.project)}} ;
+{{?}}
+	lv2:binary <{{=it.product.bundleName}}.so> ;
+	doap:name "{{=it.product.name}}" ;
+	lv2:optionalFeature lv2:hardRTCapable ;
+	lv2:port [
+{{~it.tibia.lv2.ports :p:i}}
+		a {{?p.type == "control"}}lv2:ControlPort{{??}}lv2:AudioPort{{?}} ,
+			{{?p.direction == "input"}}lv2:InputPort{{??}}lv2:OutputPort{{?}} ;
+		lv2:name "{{=p.name}}" ;
+		lv2:symbol "{{=p.symbol}}" ;
+{{?p.defaultValue}}
+		lv2:default {{=p.defaultValue.toExponential()}} ;
+{{?}}
+		lv2:index {{=i}}
+{{?i < it.tibia.lv2.ports.length - 1}}
+	] , [
+{{??}}
+	] .
+{{?}}
+{{~}}
