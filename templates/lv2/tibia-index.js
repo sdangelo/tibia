@@ -41,7 +41,13 @@ module.exports = function (data, api) {
 
 	for (var i = 0; i < data.product.parameters.length; i++) {
 		var p = data.product.parameters[i];
-		var e = { type: "control", direction: p.direction, name: p.name, defaultValue: p.defaultValue };
+		var e = { type: "control", direction: p.direction, name: p.name };
+		if ("defaultValue" in p)
+			e.defaultValue = p.defaultValue;
+		if ("minimum" in p)
+			e.minimum = p.minimum;
+		if ("maximum" in p)
+			e.maximum = p.maximum;
 		e.symbol = getSymbol(p.shortName);
 		data.tibia.lv2.ports.push(e);
 	}

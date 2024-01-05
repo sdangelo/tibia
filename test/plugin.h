@@ -1,3 +1,5 @@
+#include <math.h>
+
 typedef struct plugin {
 	float	gain;
 	char	bypass;
@@ -29,7 +31,7 @@ void plugin_set_parameter(plugin *instance, size_t index, float value) {
 }
 
 void plugin_process(plugin *instance, const float **inputs, float **outputs, size_t n_samples) {
-	for (size_t i = 0; i < n_samples; i++) {
-		outputs[0][i] = instance->bypass ? inputs[0][i] : instance->gain * inputs[0][i];
-	}
+	const float g = instance->bypass ? 1.f : powf(10.f, 0.05f * instance->gain);
+	for (size_t i = 0; i < n_samples; i++)
+		outputs[0][i] = g * inputs[0][i];
 }

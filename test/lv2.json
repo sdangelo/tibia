@@ -1,7 +1,7 @@
 {
 	"lv2": {
 		"prefixes": {
-			"example": "https://www.example.com/"
+			"example": "http://www.example.com/"
 		},
 		"uri": "@example:tibia_test",
 		"project": "@example:project",
