@@ -6,6 +6,4 @@ module.exports = function (data, api) {
 	api.copyFile(`src${sep}vst3.c`, `src${sep}vst3.c`);
 	api.generateFileFromTemplateFile(`src${sep}data.h`, `src${sep}data.h`, data);
 	api.copyFileIfNotExists(`src${sep}plugin.h`, `src${sep}plugin.h`);
-	api.copyFile(`make${sep}Makefile`, `Makefile`);
-	api.generateFileFromTemplateFile(`make${sep}vars.mk`, `vars.mk`, data);
 };
