@@ -1,25 +1,26 @@
 #include "lv2/core/lv2.h"
+#include <stdlib.h>
 
 #include "data.h"
 #include "plugin.h"
 
 typedef struct {
-	plugin	p;
+	plugin		p;
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
-	float *	x[DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N];
+	const float *	x[DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N];
 #endif
 #if DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N > 0
-	float *	y[DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N];
+	float *		y[DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N];
 #endif
 #if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
-	float *	c[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N];
+	float *		c[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N];
 #endif
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-	float	params[DATA_PRODUCT_CONTROL_INPUTS_N};
+	float		params[DATA_PRODUCT_CONTROL_INPUTS_N];
 #endif
 } plugin_instance;
 
-static const LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double sample_rate, const char * bundle_path, const LV2_Feature * const * features) {
+static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double sample_rate, const char * bundle_path, const LV2_Feature * const * features) {
 	plugin_instance *instance = malloc(sizeof(plugin_instance));
 	if (instance == NULL)
 		return NULL;
@@ -56,8 +57,8 @@ static void connect_port(LV2_Handle instance, uint32_t port, void * data_locatio
 static void activate(LV2_Handle instance) {
 	plugin_instance * i = (plugin_instance *)instance;
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-	for (size_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++)
-		i->params[j] = i->c[j] != NULL ? i->c[j] : param_defaults[j];
+	for (size_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
+		i->params[j] = i->c[j] != NULL ? *i->c[j] : param_defaults[j];
 		plugin_set_parameter(&i->p, j, i->params[j]);
 	}
 #endif
@@ -68,8 +69,8 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	plugin_instance * i = (plugin_instance *)instance;
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	for (size_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++)
-		if (i->c[j] != i->params[j]) {
-			i->params[j] = i->c[j];
+		if (*i->c[j] != i->params[j]) {
+			i->params[j] = *i->c[j];
 			plugin_set_parameter(&i->p, j, i->params[j]);
 		}
 #endif
