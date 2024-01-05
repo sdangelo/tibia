@@ -28,13 +28,13 @@ static const Steinberg_TUID dataControllerCID = SMTG_INLINE_UID(DATA_VST3_CONTRO
 
 #define DATA_VST3_SUBCATEGORY			"{{=it.vst3.subCategory}}"
 
-#define DATA_PLUGIN_BUSES_AUDIO_INPUT_N		{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length}}
-#define DATA_PLUGIN_BUSES_AUDIO_OUTPUT_N	{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "output").length}}
-#define DATA_PLUGIN_BUSES_EVENT_INPUT_N		{{=it.product.buses.filter(x => x.type == "event" && x.direction == "input").length}}
-#define DATA_PLUGIN_BUSES_EVENT_OUTPUT_N	{{=it.product.buses.filter(x => x.type == "event" && x.direction == "output").length}}
+#define DATA_PRODUCT_BUSES_AUDIO_INPUT_N	{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length}}
+#define DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N	{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "output").length}}
+#define DATA_PRODUCT_BUSES_EVENT_INPUT_N	{{=it.product.buses.filter(x => x.type == "event" && x.direction == "input").length}}
+#define DATA_PRODUCT_BUSES_EVENT_OUTPUT_N	{{=it.product.buses.filter(x => x.type == "event" && x.direction == "output").length}}
 
-#if DATA_PLUGIN_BUSES_AUDIO_INPUT_N > 0
-static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PLUGIN_BUSES_AUDIO_INPUT_N] = {
+#if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
+static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PRODUCT_BUSES_AUDIO_INPUT_N] = {
 {{~it.product.buses.filter(x => x.type == "audio" && x.direction == "input") :b}}
 	{
 		/* .mediaType		= */ Steinberg_Vst_MediaTypes_kAudio,
@@ -48,8 +48,8 @@ static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PLUGIN_BUSES_AUDIO_IN
 };
 #endif
 
-#if DATA_PLUGIN_BUSES_AUDIO_OUTPUT_N > 0
-static struct Steinberg_Vst_BusInfo busInfoAudioOutput[DATA_PLUGIN_BUSES_AUDIO_OUTPUT_N] = {
+#if DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N > 0
+static struct Steinberg_Vst_BusInfo busInfoAudioOutput[DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N] = {
 {{~it.product.buses.filter(x => x.type == "audio" && x.direction == "output") :b}}
 	{
 		/* .mediaType		= */ Steinberg_Vst_MediaTypes_kAudio,
@@ -63,8 +63,8 @@ static struct Steinberg_Vst_BusInfo busInfoAudioOutput[DATA_PLUGIN_BUSES_AUDIO_O
 };
 #endif
 
-#if DATA_PLUGIN_BUSES_EVENT_INPUT_N > 0
-static struct Steinberg_Vst_BusInfo busInfoEventInput[DATA_PLUGIN_BUSES_EVENT_INPUT_N] = {
+#if DATA_PRODUCT_BUSES_EVENT_INPUT_N > 0
+static struct Steinberg_Vst_BusInfo busInfoEventInput[DATA_PRODUCT_BUSES_EVENT_INPUT_N] = {
 {{~it.product.buses.filter(x => x.type == "event" && x.direction == "input") :b}}
 	{
 		/* .mediaType		= */ Steinberg_Vst_MediaTypes_kEvent,
@@ -78,8 +78,8 @@ static struct Steinberg_Vst_BusInfo busInfoEventInput[DATA_PLUGIN_BUSES_EVENT_IN
 };
 #endif
 
-#if DATA_PLUGIN_BUSES_EVENT_OUTPUT_N > 0
-static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PLUGIN_BUSES_EVENT_OUTPUT_N] = {
+#if DATA_PRODUCT_BUSES_EVENT_OUTPUT_N > 0
+static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PRODUCT_BUSES_EVENT_OUTPUT_N] = {
 {{~it.product.buses.filter(x => x.type == "event" && x.direction == "output") :b}}
 	{
 		/* .mediaType		= */ Steinberg_Vst_MediaTypes_kEvent,
@@ -93,10 +93,10 @@ static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PLUGIN_BUSES_EVENT_OU
 };
 #endif
 
-#define DATA_PLUGIN_PARAMETERS_N		{{=it.product.parameters.length}}
+#define DATA_PRODUCT_PARAMETERS_N		{{=it.product.parameters.length}}
 
-#if DATA_PLUGIN_PARAMETERS_N > 0
-static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PLUGIN_PARAMETERS_N] = {
+#if DATA_PRODUCT_PARAMETERS_N > 0
+static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_N] = {
 {{~it.product.parameters :p:i}}
 	{
 		/* .id				= */ {{=i}},
