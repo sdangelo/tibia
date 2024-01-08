@@ -41,13 +41,8 @@ module.exports = function (data, api) {
 
 	for (var i = 0; i < data.product.parameters.length; i++) {
 		var p = data.product.parameters[i];
-		var e = { type: "control", direction: p.direction, name: p.name };
-		if ("defaultValue" in p)
-			e.defaultValue = p.defaultValue;
-		if ("minimum" in p)
-			e.minimum = p.minimum;
-		if ("maximum" in p)
-			e.maximum = p.maximum;
+		var e = Object.create(p);
+		e.type = "control";
 		e.symbol = getSymbol(p.shortName);
 		data.tibia.lv2.ports.push(e);
 	}
@@ -56,7 +51,7 @@ module.exports = function (data, api) {
 	for (var i = 0; i < audioBuses.length; i++) {
 		var b = audioBuses[i];
 		for (var j = 0; j < b.channels; j++) {
-			var e = { type: "audio", direction: b.direction, name: b.name };
+			var e = { type: "audio", direction: b.direction, name: b.name, sidechain: b.sidechain, cv: b.cv };
 			e.symbol = getSymbol(b.name);
 			data.tibia.lv2.ports.push(e);
 		}

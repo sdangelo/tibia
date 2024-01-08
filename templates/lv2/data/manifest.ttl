@@ -15,7 +15,7 @@
 	lv2:optionalFeature lv2:hardRTCapable ;
 	lv2:port [
 {{~it.tibia.lv2.ports :p:i}}
-		a {{?p.type == "control"}}lv2:ControlPort{{??}}lv2:AudioPort{{?}} ,
+		a {{?p.type == "control"}}lv2:ControlPort{{??}}{{?p.cv}}lv2:CVPort{{??}}lv2:AudioPort{{?}}{{?}} ,
 			{{?p.direction == "input"}}lv2:InputPort{{??}}lv2:OutputPort{{?}} ;
 		lv2:name "{{=p.name}}" ;
 		lv2:symbol "{{=p.symbol}}" ;
@@ -27,6 +27,9 @@
 {{?}}
 {{?"maximum" in p}}
 		lv2:maximum {{=p.maximum.toExponential()}} ;
+{{?}}
+{{?p.sidechain}}
+		lv2:portProperty lv2:isSideChain ;
 {{?}}
 		lv2:index {{=i}}
 {{?i < it.tibia.lv2.ports.length - 1}}
