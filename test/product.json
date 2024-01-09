@@ -46,7 +46,8 @@
 					"Max": 12.0,
 					"Min": -60.0
 				},
-				"list": false
+				"list": false,
+				"unit": "db"
 			},
 			{
 				"name": "Bypass",

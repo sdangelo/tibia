@@ -5,9 +5,11 @@ module.exports = function (data, api) {
 	data.tibia.lv2 = {
 		prefixes: [
 			{ id: "doap", uri: "http://usefulinc.com/ns/doap#" },
+			{ id: "foaf", uri: "http://xmlns.com/foaf/0.1/" },
 			{ id: "lv2", uri: "http://lv2plug.in/ns/lv2core#" },
 			{ id: "rdf", uri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#" },
-			{ id: "rdfs", uri: "http://www.w3.org/2000/01/rdf-schema#" }
+			{ id: "rdfs", uri: "http://www.w3.org/2000/01/rdf-schema#" },
+			{ id: "units", uri: "http://lv2plug.in/ns/extensions/units#" }
 		],
 		ports: [],
 
@@ -47,6 +49,33 @@ module.exports = function (data, api) {
 	}
 
 	data.tibia.lv2.ports.sort((a, b) => a.type != b.type ? (a.type == "audio" ? -1 : 1) : (a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0));
+
+	data.tibia.lv2.units = {
+		"bar":			"@units:bar",
+		"beat":			"@units:beat",
+		"bpm":			"@units:bpm",
+		"cent":			"@units:cent",
+		"cm":			"@units:cm",
+		"coef":			"@units:coef",
+		"db":			"@units:db",
+		"degree":		"@units:degree",
+		"frame":		"@units:frame",
+		"hz":			"@units:hz",
+		"inch":			"@units:inch",
+		"khz":			"@units:khz",
+		"km":			"@units:km",
+		"m":			"@units:m",
+		"mhz":			"@units:mhz",
+		"midiNote":		"@units:midiNote",
+		"mile":			"@units:mile",
+		"min":			"@units:min",
+		"mm":			"@units:mm",
+		"ms":			"@units:ms",
+		"oct":			"@units:oct",
+		"pc":			"@units:pc",
+		"s":			"@units:s",
+		"semitone12TET":	"@units:semitone12TET"
+	};
 
 	api.generateFileFromTemplateFile(`data${sep}manifest.ttl`, `data${sep}manifest.ttl`, data);
 	api.copyFile(`src${sep}lv2.c`, `src${sep}lv2.c`);
