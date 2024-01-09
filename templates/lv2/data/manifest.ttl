@@ -48,6 +48,24 @@
 {{?p.optional}}
 		lv2:portProperty lv2:connectionOptional ;
 {{?}}
+{{?p.integer}}
+		lv2:portProperty lv2:integer ;
+{{?}}
+{{?p.scalePoints}}
+		lv2:scalePoint [
+{{~Object.entries(p.scalePoints) :sp:j}}
+			rdfs:label "{{=sp[0]}}" ;
+			rdf:value {{=sp[1].toExponential()}}
+{{?j < Object.entries(p.scalePoints).length - 1}}
+		] , [
+{{??}}
+		] ;
+{{?}}
+{{~}}
+{{?}}
+{{?p.list}}
+		lv2:portProperty lv2:enumeration ;
+{{?}}
 		lv2:index {{=i}}
 {{?i < it.tibia.lv2.ports.length - 1}}
 	] , [

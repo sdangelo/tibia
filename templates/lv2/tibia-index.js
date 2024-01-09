@@ -32,6 +32,7 @@ module.exports = function (data, api) {
 		var e = Object.create(p);
 		e.type = "control";
 		e.symbol = data.lv2.parameterSymbols[i];
+		e.paramIndex = i;
 		data.tibia.lv2.ports.push(e);
 	}
 

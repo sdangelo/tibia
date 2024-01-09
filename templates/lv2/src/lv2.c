@@ -27,15 +27,15 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	plugin_init(&instance->p);
 	plugin_set_sample_rate(&instance->p, sample_rate);
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
-	for (size_t i = 0; i < DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N; i++)
+	for (uint32_t i = 0; i < DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N; i++)
 		instance->x[i] = NULL;
 #endif
 #if DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N > 0
-	for (size_t i = 0; i < DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N; i++)
+	for (uint32_t i = 0; i < DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N; i++)
 		instance->y[i] = NULL;
 #endif
-#if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-	for (size_t i = 0; i < DATA_PRODUCT_CONTROL_INPUTS_N; i++)
+#if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
+	for (uint32_t i = 0; i < DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N; i++)
 		instance->c[i] = NULL;
 #endif
 	return instance;
@@ -65,9 +65,10 @@ static void connect_port(LV2_Handle instance, uint32_t port, void * data_locatio
 static void activate(LV2_Handle instance) {
 	plugin_instance * i = (plugin_instance *)instance;
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-	for (size_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
-		i->params[j] = i->c[j] != NULL ? *i->c[j] : param_data[j].def;
-		plugin_set_parameter(&i->p, j, i->params[j]);
+	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
+		uint32_t k = param_data[j].index;
+		i->params[j] = i->c[k] != NULL ? *i->c[k] : param_data[j].def;
+		plugin_set_parameter(&i->p, k, i->params[j]);
 	}
 #endif
 	plugin_reset(&i->p);
@@ -81,25 +82,37 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	plugin_instance * i = (plugin_instance *)instance;
 
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-	for (size_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
-		if (i->c[j] == NULL)
+	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
+		uint32_t k = param_data[j].index;
+		if (i->c[k] == NULL)
 			continue;
 		float v;
 		if (param_data[j].flags & DATA_PARAM_BYPASS)
-			v = *i->c[j] > 0.f ? 0.f : 1.f;
+			v = *i->c[k] > 0.f ? 0.f : 1.f;
 		else if (param_data[j].flags & DATA_PARAM_TOGGLED)
-			v = *i->c[j] > 0.f ? 1.f : 0.f;
+			v = *i->c[k] > 0.f ? 1.f : 0.f;
+		else if (param_data[j].flags & DATA_PARAM_INTEGER)
+			v = (int32_t)(*i->c[k] + 0.5f);
 		else
-			v = clampf(*i->c[j], param_data[j].min, param_data[j].max);
+			v = *i->c[k];
 
+		v = clampf(v, param_data[j].min, param_data[j].max);
 		if (v != i->params[j]) {
 			i->params[j] = v;
-			plugin_set_parameter(&i->p, j, v);
+			plugin_set_parameter(&i->p, k, v);
 		}
 	}
 #endif
 
 	plugin_process(&i->p, i->x, i->y, sample_count);
+
+#if DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
+	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_OUTPUTS_N; j++) {
+		uint32_t k = param_out_index[j];
+		if (i->c[k] != NULL)
+			i->c[k] = plugin_get_parameter(&i->p, k);
+	}
+#endif
 }
 
 static void cleanup(LV2_Handle instance) {

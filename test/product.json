@@ -39,7 +39,14 @@
 				"minimum": -60.0,
 				"maximum": 12.0,
 				"toggled": false,
-				"optional": false
+				"optional": false,
+				"integer": false,
+				"scalePoints": {
+					"0": 0.0,
+					"Max": 12.0,
+					"Min": -60.0
+				},
+				"list": false
 			},
 			{
 				"name": "Bypass",
@@ -53,7 +60,13 @@
 				"minimum": 0,
 				"maximum": 1,
 				"toggled": true,
-				"optional": true
+				"optional": true,
+				"integer": true,
+				"scalePoints": {
+					"Off": 0,
+					"On": 1
+				},
+				"list": true
 			}
 		]
 	}
