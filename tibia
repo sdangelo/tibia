@@ -62,15 +62,6 @@ var api = {
 		var dir = outputDir + path.sep + path.dirname(outFile);
 		fs.mkdirSync(dir, { recursive: true });
 		fs.copyFileSync(template + path.sep + inFile, outputDir + path.sep + outFile);
-	},
-
-	copyFileIfNotExists: function (inFile, outFile) {
-		var p = outputDir + path.sep + outFile;
-		if (fs.existsSync(p))
-			return;
-		var dir = outputDir + path.sep + path.dirname(outFile);
-		fs.mkdirSync(dir, { recursive: true });
-		fs.copyFileSync(template + path.sep + inFile, p);
 	}
 };
 

@@ -5,6 +5,9 @@
 		},
 		"uri": "@example:tibia_test",
 		"project": "@example:project",
-		"types": [ "@lv2:AmplifierPlugin" ]
+		"types": [ "@lv2:AmplifierPlugin" ],
+		"version": "1.0",
+		"busSymbols": [ "input", "output" ],
+		"parameterSymbols": [ "gain", "bypass" ]
 	}
 }

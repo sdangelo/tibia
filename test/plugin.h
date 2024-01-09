@@ -30,6 +30,11 @@ void plugin_set_parameter(plugin *instance, size_t index, float value) {
 	}
 }
 
+float plugin_get_parameter(plugin *instance, size_t index) {
+	// no output parameters
+	return 0.f;
+}
+
 void plugin_process(plugin *instance, const float **inputs, float **outputs, size_t n_samples) {
 	const float g = instance->bypass ? 1.f : powf(10.f, 0.05f * instance->gain);
 	for (size_t i = 0; i < n_samples; i++)

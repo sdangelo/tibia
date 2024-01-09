@@ -26,6 +26,14 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 		return NULL;
 	plugin_init(&instance->p);
 	plugin_set_sample_rate(&instance->p, sample_rate);
+#if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
+	for (size_t i = 0; i < DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N; i++)
+		instance->x[i] = NULL;
+#endif
+#if DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N > 0
+	for (size_t i = 0; i < DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N; i++)
+		instance->y[i] = NULL;
+#endif
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	for (size_t i = 0; i < DATA_PRODUCT_CONTROL_INPUTS_N; i++)
 		instance->c[i] = NULL;
@@ -58,22 +66,39 @@ static void activate(LV2_Handle instance) {
 	plugin_instance * i = (plugin_instance *)instance;
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	for (size_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
-		i->params[j] = i->c[j] != NULL ? *i->c[j] : param_defaults[j];
+		i->params[j] = i->c[j] != NULL ? *i->c[j] : param_data[j].def;
 		plugin_set_parameter(&i->p, j, i->params[j]);
 	}
 #endif
 	plugin_reset(&i->p);
 }
 
+static inline float clampf(float x, float m, float M) {
+	return x < m ? m : (x > M ? M : x);
+}
+
 static void run(LV2_Handle instance, uint32_t sample_count) {
 	plugin_instance * i = (plugin_instance *)instance;
+
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-	for (size_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++)
-		if (*i->c[j] != i->params[j]) {
-			i->params[j] = *i->c[j];
-			plugin_set_parameter(&i->p, j, i->params[j]);
+	for (size_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
+		if (i->c[j] == NULL)
+			continue;
+		float v;
+		if (param_data[j].flags & DATA_PARAM_BYPASS)
+			v = *i->c[j] > 0.f ? 0.f : 1.f;
+		else if (param_data[j].flags & DATA_PARAM_TOGGLED)
+			v = *i->c[j] > 0.f ? 1.f : 0.f;
+		else
+			v = clampf(*i->c[j], param_data[j].min, param_data[j].max);
+
+		if (v != i->params[j]) {
+			i->params[j] = v;
+			plugin_set_parameter(&i->p, j, v);
 		}
+	}
 #endif
+
 	plugin_process(&i->p, i->x, i->y, sample_count);
 }
 

@@ -1,0 +1,26 @@
+company {
+	name:
+		VST3: PFactoryInfo.vendor
+		LV2: not used
+	url:
+		VST3: PFactoryInfo.url
+		LV2: not used
+	email:
+		VST3: PFactoryInfo.email
+		LV2: not used
+}
+
+product {
+	name:
+		VST3: PClassInfo{,2,W}.name
+		LV2: manifest.ttl plugin doap:name
+	version:
+		VST3: PClassInfo{2,W}.version (first 3 numbers)
+		LV2: not used
+	buildVersion:
+		VST3: PClassInfo{2,W}.version (last number)
+		LV2: not used
+	bundleName:
+		VST3: plugin folder name, plugin .dll name, Info.plist
+		LV2: plugin folder name, plugin .dll name, manifest.ttl plugin lv2:binary
+}

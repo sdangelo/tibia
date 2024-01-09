@@ -10,16 +10,20 @@
 				"direction": "input",
 				"channels": 1,
 				"name": "Input",
+				"shortName": "Input",
 				"sidechain": false,
-				"cv": false
+				"cv": false,
+				"optional": false
 			},
 			{
 				"type": "audio",
 				"direction": "output",
 				"channels": 1,
 				"name": "Output",
+				"shortName": "Output",
 				"sidechain": false,
-				"cv": false
+				"cv": false,
+				"optional": false
 			}
 		],
 		"parameters": [
@@ -30,9 +34,12 @@
 				"steps": 0,
 				"direction": "input",
 				"isBypass": false,
+				"isLatency": false,
 				"defaultValue": 0.0,
 				"minimum": -60.0,
-				"maximum": 12.0
+				"maximum": 12.0,
+				"toggled": false,
+				"optional": false
 			},
 			{
 				"name": "Bypass",
@@ -41,9 +48,12 @@
 				"steps": 1,
 				"direction": "input",
 				"isBypass": true,
-				"defaultValue": 0.0,
+				"isLatency": false,
+				"defaultValue": 0,
 				"minimum": 0,
-				"maximum": 1
+				"maximum": 1,
+				"toggled": true,
+				"optional": true
 			}
 		]
 	}

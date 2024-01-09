@@ -5,7 +5,7 @@ CFLAGS = -fPIC -Wall -Wpedantic -Wextra -Wno-unused-parameter
 
 BUNDLE_DIR = ${BUNDLE_NAME}.lv2
 
-SO_FILE := ${BUNDLE_NAME}.so
+SO_FILE = ${BUNDLE_NAME}.so
 
 all: build/${BUNDLE_DIR}/manifest.ttl build/${BUNDLE_DIR}/${SO_FILE}
 
@@ -13,7 +13,7 @@ build/${BUNDLE_DIR}/manifest.ttl: data/manifest.ttl | build/${BUNDLE_DIR}
 	cp $^ $@
 
 build/${BUNDLE_DIR}/${SO_FILE}: src/lv2.c | build/${BUNDLE_DIR}
-	${CC} $^ -o $@ ${CFLAGS} -shared
+	${CC} $^ -o $@ ${CFLAGS} ${CFLAGS_EXTRA} ${LIBS_EXTRA} -shared
 
 build/${BUNDLE_DIR}:
 	mkdir -p $@
@@ -21,4 +21,4 @@ build/${BUNDLE_DIR}:
 clean:
 	rm -fr build
 
-.PHONY: clean
+.PHONY: all clean

@@ -5,8 +5,8 @@ CFLAGS = -fPIC -Wall -Wpedantic -Wextra -Wno-unused-parameter
 
 BUNDLE_DIR = ${BUNDLE_NAME}.vst3
 
-SO_DIR := $(shell uname -m)-linux
-SO_FILE := ${SO_DIR}/${BUNDLE_NAME}.so
+SO_DIR = $(shell uname -m)-linux
+SO_FILE = ${SO_DIR}/${BUNDLE_NAME}.so
 
 all: build/${BUNDLE_DIR}/Contents/Info.plist build/${BUNDLE_DIR}/Contents/${SO_FILE}
 
@@ -14,7 +14,7 @@ build/${BUNDLE_DIR}/Contents/Info.plist: data/Info.plist | build/${BUNDLE_DIR}/C
 	cp $^ $@
 
 build/${BUNDLE_DIR}/Contents/${SO_FILE}: src/vst3.c | build/${BUNDLE_DIR}/Contents/${SO_DIR}
-	${CC} $^ -o $@ ${CFLAGS} -I${VST3_C_API_DIR} -shared
+	${CC} $^ -o $@ ${CFLAGS} ${CFLAGS_EXTRA} ${LIBS_EXTRA} -shared
 
 build/${BUNDLE_DIR}/Contents build/${BUNDLE_DIR}/Contents/${SO_DIR}:
 	mkdir -p $@
@@ -22,4 +22,4 @@ build/${BUNDLE_DIR}/Contents build/${BUNDLE_DIR}/Contents/${SO_DIR}:
 clean:
 	rm -fr build
 
-.PHONY: clean
+.PHONY: all clean

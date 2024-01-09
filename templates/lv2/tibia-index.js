@@ -27,23 +27,11 @@ module.exports = function (data, api) {
 	for (var id in data.lv2.prefixes)
 		data.tibia.lv2.prefixes.push({ id: id, uri: data.lv2.prefixes[id] });
 
-	var symbols = {};
-	function getSymbol(name) {
-		name = name.toLowerCase().replace(/[^0-9a-z]/g, "_");
-		var n = name;
-		var i = 1;
-		while (n in symbols) {
-			n = name + i;
-			i++;
-		}
-		return n;
-	}
-
 	for (var i = 0; i < data.product.parameters.length; i++) {
 		var p = data.product.parameters[i];
 		var e = Object.create(p);
 		e.type = "control";
-		e.symbol = getSymbol(p.shortName);
+		e.symbol = data.lv2.parameterSymbols[i];
 		data.tibia.lv2.ports.push(e);
 	}
 
@@ -52,7 +40,7 @@ module.exports = function (data, api) {
 		var b = audioBuses[i];
 		for (var j = 0; j < b.channels; j++) {
 			var e = { type: "audio", direction: b.direction, name: b.name, sidechain: b.sidechain, cv: b.cv };
-			e.symbol = getSymbol(b.name);
+			e.symbol = data.lv2.busSymbols[i] + "_" + j;
 			data.tibia.lv2.ports.push(e);
 		}
 	}
@@ -62,5 +50,4 @@ module.exports = function (data, api) {
 	api.generateFileFromTemplateFile(`data${sep}manifest.ttl`, `data${sep}manifest.ttl`, data);
 	api.copyFile(`src${sep}lv2.c`, `src${sep}lv2.c`);
 	api.generateFileFromTemplateFile(`src${sep}data.h`, `src${sep}data.h`, data);
-	api.copyFileIfNotExists(`src${sep}plugin.h`, `src${sep}plugin.h`);
 };

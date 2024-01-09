@@ -12,12 +12,17 @@
 {{?}}
 	lv2:binary <{{=it.product.bundleName}}.so> ;
 	doap:name "{{=it.product.name}}" ;
+	lv2:minorVersion {{=/^([0-9]+)\./.exec(it.lv2.version)[1]}} ;
+	lv2:microVersion {{=/^[0-9]+\.([0-9]+)/.exec(it.lv2.version)[1]}} ;
 	lv2:optionalFeature lv2:hardRTCapable ;
 	lv2:port [
 {{~it.tibia.lv2.ports :p:i}}
 		a {{?p.type == "control"}}lv2:ControlPort{{??}}{{?p.cv}}lv2:CVPort{{??}}lv2:AudioPort{{?}}{{?}} ,
 			{{?p.direction == "input"}}lv2:InputPort{{??}}lv2:OutputPort{{?}} ;
 		lv2:name "{{=p.name}}" ;
+{{?"shortName" in p}}
+		lv2:shortName "{{=p.shortName.substring(0, 16)}}" ;
+{{?}}
 		lv2:symbol "{{=p.symbol}}" ;
 {{?"defaultValue" in p}}
 		lv2:default {{=p.defaultValue.toExponential()}} ;
@@ -30,6 +35,18 @@
 {{?}}
 {{?p.sidechain}}
 		lv2:portProperty lv2:isSideChain ;
+{{?}}
+{{?p.isBypass}}
+		lv2:designation lv2:enabled ;
+{{?}}
+{{?p.isLatency}}
+		lv2:designation lv2:latency ;
+{{?}}
+{{?p.toggled}}
+		lv2:portProperty lv2:toggled ;
+{{?}}
+{{?p.optional}}
+		lv2:portProperty lv2:connectionOptional ;
 {{?}}
 		lv2:index {{=i}}
 {{?i < it.tibia.lv2.ports.length - 1}}
