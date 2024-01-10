@@ -61,14 +61,10 @@
 		lv2:shortName "{{=p.shortName.substring(0, 16)}}" ;
 {{?}}
 		lv2:symbol "{{=p.symbol}}" ;
-{{?"defaultValue" in p}}
-		lv2:default {{=p.defaultValue.toExponential()}} ;
-{{?}}
-{{?"minimum" in p}}
+{{?p.type == "control"}}
 		lv2:minimum {{=p.minimum.toExponential()}} ;
-{{?}}
-{{?"maximum" in p}}
 		lv2:maximum {{=p.maximum.toExponential()}} ;
+		lv2:default {{=p.defaultValue.toExponential()}} ;
 {{?}}
 {{?p.sidechain}}
 		lv2:portProperty lv2:isSideChain ;

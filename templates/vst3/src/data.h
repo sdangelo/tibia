@@ -112,8 +112,8 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 		/* .title			= */ { {{~Array.from(p.name) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .shortTitle			= */ { {{~Array.from(p.shortName) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { {{~Array.from(p.unit in it.tibia.vst3.units ? it.tibia.vst3.units[p.unit] : "") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .stepCount			= */ {{?p.toggled}}1{{??p.list && p.scalePoints.length > 1}}Number(1 / (p.scalePoints.length - 1)).toExponential(){{??p.integer && "maximum" in p && "minimum" in p}}Number(p.maximum - p.minimum).toExponential(){{??}}0{{?}},
-		/* .defaultNormalizedValue	= */ {{="defaultValue" in p && "maximum" in p && "minimum" in p ? Number((p.defaultValue - p.minimum) / (p.maximum - p.minimum)).toExponential() : 0.0}},
+		/* .stepCount			= */ {{?p.toggled}}1{{??p.list && p.scalePoints.length > 1}}Number(1 / (p.scalePoints.length - 1)).toExponential(){{??p.integer}}Number(p.maximum - p.minimum).toExponential(){{??}}0{{?}},
+		/* .defaultNormalizedValue	= */ {{=Number((p.defaultValue - p.minimum) / (p.maximum - p.minimum)).toExponential()}},
 		/* .unitId			= */ 0,
 		/* .flags			= */ {{?p.direction == "input"}}Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate{{??}}Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly{{?}}
 {{?}}
@@ -129,14 +129,16 @@ static struct {
 	size_t		index;
 	double		min;
 	double		max;
+	double		def;
 	uint32_t	flags;
 	// scalePoints?
 } parameterData[DATA_PRODUCT_PARAMETERS_N] = {
 {{~it.product.parameters.filter(x => !x.isLatency) :p:i}}
 	{
 		/* .index	= */ {{=p.paramIndex}},
-		/* .min		= */ {{="minimum" in p ? p.minimum.toExponential() : 0.0}},
-		/* .max		= */ {{="maximum" in p ? p.maximum.toExponential() : 0.0}},
+		/* .min		= */ {{=p.minimum.toExponential()}},
+		/* .max		= */ {{=p.maximum.toExponential()}},
+		/* .def		= */ {{=p.defaultValue.toExponential()}},
 		/* .flags	= */ {{?p.isBypass}}DATA_PARAM_BYPASS{{??}}0{{?p.toggled}} | DATA_PARAM_TOGGLED{{?}}{{?p.integer}} | DATA_PARAM_INTEGER{{?}}{{?}}
 	},
 {{~}}

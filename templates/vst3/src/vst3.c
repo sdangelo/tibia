@@ -469,7 +469,7 @@ static Steinberg_tresult controllerInitialize(void* thisInterface, struct Steinb
 	c->context = context;
 #if DATA_PRODUCT_PARAMETERS_N > 0
 	for (int i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++)
-		c->parameters[i] = parameterInfo[i].defaultNormalizedValue;
+		c->parameters[i] = parameterData[i].def;
 #endif
 	return Steinberg_kResultOk;
 }
@@ -481,13 +481,12 @@ static Steinberg_tresult controllerTerminate(void* thisInterface) {
 	return Steinberg_kResultOk;
 }
 
-static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue value);
-
 static Steinberg_tresult controllerSetComponentState(void* thisInterface, struct Steinberg_IBStream* state) {
 	TRACE("controller set component state %p %p\n", thisInterface, (void *)state);
 	if (state == NULL)
 		return Steinberg_kResultFalse;
 #if DATA_PRODUCT_PARAMETERS_N > 0
+	controller *c = (controller *)thisInterface;
 	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
 		if (parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
 			continue;
@@ -498,7 +497,7 @@ static Steinberg_tresult controllerSetComponentState(void* thisInterface, struct
 			return Steinberg_kResultFalse;
 		if (IS_BIG_ENDIAN)
 			v.u = SWAP_UINT32(v.u);
-		controllerSetParamNormalized(thisInterface, i, v.f);
+		c->parameters[i] = v.f;
 	}
 #endif
 	TRACE(" ok\n");
@@ -570,12 +569,19 @@ static void dToStr(double v, Steinberg_Vst_String128 s, int precision) {
 	s[i] = '\0';
 }
 
+static double parameterMap(Steinberg_Vst_ParamID id, double v) {
+	return parameterData[id].min + (parameterData[id].max - parameterData[id].min) * v;
+}
+
+static double parameterUnmap(Steinberg_Vst_ParamID id, double v) {
+	return (v - parameterData[id].min) / (parameterData[id].max - parameterData[id].min);
+}
+
 static Steinberg_tresult controllerGetParamStringByValue(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue valueNormalized, Steinberg_Vst_String128 string) {
 	TRACE("controller get param string by value\n");
 	if (id >= DATA_PRODUCT_PARAMETERS_N)
 		return Steinberg_kResultFalse;
-	//mapping TBD
-	dToStr(valueNormalized, string, 2);
+	dToStr(parameterMap(id, valueNormalized), string, 2);
 	return Steinberg_kResultTrue;
 }
 
@@ -611,28 +617,27 @@ static Steinberg_tresult controllerGetParamValueByString(void* thisInterface, St
 	TRACE("controller get param value by string\n");
 	if (id >= DATA_PRODUCT_PARAMETERS_N)
 		return Steinberg_kResultFalse;
-	//mapping TBD
-	TCharToD(string, valueNormalized);
+	double v;
+	TCharToD(string, &v);
+	*valueNormalized = parameterUnmap(id, v);
 	return Steinberg_kResultTrue;
 }
 
 static Steinberg_Vst_ParamValue controllerNormalizedParamToPlain(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue valueNormalized) {
 	TRACE("controller normalized param to plain\n");
-	//mapping TBD
-	return valueNormalized;
+	return parameterMap(id, valueNormalized);
 }
 
 static Steinberg_Vst_ParamValue controllerPlainParamToNormalized(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue plainValue) {
 	TRACE("controller plain param to normalized\n");
-	//mapping TBD
-	return plainValue;
+	return parameterUnmap(id, plainValue);
 }
 
 static Steinberg_Vst_ParamValue controllerGetParamNormalized(void* thisInterface, Steinberg_Vst_ParamID id) {
 	TRACE("controller get param normalized\n");
 #if DATA_PRODUCT_PARAMETERS_N > 0
 	controller *c = (controller *)thisInterface;
-	return c->parameters[id];
+	return parameterMap(id, c->parameters[id]);
 #else
 	return 0.0;
 #endif
@@ -644,7 +649,7 @@ static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Stein
 	if (id >= DATA_PRODUCT_PARAMETERS_N)
 		return Steinberg_kResultFalse;
 	controller *c = (controller *)thisInterface;
-	c->parameters[id] = value;
+	c->parameters[id] = parameterMap(id, value);
 	return Steinberg_kResultTrue;
 #else
 	return Steinberg_kResultFalse;
