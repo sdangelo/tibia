@@ -10,3 +10,4 @@
 * lv2: extra data, see also - should use plugin.ttl?
 * lv2: i18n?
 * #if > 0 -> dotjs
+* more mappings, lv2 port props

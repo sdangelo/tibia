@@ -1,13 +1,13 @@
 company {
 	name:
 		VST3: PFactoryInfo.vendor
-		LV2: not used
+		LV2: manifest.ttl doap:maintainer foaf:name
 	url:
 		VST3: PFactoryInfo.url
-		LV2: not used
+		LV2: manifest.ttl doap:maintainer rdfs:seeAlso
 	email:
 		VST3: PFactoryInfo.email
-		LV2: not used
+		LV2: manifest.ttl doap:maintainer foaf:mbox
 }
 
 product {
