@@ -24,7 +24,7 @@ static struct {
 		/* .min		= */ {{=p.minimum.toExponential()}}f,
 		/* .max		= */ {{=p.maximum.toExponential()}}f,
 		/* .def		= */ {{=p.defaultValue.toExponential()}}f,
-		/* .flags	= */ 0{{?p.isBypass}} | DATA_PARAM_BYPASS{{?}}{{?p.toggled}} | DATA_PARAM_TOGGLED{{?}}{{?p.integer}} | DATA_PARAM_INTEGER{{?}}
+		/* .flags	= */ {{?p.isBypass}}DATA_PARAM_BYPASS{{??p.isLatency}}DATA_PARAM_INTEGER{{??}}0{{?p.toggled}} | DATA_PARAM_TOGGLED{{?}}{{?p.integer}} | DATA_PARAM_INTEGER{{?}}{{?}}
 	},
 	{{~}}
 };

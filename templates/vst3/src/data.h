@@ -8,8 +8,8 @@
 static Steinberg_char16 dataProductNameW[64] = { {{~Array.from(it.product.name).slice(0, 63) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
 static Steinberg_char16 dataProductVersionW[64] = { {{~Array.from(it.product.version + "." + it.product.buildVersion).slice(0, 63) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
 
-#define DATA_VST3_SDK_VERSION			"VST 3.7.4 | Tibia"
-static Steinberg_char16 dataVST3SDKVersionW[64] = { {{~Array.from("VST 3.7.4 | Tibia") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
+#define DATA_VST3_SDK_VERSION			"VST 3.7.9"
+static Steinberg_char16 dataVST3SDKVersionW[64] = { {{~Array.from("VST 3.7.9") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
 
 static Steinberg_char16 dataVST3ControllerNameW[64] = { {{~Array.from(it.product.name + " Controller").slice(0, 63) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
 
@@ -93,21 +93,56 @@ static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PRODUCT_BUSES_EVENT_O
 };
 #endif
 
-#define DATA_PRODUCT_PARAMETERS_N		{{=it.product.parameters.length}}
+#define DATA_PRODUCT_PARAMETERS_N		{{=it.product.parameters.filter(x => !x.isLatency).length}}
 
 #if DATA_PRODUCT_PARAMETERS_N > 0
 static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_N] = {
-{{~it.product.parameters :p:i}}
+{{~it.product.parameters.filter(x => !x.isLatency) :p:i}}
 	{
 		/* .id				= */ {{=i}},
+{{?p.isBypass}}
+		/* .title			= */ { {{~Array.from("Bypass") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .shortTitle			= */ { {{~Array.from("Bypass") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .units			= */ { 0 },
+		/* .stepCount			= */ 1,
+		/* .defaultNormalizedValue	= */ 0.0,
+		/* .unitId			= */ 0,
+		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsBypass | Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate
+{{??}}
 		/* .title			= */ { {{~Array.from(p.name) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .shortTitle			= */ { {{~Array.from(p.shortName) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .units			= */ { {{~Array.from(p.units) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .stepCount			= */ {{=p.steps}},
-		/* .defaultNormalizedValue	= */ {{=p.defaultValue.toExponential()}},
+		/* .units			= */ { {{~Array.from(p.unit in it.tibia.vst3.units ? it.tibia.vst3.units[p.unit] : "") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .stepCount			= */ {{?p.toggled}}1{{??p.list && p.scalePoints.length > 1}}Number(1 / (p.scalePoints.length - 1)).toExponential(){{??p.integer && "maximum" in p && "minimum" in p}}Number(p.maximum - p.minimum).toExponential(){{??}}0{{?}},
+		/* .defaultNormalizedValue	= */ {{="defaultValue" in p && "maximum" in p && "minimum" in p ? Number((p.defaultValue - p.minimum) / (p.maximum - p.minimum)).toExponential() : 0.0}},
 		/* .unitId			= */ 0,
-		/* .flags			= */ {{?p.isBypass}}Steinberg_Vst_ParameterInfo_ParameterFlags_kIsBypass | {{?}}{{?p.direction == "input"}}Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate{{??}}Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly{{?}}
+		/* .flags			= */ {{?p.direction == "input"}}Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate{{??}}Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly{{?}}
+{{?}}
+	},
+{{~}}
+};
+
+# define DATA_PARAM_BYPASS	1
+# define DATA_PARAM_TOGGLED	(1<<1)
+# define DATA_PARAM_INTEGER	(1<<2)
+
+static struct {
+	size_t		index;
+	double		min;
+	double		max;
+	uint32_t	flags;
+	// scalePoints?
+} parameterData[DATA_PRODUCT_PARAMETERS_N] = {
+{{~it.product.parameters.filter(x => !x.isLatency) :p:i}}
+	{
+		/* .index	= */ {{=p.paramIndex}},
+		/* .min		= */ {{="minimum" in p ? p.minimum.toExponential() : 0.0}},
+		/* .max		= */ {{="maximum" in p ? p.maximum.toExponential() : 0.0}},
+		/* .flags	= */ {{?p.isBypass}}DATA_PARAM_BYPASS{{??}}0{{?p.toggled}} | DATA_PARAM_TOGGLED{{?}}{{?p.integer}} | DATA_PARAM_INTEGER{{?}}{{?}}
 	},
 {{~}}
 };
 #endif
+
+{{?it.product.parameters.find(x => x.isLatency)}}
+# define DATA_PARAM_LATENCY_INDEX	{{=it.product.parameters.find(x => x.isLatency).paramIndex}}
+{{?}}

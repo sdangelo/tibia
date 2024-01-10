@@ -762,7 +762,7 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 	TRACE("createInstance\n");
 	if (memcmp(cid, dataPluginCID, sizeof(Steinberg_TUID)) == 0) {
 		TRACE(" plugin\n");
-		size_t offset; // FIXME: does it actually work like this? or is offset always 0?
+		size_t offset; // does it actually work like this? or is offset always 0? this seems to be correct and works...
 		if ((memcmp(iid, Steinberg_FUnknown_iid, sizeof(Steinberg_TUID)) == 0)
 		    || (memcmp(iid, Steinberg_IPluginBase_iid, sizeof(Steinberg_TUID)) != 0)
 		    || (memcmp(iid, Steinberg_Vst_IComponent_iid, sizeof(Steinberg_TUID)) != 0)) {
@@ -883,6 +883,7 @@ static Steinberg_tresult factoryGetClassInfoUnicode(void* thisInterface, Steinbe
 
 static Steinberg_tresult factorySetHostContext(void* thisInterface, struct Steinberg_FUnknown* context) {
 	TRACE("factory set host context\n");
+	//XXX: Linux run loop...
 	return Steinberg_kNotImplemented;
 }
 
