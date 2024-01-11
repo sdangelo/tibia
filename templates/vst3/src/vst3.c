@@ -9,7 +9,6 @@
 //   https://github.com/rubberduck-vba/Rubberduck/wiki/COM-in-plain-C
 //   https://devblogs.microsoft.com/oldnewthing/20040205-00/?p=40733
 
-
 #ifdef NDEBUG
 # define TRACE(...)	/* do nothing */
 #else
@@ -256,6 +255,7 @@ static  Steinberg_tresult pluginSetState(void* thisInterface, struct Steinberg_I
 		if (IS_BIG_ENDIAN)
 			v.u = SWAP_UINT32(v.u);
 		p->parameters[i] = v.f;
+		//XXX
 		plugin_set_parameter(&p->p, i, v.f);
 	}
 #endif
@@ -360,6 +360,7 @@ static Steinberg_tresult pluginSetProcessing(void* thisInterface, Steinberg_TBoo
 static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst_ProcessData* data) {
 	TRACE("plugin IAudioProcessor process\n");
 	//TBD
+	// IComponentHandler::restartComponent (kLatencyChanged), see https://steinbergmedia.github.io/vst3_dev_portal/pages/Technical+Documentation/Workflow+Diagrams/Get+Latency+Call+Sequence.html
 	return Steinberg_kResultOk;
 }
 
@@ -481,6 +482,24 @@ static Steinberg_tresult controllerTerminate(void* thisInterface) {
 	return Steinberg_kResultOk;
 }
 
+static double clamp(double x, double m, double M) {
+	return x < m ? m : (x > M ? M : x);
+}
+
+static double parameterMap(Steinberg_Vst_ParamID id, double v) {
+	return parameterData[id].min + (parameterData[id].max - parameterData[id].min) * v;
+}
+
+static double parameterUnmap(Steinberg_Vst_ParamID id, double v) {
+	return (v - parameterData[id].min) / (parameterData[id].max - parameterData[id].min);
+}
+
+static double parameterAdjust(Steinberg_Vst_ParamID id, double v) {
+	v = parameterData[id].flags & (DATA_PARAM_BYPASS | DATA_PARAM_TOGGLED) ? v >= 0.5 ? 1.0 : 0.0
+		: (parameterData[id].flags & DATA_PARAM_INTEGER ? (int32_t)(v + 0.5) : v);
+	return clamp(v, parameterData[id].min, parameterData[id].max);
+}
+
 static Steinberg_tresult controllerSetComponentState(void* thisInterface, struct Steinberg_IBStream* state) {
 	TRACE("controller set component state %p %p\n", thisInterface, (void *)state);
 	if (state == NULL)
@@ -497,7 +516,7 @@ static Steinberg_tresult controllerSetComponentState(void* thisInterface, struct
 			return Steinberg_kResultFalse;
 		if (IS_BIG_ENDIAN)
 			v.u = SWAP_UINT32(v.u);
-		c->parameters[i] = v.f;
+		c->parameters[i] = parameterAdjust(i, v.f);
 	}
 #endif
 	TRACE(" ok\n");
@@ -569,14 +588,6 @@ static void dToStr(double v, Steinberg_Vst_String128 s, int precision) {
 	s[i] = '\0';
 }
 
-static double parameterMap(Steinberg_Vst_ParamID id, double v) {
-	return parameterData[id].min + (parameterData[id].max - parameterData[id].min) * v;
-}
-
-static double parameterUnmap(Steinberg_Vst_ParamID id, double v) {
-	return (v - parameterData[id].min) / (parameterData[id].max - parameterData[id].min);
-}
-
 static Steinberg_tresult controllerGetParamStringByValue(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue valueNormalized, Steinberg_Vst_String128 string) {
 	TRACE("controller get param string by value\n");
 	if (id >= DATA_PRODUCT_PARAMETERS_N)
@@ -637,7 +648,7 @@ static Steinberg_Vst_ParamValue controllerGetParamNormalized(void* thisInterface
 	TRACE("controller get param normalized\n");
 #if DATA_PRODUCT_PARAMETERS_N > 0
 	controller *c = (controller *)thisInterface;
-	return parameterMap(id, c->parameters[id]);
+	return parameterUnmap(id, c->parameters[id]);
 #else
 	return 0.0;
 #endif
@@ -649,7 +660,7 @@ static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Stein
 	if (id >= DATA_PRODUCT_PARAMETERS_N)
 		return Steinberg_kResultFalse;
 	controller *c = (controller *)thisInterface;
-	c->parameters[id] = parameterMap(id, value);
+	c->parameters[id] = parameterAdjust(id, parameterMap(id, value));
 	return Steinberg_kResultTrue;
 #else
 	return Steinberg_kResultFalse;

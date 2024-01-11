@@ -23,4 +23,67 @@ product {
 	bundleName:
 		VST3: plugin folder name, plugin .dll name, Info.plist
 		LV2: plugin folder name, plugin .dll name, manifest.ttl plugin lv2:binary
+	buses: ...
+	parameters: [
+		{
+			name:
+				parameter name string, required
+				VST3: ParameterInfo title
+				LV2: manifest.ttl lv2:port lv2:name
+			shortName:
+				parameter short name string, required
+				VST3: ParameterInfo shortTitle
+				LV2: manifest.ttl lv2:port lv2:shortName
+			direction:
+				"input" or "output", required
+				VST3: ParameterInfo flags
+				LV2: manifest.ttl lv2:port a
+			isBypass:
+				parameter is bypass/enabled? boolean - lots of implications, default false
+				VST3: ParameterInfo, controller get/set parameter/state
+				LV2: manifest.ttl lv2:port, run() (set parameter)
+			isLatency:
+				parameter is latency output? boolean - lots of implications, default false
+				VST3: TBD
+				LV2: manifest.ttl lv2:port, run() (set parameter)
+			defaultValue:
+				default value, number, mapped, required for non-bypass input
+				VST3: ParameterInfo defaultNormalizedValue, controller initialize
+				LV2: manifest.ttl lv2:port lv2:default, activate() (set initial parameter)
+			minimum:
+				minimum value, number, mapped, required for non-bypass input
+				VST3: ParameterInfo stepCount, defaultNormalizedValue, controller get/set parameter (value clamped)
+				LV2: manifest.ttl lv2:port lv2:minimum, run() (set parameter, value clamped)
+				LV2:
+			maximum:
+				maximum value, number, mapped, required for non-bypass input
+				VST3: ParameterInfo stepCount, defaultNormalizedValue, controller get/set parameter (value clamped)
+				LV2: manifest.ttl lv2:port lv2:maximum, run() (set parameter, value clamped)
+			toggled:
+				parameter is on/off? boolean, default false
+				VST3: ParameterInfo stepCount, controller set parameter/state
+				LV2: manifest.ttl lv2:port lv2:portProperty lv2:toggled, run() (set parameter)
+			optional:
+				parameter is optionally connected? boolean, default false
+				VST3: not used
+				LV2: manifest.ttl lv2:port lv2:portProperty lv2:connectionOptional
+			integer:
+				parameter values are integers? boolean, default false
+				VST3: ParameterInfo stepCount, controller set parameter/state
+				LV2: manifest.ttl lv2:port lv2:portProperty lv2:integer, run() (set parameter)
+			scalePoints:
+				{ "label1": value1, "label2", value2, ... }
+				labeled values, default none
+				VST3: TBD
+				LV2: manifest.ttl lv2:port lv2:scalePoint
+			list:
+				parameter is a list (using scalePoints values)? default false
+				VST3: TBD
+				LV2: manifest.ttl lv2:port lv2:enumeration - run() (set parameter) TBD?
+			unit:
+				unit of measure (from predefined list, see tibia-index.js), default ""
+				VST3: ParameterInfo units
+				LV2: manifest.ttl lv2:port units:unit
+		}
+	]
 }
