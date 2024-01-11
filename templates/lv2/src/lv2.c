@@ -4,6 +4,11 @@
 #include "data.h"
 #include "plugin.h"
 
+#if defined(__i386__) || defined(__x86_64__)
+#include <xmmintrin.h>
+#include <pmmintrin.h>
+#endif
+
 typedef struct {
 	plugin		p;
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
@@ -104,7 +109,26 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	}
 #endif
 
+#if defined(__aarch64__)
+	uint64_t fpcr;
+	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
+	__asm__ __volatile__ ("msr fpcr, %0" :: "r"(fpcr | 0x1000000)); // enable FZ
+#elif defined(__i386__) || defined(__x86_64__)
+	const unsigned int flush_zero_mode = _MM_GET_FLUSH_ZERO_MODE();
+	const unsigned int denormals_zero_mode = _MM_GET_DENORMALS_ZERO_MODE();
+
+	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+	_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+#endif
+
 	plugin_process(&i->p, i->x, i->y, sample_count);
+
+#if defined(__aarch64__)
+	__asm__ __volatile__ ("msr fpcr, %0" : : "r"(fpcr));
+#elif defined(__i386__) || defined(__x86_64__)
+	_MM_SET_FLUSH_ZERO_MODE(flush_zero_mode);
+	_MM_SET_DENORMALS_ZERO_MODE(denormals_zero_mode);
+#endif
 
 #if DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
 	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_OUTPUTS_N; j++) {

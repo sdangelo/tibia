@@ -8,7 +8,7 @@
 			{
 				"type":	"audio",
 				"direction": "input",
-				"channels": 1,
+				"channels": "mono",
 				"name": "Input",
 				"shortName": "Input",
 				"sidechain": false,
@@ -18,7 +18,7 @@
 			{
 				"type": "audio",
 				"direction": "output",
-				"channels": 1,
+				"channels": "mono",
 				"name": "Output",
 				"shortName": "Output",
 				"sidechain": false,

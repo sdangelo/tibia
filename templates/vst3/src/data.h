@@ -39,10 +39,10 @@ static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PRODUCT_BUSES_AUDIO_I
 	{
 		/* .mediaType		= */ Steinberg_Vst_MediaTypes_kAudio,
 		/* .direction		= */ Steinberg_Vst_BusDirections_kInput,
-		/* .channelCount	= */ {{=b.channels}},
+		/* .channelCount	= */ {{=b.channels == "mono" ? 1 : 2}},
 		/* .name		= */ { {{~Array.from(b.name) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .busType		= */ {{?b.aux}}Steinberg_Vst_BusTypes_kAux{{??}}Steinberg_Vst_BusTypes_kMain{{?}},
-		/* .flags		= */ {{?b.cv}}Steinberg_Vst_BusInfo_BusFlags_kIsControlVoltage{{??}}Steinberg_Vst_BusInfo_BusFlags_kDefaultActive{{?}}
+		/* .busType		= */ {{?b.sidechain}}Steinberg_Vst_BusTypes_kAux{{??}}Steinberg_Vst_BusTypes_kMain{{?}},
+		/* .flags		= */ 0{{?b.cv}} | Steinberg_Vst_BusInfo_BusFlags_kIsControlVoltage{{?}}{{?!b.optional}} | Steinberg_Vst_BusInfo_BusFlags_kDefaultActive{{?}}
 	},
 {{~}}
 };
@@ -54,10 +54,10 @@ static struct Steinberg_Vst_BusInfo busInfoAudioOutput[DATA_PRODUCT_BUSES_AUDIO_
 	{
 		/* .mediaType		= */ Steinberg_Vst_MediaTypes_kAudio,
 		/* .direction		= */ Steinberg_Vst_BusDirections_kOutput,
-		/* .channelCount	= */ {{=b.channels}},
+		/* .channelCount	= */ {{=b.channels == "mono" ? 1 : 2}},
 		/* .name		= */ { {{~Array.from(b.name) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .busType		= */ {{?b.aux}}Steinberg_Vst_BusTypes_kAux{{??}}Steinberg_Vst_BusTypes_kMain{{?}},
-		/* .flags		= */ {{?b.cv}}Steinberg_Vst_BusInfo_BusFlags_kIsControlVoltage{{??}}Steinberg_Vst_BusInfo_BusFlags_kDefaultActive{{?}}
+		/* .busType		= */ {{?b.sidechain}}Steinberg_Vst_BusTypes_kAux{{??}}Steinberg_Vst_BusTypes_kMain{{?}},
+		/* .flags		= */ 0{{?b.cv}} | Steinberg_Vst_BusInfo_BusFlags_kIsControlVoltage{{?}}{{?!b.optional}} | Steinberg_Vst_BusInfo_BusFlags_kDefaultActive{{?}}
 	},
 {{~}}
 };
@@ -69,10 +69,10 @@ static struct Steinberg_Vst_BusInfo busInfoEventInput[DATA_PRODUCT_BUSES_EVENT_I
 	{
 		/* .mediaType		= */ Steinberg_Vst_MediaTypes_kEvent,
 		/* .direction		= */ Steinberg_Vst_BusDirections_kInput,
-		/* .channelCount	= */ {{=b.channels}},
+		/* .channelCount	= */ 1,
 		/* .name		= */ { {{~Array.from(b.name) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .busType		= */ Steinberg_Vst_BusTypes_kMain,
-		/* .flags		= */ Steinberg_Vst_BusInfo_BusFlags_kDefaultActive
+		/* .flags		= */ 0{{?!b.optional}} | Steinberg_Vst_BusInfo_BusFlags_kDefaultActive{{?}}
 	},
 {{~}}
 };
@@ -84,10 +84,10 @@ static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PRODUCT_BUSES_EVENT_O
 	{
 		/* .mediaType		= */ Steinberg_Vst_MediaTypes_kEvent,
 		/* .direction		= */ Steinberg_Vst_BusDirections_kOutput,
-		/* .channelCount	= */ {{=b.channels}},
+		/* .channelCount	= */ 1,
 		/* .name		= */ { {{~Array.from(b.name) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .busType		= */ Steinberg_Vst_BusTypes_kMain,
-		/* .flags		= */ Steinberg_Vst_BusInfo_BusFlags_kDefaultActive
+		/* .flags		= */ 0{{?!b.optional}} | Steinberg_Vst_BusInfo_BusFlags_kDefaultActive{{?}}
 	},
 {{~}}
 };

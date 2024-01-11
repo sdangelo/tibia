@@ -67,15 +67,21 @@ module.exports = function (data, api) {
 	var audioBuses = data.product.buses.filter(x => x.type == "audio");
 	for (var i = 0; i < audioBuses.length; i++) {
 		var b = audioBuses[i];
-		for (var j = 0; j < b.channels; j++) {
+		if (b.channels == "mono") {
 			var e = { type: "audio", direction: b.direction, name: b.name, sidechain: b.sidechain, cv: b.cv };
-			e.symbol = data.lv2.busSymbols[i] + "_" + j;
+			e.symbol = data.lv2.busSymbols[i];
+			data.tibia.lv2.ports.push(e);
+		} else {
+			var e = { type: "audio", direction: b.direction, name: b.name + " Left", shortName: b.shortName + " L", sidechain: b.sidechain, cv: b.cv };
+			e.symbol = data.lv2.busSymbols[i] + "_L";
+			data.tibia.lv2.ports.push(e);
+			var e = { type: "audio", direction: b.direction, name: b.name + " Right", shortName: b.shortName + " R", sidechain: b.sidechain, cv: b.cv };
+			e.symbol = data.lv2.busSymbols[i] + "_R";
 			data.tibia.lv2.ports.push(e);
 		}
 	}
 
 	data.tibia.lv2.ports.sort((a, b) => a.type != b.type ? (a.type == "audio" ? -1 : 1) : (a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0));
-
 
 	api.generateFileFromTemplateFile(`data${sep}manifest.ttl`, `data${sep}manifest.ttl`, data);
 	api.copyFile(`src${sep}lv2.c`, `src${sep}lv2.c`);

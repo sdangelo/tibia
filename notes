@@ -47,16 +47,16 @@ product {
 				VST3: TBD
 				LV2: manifest.ttl lv2:port, run() (set parameter)
 			defaultValue:
-				default value, number, mapped, required for non-bypass input
+				default value, number, mapped, required for non-bypass
 				VST3: ParameterInfo defaultNormalizedValue, controller initialize
 				LV2: manifest.ttl lv2:port lv2:default, activate() (set initial parameter)
 			minimum:
-				minimum value, number, mapped, required for non-bypass input
+				minimum value, number, mapped, required for non-bypass
 				VST3: ParameterInfo stepCount, defaultNormalizedValue, controller get/set parameter (value clamped)
 				LV2: manifest.ttl lv2:port lv2:minimum, run() (set parameter, value clamped)
 				LV2:
 			maximum:
-				maximum value, number, mapped, required for non-bypass input
+				maximum value, number, mapped, required for non-bypass
 				VST3: ParameterInfo stepCount, defaultNormalizedValue, controller get/set parameter (value clamped)
 				LV2: manifest.ttl lv2:port lv2:maximum, run() (set parameter, value clamped)
 			toggled:

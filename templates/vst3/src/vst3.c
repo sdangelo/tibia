@@ -16,6 +16,29 @@
 # define TRACE(...)	printf(__VA_ARGS__)
 #endif
 
+#if defined(__i386__) || defined(__x86_64__)
+#include <xmmintrin.h>
+#include <pmmintrin.h>
+#endif
+
+static double clamp(double x, double m, double M) {
+	return x < m ? m : (x > M ? M : x);
+}
+
+static double parameterMap(Steinberg_Vst_ParamID id, double v) {
+	return parameterData[id].min + (parameterData[id].max - parameterData[id].min) * v;
+}
+
+static double parameterUnmap(Steinberg_Vst_ParamID id, double v) {
+	return (v - parameterData[id].min) / (parameterData[id].max - parameterData[id].min);
+}
+
+static double parameterAdjust(Steinberg_Vst_ParamID id, double v) {
+	v = parameterData[id].flags & (DATA_PARAM_BYPASS | DATA_PARAM_TOGGLED) ? v >= 0.5 ? 1.0 : 0.0
+		: (parameterData[id].flags & DATA_PARAM_INTEGER ? (int32_t)(v + 0.5) : v);
+	return clamp(v, parameterData[id].min, parameterData[id].max);
+}
+
 typedef struct pluginInstance {
 	Steinberg_Vst_IComponentVtbl *			vtblIComponent;
 	Steinberg_Vst_IAudioProcessorVtbl *		vtblIAudioProcessor;
@@ -93,7 +116,13 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 		return Steinberg_kResultFalse;
 	p->context = context;
 	plugin_init(&p->p);
-	// TODO: set param defaults
+#if DATA_PRODUCT_PARAMETERS_N > 0
+	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
+		p->parameters[i] = parameterData[i].def;
+		if (!(parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly))
+			plugin_set_parameter(&p->p, parameterData[i].index, parameterData[i].def);
+	}
+#endif
 	return Steinberg_kResultOk;
 }
 
@@ -189,14 +218,12 @@ static Steinberg_tresult pluginActivateBus(void* thisInterface, Steinberg_Vst_Me
 #if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
 			if (index >= DATA_PRODUCT_BUSES_AUDIO_INPUT_N)
 				return Steinberg_kInvalidArgument;
-			// TBD
 			return Steinberg_kResultTrue;
 #endif
 		} else if (dir == Steinberg_Vst_BusDirections_kOutput) {
 #if DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N > 0
 			if (index >= DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N)
 				return Steinberg_kInvalidArgument;
-			// TBD
 			return Steinberg_kResultTrue;
 #endif
 		}
@@ -205,14 +232,12 @@ static Steinberg_tresult pluginActivateBus(void* thisInterface, Steinberg_Vst_Me
 #if DATA_PRODUCT_BUSES_EVENT_INPUT_N > 0
 			if (index >= DATA_PRODUCT_BUSES_AUDIO_INPUT_N)
 				return Steinberg_kInvalidArgument;
-			// TBD
 			return Steinberg_kResultTrue;
 #endif
 		} else if (dir == Steinberg_Vst_BusDirections_kOutput) {
 #if DATA_PRODUCT_BUSES_EVENT_OUTPUT_N > 0
 			if (index >= DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N)
 				return Steinberg_kInvalidArgument;
-			// TBD
 			return Steinberg_kResultTrue;
 #endif
 		}
@@ -225,10 +250,7 @@ static Steinberg_tresult pluginSetActive(void* thisInterface, Steinberg_TBool st
 	pluginInstance *p = (pluginInstance *)thisInterface;
 	if (state) {
 		plugin_set_sample_rate(&p->p, p->sampleRate);
-		// TODO: mem
 		plugin_reset(&p->p);
-	} else {
-		// TODO: mem
 	}
 	return Steinberg_kResultOk;
 }
@@ -254,9 +276,8 @@ static  Steinberg_tresult pluginSetState(void* thisInterface, struct Steinberg_I
 			return Steinberg_kResultFalse;
 		if (IS_BIG_ENDIAN)
 			v.u = SWAP_UINT32(v.u);
-		p->parameters[i] = v.f;
-		//XXX
-		plugin_set_parameter(&p->p, i, v.f);
+		p->parameters[i] = parameterAdjust(i, v.f);
+		plugin_set_parameter(&p->p, parameterData[i].index, p->parameters[i]);
 	}
 #endif
 	return Steinberg_kResultOk;
@@ -323,15 +344,46 @@ static Steinberg_uint32 pluginIAudioProcessorRelease(void *thisInterface) {
 
 static Steinberg_tresult pluginSetBusArrangements(void* thisInterface, Steinberg_Vst_SpeakerArrangement* inputs, Steinberg_int32 numIns, Steinberg_Vst_SpeakerArrangement* outputs, Steinberg_int32 numOuts) {
 	TRACE("plugin IAudioProcessor set bus arrangements\n");
+	if (numIns < 0 || numOuts < 0)
+		return Steinberg_kInvalidArgument;
 	if (numIns != DATA_PRODUCT_BUSES_AUDIO_INPUT_N || numOuts != DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N)
 		return Steinberg_kResultFalse;
+
+#if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
+	for (Steinberg_int32 i = 0; i < numIns; i++)
+		if ((busInfoAudioInput[i].channelCount == 1 && inputs[i] != Steinberg_Vst_SpeakerArr_kMono)
+		    || (busInfoAudioInput[i].channelCount == 2 && inputs[i] != Steinberg_Vst_SpeakerArr_kStereo))
+			return Steinberg_kResultFalse;
+#endif
+
+#if DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N > 0
+	for (Steinberg_int32 i = 0; i < numOuts; i++)
+		if ((busInfoAudioOutput[i].channelCount == 1 && outputs[i] != Steinberg_Vst_SpeakerArr_kMono)
+		    || (busInfoAudioOutput[i].channelCount == 2 && outputs[i] != Steinberg_Vst_SpeakerArr_kStereo))
+			return Steinberg_kResultFalse;
+#endif
+
 	return Steinberg_kResultTrue;
 }
 
 static Steinberg_tresult pluginGetBusArrangement(void* thisInterface, Steinberg_Vst_BusDirection dir, Steinberg_int32 index, Steinberg_Vst_SpeakerArrangement* arr) {
 	TRACE("plugin IAudioProcessor get bus arrangement\n");
-	//TBD!
-	return Steinberg_kNotImplemented;
+
+#if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
+	if (dir == Steinberg_Vst_BusDirections_kInput && index >= 0 && index < DATA_PRODUCT_BUSES_AUDIO_INPUT_N) {
+		*arr = busInfoAudioInput[index].channelCount == 1 ? Steinberg_Vst_SpeakerArr_kMono : Steinberg_Vst_SpeakerArr_kStereo;
+		return Steinberg_kResultTrue;
+	}
+#endif
+
+#if DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N > 0
+	if (dir == Steinberg_Vst_BusDirections_kOutput && index >= 0 && index < DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N) {
+		*arr = busInfoAudioOutput[index].channelCount == 1 ? Steinberg_Vst_SpeakerArr_kMono : Steinberg_Vst_SpeakerArr_kStereo;
+		return Steinberg_kResultTrue;
+	}
+#endif
+
+	return Steinberg_kInvalidArgument;
 }
 
 static Steinberg_tresult pluginCanProcessSampleSize(void* thisInterface, Steinberg_int32 symbolicSampleSize) {
@@ -359,8 +411,30 @@ static Steinberg_tresult pluginSetProcessing(void* thisInterface, Steinberg_TBoo
 
 static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst_ProcessData* data) {
 	TRACE("plugin IAudioProcessor process\n");
+
+#if defined(__aarch64__)
+	uint64_t fpcr;
+	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
+	__asm__ __volatile__ ("msr fpcr, %0" :: "r"(fpcr | 0x1000000)); // enable FZ
+#elif defined(__i386__) || defined(__x86_64__)
+	const unsigned int flush_zero_mode = _MM_GET_FLUSH_ZERO_MODE();
+	const unsigned int denormals_zero_mode = _MM_GET_DENORMALS_ZERO_MODE();
+
+	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+	_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+#endif
+
 	//TBD
+
+#if defined(__aarch64__)
+	__asm__ __volatile__ ("msr fpcr, %0" : : "r"(fpcr));
+#elif defined(__i386__) || defined(__x86_64__)
+	_MM_SET_FLUSH_ZERO_MODE(flush_zero_mode);
+	_MM_SET_DENORMALS_ZERO_MODE(denormals_zero_mode);
+#endif
+
 	// IComponentHandler::restartComponent (kLatencyChanged), see https://steinbergmedia.github.io/vst3_dev_portal/pages/Technical+Documentation/Workflow+Diagrams/Get+Latency+Call+Sequence.html
+
 	return Steinberg_kResultOk;
 }
 
@@ -480,24 +554,6 @@ static Steinberg_tresult controllerTerminate(void* thisInterface) {
 	controller *c = (controller *)thisInterface;
 	c->context = NULL;
 	return Steinberg_kResultOk;
-}
-
-static double clamp(double x, double m, double M) {
-	return x < m ? m : (x > M ? M : x);
-}
-
-static double parameterMap(Steinberg_Vst_ParamID id, double v) {
-	return parameterData[id].min + (parameterData[id].max - parameterData[id].min) * v;
-}
-
-static double parameterUnmap(Steinberg_Vst_ParamID id, double v) {
-	return (v - parameterData[id].min) / (parameterData[id].max - parameterData[id].min);
-}
-
-static double parameterAdjust(Steinberg_Vst_ParamID id, double v) {
-	v = parameterData[id].flags & (DATA_PARAM_BYPASS | DATA_PARAM_TOGGLED) ? v >= 0.5 ? 1.0 : 0.0
-		: (parameterData[id].flags & DATA_PARAM_INTEGER ? (int32_t)(v + 0.5) : v);
-	return clamp(v, parameterData[id].min, parameterData[id].max);
 }
 
 static Steinberg_tresult controllerSetComponentState(void* thisInterface, struct Steinberg_IBStream* state) {
