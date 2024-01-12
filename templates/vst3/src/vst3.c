@@ -50,6 +50,12 @@ typedef struct pluginInstance {
 #if DATA_PRODUCT_PARAMETERS_N > 0
 	float						parameters[DATA_PRODUCT_PARAMETERS_N];
 #endif
+#if DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N > 0
+	const float *					inputs[DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N];
+#endif
+#if DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N > 0
+	float *						outputs[DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N];
+#endif
 } pluginInstance;
 
 static Steinberg_Vst_IComponentVtbl pluginVtblIComponent;
@@ -111,7 +117,7 @@ static Steinberg_uint32 pluginIComponentRelease(void *thisInterface) {
 
 static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_FUnknown *context) {
 	TRACE("plugin initialize\n");
-	pluginInstance *p = (pluginInstance *)thisInterface;
+	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
 	if (p->context != NULL)
 		return Steinberg_kResultFalse;
 	p->context = context;
@@ -128,7 +134,7 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 
 static Steinberg_tresult pluginTerminate(void *thisInterface) {
 	TRACE("plugin terminate\n");
-	pluginInstance *p = (pluginInstance *)thisInterface;
+	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
 	p->context = NULL;
 	plugin_fini(&p->p);
 	return Steinberg_kResultOk;
@@ -247,7 +253,7 @@ static Steinberg_tresult pluginActivateBus(void* thisInterface, Steinberg_Vst_Me
 
 static Steinberg_tresult pluginSetActive(void* thisInterface, Steinberg_TBool state) {
 	TRACE("plugin set active\n");
-	pluginInstance *p = (pluginInstance *)thisInterface;
+	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
 	if (state) {
 		plugin_set_sample_rate(&p->p, p->sampleRate);
 		plugin_reset(&p->p);
@@ -265,7 +271,7 @@ static  Steinberg_tresult pluginSetState(void* thisInterface, struct Steinberg_I
 	if (state == NULL)
 		return Steinberg_kResultFalse;
 #if DATA_PRODUCT_PARAMETERS_N > 0
-	pluginInstance *p = (pluginInstance *)thisInterface;
+	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
 	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
 		if (parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
 			continue;
@@ -288,7 +294,7 @@ static Steinberg_tresult pluginGetState(void* thisInterface, struct Steinberg_IB
 	if (state == NULL)
 		return Steinberg_kResultFalse;
 #if DATA_PRODUCT_PARAMETERS_N > 0
-	pluginInstance *p = (pluginInstance *)thisInterface;
+	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
 	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
 		if (parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
 			continue;
@@ -412,6 +418,54 @@ static Steinberg_tresult pluginSetProcessing(void* thisInterface, Steinberg_TBoo
 static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst_ProcessData* data) {
 	TRACE("plugin IAudioProcessor process\n");
 
+	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIAudioProcessor));
+
+#if DATA_PRODUCT_PARAMETERS_N > 0
+	if (data->inputParameterChanges != NULL) {
+		Steinberg_int32 n = data->inputParameterChanges->lpVtbl->getParameterCount(data->inputParameterChanges);
+		for (Steinberg_int32 i = 0; i < n; i++) {
+			struct Steinberg_Vst_IParamValueQueue *q = data->inputParameterChanges->lpVtbl->getParameterData(data->inputParameterChanges, i);
+			if (q == NULL)
+				continue;
+			Steinberg_int32 c = q->lpVtbl->getPointCount(q);
+			if (c <= 0)
+				continue;
+			Steinberg_int32 o;
+			Steinberg_Vst_ParamValue v;
+			if (q->lpVtbl->getPoint(q, 0, &o, &v) != Steinberg_kResultTrue)
+				continue;
+			if (o != 0)
+				continue;
+			Steinberg_Vst_ParamID id = q->lpVtbl->getParameterId(q);
+			v = parameterAdjust(id, parameterMap(id, v));
+			if (v != p->parameters[id]) {
+				p->parameters[id] = v;
+				plugin_set_parameter(&p->p, parameterData[id].index, p->parameters[id]);
+			}
+		}
+	}
+#endif
+
+#if DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N > 0
+	const float **inputs = p->inputs;
+	Steinberg_int32 ki = 0;
+	for (Steinberg_int32 i = 0; i < data->numInputs; i++)
+		for (Steinberg_int32 j = 0; j < data->inputs[i].numChannels; j++, ki++)
+			inputs[ki] = data->inputs[i].Steinberg_Vst_AudioBusBuffers_channelBuffers32[j];
+#else
+	const float **inputs = NULL;
+#endif
+
+#if DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N > 0
+	float **outputs = p->outputs;
+	Steinberg_int32 ko = 0;
+	for (Steinberg_int32 i = 0; i < data->numOutputs; i++)
+		for (Steinberg_int32 j = 0; j < data->outputs[i].numChannels; j++, ko++)
+			outputs[ko] = data->outputs[i].Steinberg_Vst_AudioBusBuffers_channelBuffers32[j];
+#else
+	float **outputs = NULL;
+#endif
+
 #if defined(__aarch64__)
 	uint64_t fpcr;
 	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
@@ -424,13 +478,41 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 	_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
 #endif
 
-	//TBD
+	plugin_process(&p->p, inputs, outputs, data->numSamples);
 
 #if defined(__aarch64__)
 	__asm__ __volatile__ ("msr fpcr, %0" : : "r"(fpcr));
 #elif defined(__i386__) || defined(__x86_64__)
 	_MM_SET_FLUSH_ZERO_MODE(flush_zero_mode);
 	_MM_SET_DENORMALS_ZERO_MODE(denormals_zero_mode);
+#endif
+
+#if DATA_PRODUCT_PARAMETERS_N > 0
+	if (data->inputParameterChanges != NULL) {
+		Steinberg_int32 n = data->inputParameterChanges->lpVtbl->getParameterCount(data->inputParameterChanges);
+		for (Steinberg_int32 i = 0; i < n; i++) {
+			struct Steinberg_Vst_IParamValueQueue *q = data->inputParameterChanges->lpVtbl->getParameterData(data->inputParameterChanges, i);
+			if (q == NULL)
+				continue;
+			Steinberg_int32 c = q->lpVtbl->getPointCount(q);
+			if (c <= 0)
+				continue;
+			Steinberg_int32 o;
+			Steinberg_Vst_ParamValue v;
+			if (q->lpVtbl->getPoint(q, c - 1, &o, &v) != Steinberg_kResultTrue)
+				continue;
+			if (o <= 0)
+				continue;
+			Steinberg_Vst_ParamID id = q->lpVtbl->getParameterId(q);
+			v = parameterAdjust(id, parameterMap(id, v));
+			if (v != p->parameters[id]) {
+				p->parameters[id] = v;
+				plugin_set_parameter(&p->p, parameterData[id].index, p->parameters[id]);
+			}
+		}
+	}
+
+	//TBD out param
 #endif
 
 	// IComponentHandler::restartComponent (kLatencyChanged), see https://steinbergmedia.github.io/vst3_dev_portal/pages/Technical+Documentation/Workflow+Diagrams/Get+Latency+Call+Sequence.html

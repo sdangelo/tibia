@@ -33,6 +33,9 @@ static const Steinberg_TUID dataControllerCID = SMTG_INLINE_UID(DATA_VST3_CONTRO
 #define DATA_PRODUCT_BUSES_EVENT_INPUT_N	{{=it.product.buses.filter(x => x.type == "event" && x.direction == "input").length}}
 #define DATA_PRODUCT_BUSES_EVENT_OUTPUT_N	{{=it.product.buses.filter(x => x.type == "event" && x.direction == "output").length}}
 
+#define DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N	{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "input").reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0)}}
+#define DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N	{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "output").reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0)}}
+
 #if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
 static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PRODUCT_BUSES_AUDIO_INPUT_N] = {
 {{~it.product.buses.filter(x => x.type == "audio" && x.direction == "input") :b}}
