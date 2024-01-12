@@ -512,10 +512,25 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 		}
 	}
 
-	//TBD out param
+	for (Steinberg_int32 i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
+		if (!(parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly))
+			continue;
+		float v = plugin_get_parameter(&p->p, parameterData[i].index);
+		if (v == p->parameters[i])
+			continue;
+		p->parameters[i] = v;
+		if (data->outputParameterChanges == NULL)
+			continue;
+		Steinberg_Vst_ParamID id = i;
+		Steinberg_int32 index;
+		struct Steinberg_Vst_IParamValueQueue *q = data->outputParameterChanges->lpVtbl->addParameterData(data->outputParameterChanges, &id, &index);
+		if (q == NULL)
+			continue;
+		q->lpVtbl->addPoint(q, data->numSamples - 1, v, &index);
+	}
 #endif
 
-	// IComponentHandler::restartComponent (kLatencyChanged), see https://steinbergmedia.github.io/vst3_dev_portal/pages/Technical+Documentation/Workflow+Diagrams/Get+Latency+Call+Sequence.html
+	// TBD: latency + IComponentHandler::restartComponent (kLatencyChanged), see https://steinbergmedia.github.io/vst3_dev_portal/pages/Technical+Documentation/Workflow+Diagrams/Get+Latency+Call+Sequence.html
 
 	return Steinberg_kResultOk;
 }
