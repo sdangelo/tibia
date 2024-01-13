@@ -49,6 +49,22 @@
 				"map": "linear"
 			},
 			{
+				"name": "Delay",
+				"shortName": "Delay",
+				"direction": "input",
+				"isBypass": false,
+				"isLatency": false,
+				"defaultValue": 0.0,
+				"minimum": 0.0,
+				"maximum": 1000.0,
+				"toggled": false,
+				"optional": false,
+				"integer": false,
+				"list": false,
+				"unit": "ms",
+				"map": "linear"
+			},
+			{
 				"name": "Bypass",
 				"shortName": "Bypass",
 				"direction": "input",

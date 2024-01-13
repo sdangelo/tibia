@@ -23,6 +23,7 @@ typedef struct {
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	float		params[DATA_PRODUCT_CONTROL_INPUTS_N];
 #endif
+	void *		mem;
 } plugin_instance;
 
 static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double sample_rate, const char * bundle_path, const LV2_Feature * const * features) {
@@ -31,6 +32,16 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 		return NULL;
 	plugin_init(&instance->p);
 	plugin_set_sample_rate(&instance->p, sample_rate);
+	size_t req = plugin_mem_req(&instance->p);
+	if (req != 0) {
+		instance->mem = malloc(req);
+		if (instance->mem == NULL) {
+			plugin_fini(&instance->p);
+			return NULL;
+		}
+		plugin_mem_set(&instance->p, instance->mem);
+	} else
+		instance->mem = NULL;
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
 	for (uint32_t i = 0; i < DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N; i++)
 		instance->x[i] = NULL;
@@ -142,6 +153,8 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 static void cleanup(LV2_Handle instance) {
 	plugin_instance * i = (plugin_instance *)instance;
 	plugin_fini(&i->p);
+	if (i->mem)
+		free(i->mem);
 	free(instance);
 }
 
