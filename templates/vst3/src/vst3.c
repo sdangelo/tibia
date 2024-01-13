@@ -26,19 +26,14 @@ static double clamp(double x, double m, double M) {
 	return x < m ? m : (x > M ? M : x);
 }
 
-static double parameterMapLinear(Steinberg_Vst_ParamID id, double v) {
-	return parameterData[id].min + (parameterData[id].max - parameterData[id].min) * v;
-}
-
 static double parameterUnmapLinear(Steinberg_Vst_ParamID id, double v) {
-	return (v - parameterData[id].min) / (parameterData[id].max - parameterData[id].min);
 }
 static double parameterMap(Steinberg_Vst_ParamID id, double v) {
-	return parameterData[id].flags & DATA_PARAM_MAP_LOG ? parameterData[id].min * exp(parameterData[id].mapK * v) : parameterMapLinear(id, v);
+	return parameterData[id].flags & DATA_PARAM_MAP_LOG ? parameterData[id].min * exp(parameterData[id].mapK * v) : parameterData[id].min + (parameterData[id].max - parameterData[id].min) * v;
 }
 
 static double parameterUnmap(Steinberg_Vst_ParamID id, double v) {
-	return parameterData[id].flags & DATA_PARAM_MAP_LOG ? log(v / parameterData[id].min) / parameterData[id].mapK : parameterUnmapLinear(id, v);
+	return parameterData[id].flags & DATA_PARAM_MAP_LOG ? log(v / parameterData[id].min) / parameterData[id].mapK : (v - parameterData[id].min) / (parameterData[id].max - parameterData[id].min);
 }
 
 static double parameterAdjust(Steinberg_Vst_ParamID id, double v) {
@@ -445,7 +440,7 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 			if (o != 0)
 				continue;
 			Steinberg_Vst_ParamID id = q->lpVtbl->getParameterId(q);
-			v = parameterAdjust(id, parameterMapLinear(id, v));
+			v = parameterAdjust(id, parameterMap(id, v));
 			if (v != p->parameters[id]) {
 				p->parameters[id] = v;
 				plugin_set_parameter(&p->p, parameterData[id].index, p->parameters[id]);
@@ -512,7 +507,7 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 			if (o <= 0)
 				continue;
 			Steinberg_Vst_ParamID id = q->lpVtbl->getParameterId(q);
-			v = parameterAdjust(id, parameterMapLinear(id, v));
+			v = parameterAdjust(id, parameterMap(id, v));
 			if (v != p->parameters[id]) {
 				p->parameters[id] = v;
 				plugin_set_parameter(&p->p, parameterData[id].index, p->parameters[id]);
@@ -797,13 +792,11 @@ static Steinberg_tresult controllerGetParamValueByString(void* thisInterface, St
 
 static Steinberg_Vst_ParamValue controllerNormalizedParamToPlain(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue valueNormalized) {
 	TRACE("controller normalized param to plain\n");
-printf("map %d %g -> %g\n", id, valueNormalized, parameterMap(id, valueNormalized));
 	return parameterMap(id, valueNormalized);
 }
 
 static Steinberg_Vst_ParamValue controllerPlainParamToNormalized(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue plainValue) {
 	TRACE("controller plain param to normalized\n");
-printf("unmap %d %g -> %g\n", id, plainValue, parameterUnmap(id, plainValue));
 	return parameterUnmap(id, plainValue);
 }
 
