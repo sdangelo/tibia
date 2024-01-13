@@ -33,19 +33,20 @@
 				"direction": "input",
 				"isBypass": false,
 				"isLatency": false,
-				"defaultValue": 0.0,
-				"minimum": -60.0,
-				"maximum": 12.0,
+				"defaultValue": 10.0,
+				"minimum": 1.0,
+				"maximum": 100.0,
 				"toggled": false,
 				"optional": false,
 				"integer": false,
 				"scalePoints": {
-					"0": 0.0,
-					"Max": 12.0,
-					"Min": -60.0
+					"0": 1.0,
+					"Max": 100.0,
+					"Min": 10.0
 				},
 				"list": false,
-				"unit": "db"
+				"unit": "db",
+				"map": "logarithmic"
 			},
 			{
 				"name": "Bypass",
@@ -64,7 +65,8 @@
 					"On": 1
 				},
 				"list": true,
-				"unit": ""
+				"unit": "",
+				"map": "linear"
 			}
 		]
 	}

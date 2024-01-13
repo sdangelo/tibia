@@ -116,7 +116,7 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 		/* .shortTitle			= */ { {{~Array.from(p.shortName) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { {{~Array.from(p.unit in it.tibia.vst3.units ? it.tibia.vst3.units[p.unit] : "") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .stepCount			= */ {{?p.toggled}}1{{??p.list && p.scalePoints.length > 1}}Number(1 / (p.scalePoints.length - 1)).toExponential(){{??p.integer}}Number(p.maximum - p.minimum).toExponential(){{??}}0{{?}},
-		/* .defaultNormalizedValue	= */ {{=Number((p.defaultValue - p.minimum) / (p.maximum - p.minimum)).toExponential()}},
+		/* .defaultNormalizedValue	= */ {{?p.map == "logarithmic"}}{{=Number(Math.log(p.defaultValue / p.minimum) / (2 * Math.log(Math.sqrt(p.minimum * p.maximum) / Math.abs(p.minimum)))).toExponential()}}{{??}}{{=Number((p.defaultValue - p.minimum) / (p.maximum - p.minimum)).toExponential()}}{{?}},
 		/* .unitId			= */ 0,
 		/* .flags			= */ {{?p.direction == "input"}}Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate{{??}}Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly{{?}}
 {{?}}
@@ -127,6 +127,7 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 # define DATA_PARAM_BYPASS	1
 # define DATA_PARAM_TOGGLED	(1<<1)
 # define DATA_PARAM_INTEGER	(1<<2)
+# define DATA_PARAM_MAP_LOG	(1<<3)
 
 static struct {
 	size_t		index;
@@ -134,6 +135,7 @@ static struct {
 	double		max;
 	double		def;
 	uint32_t	flags;
+	double		mapK;
 	// scalePoints?
 } parameterData[DATA_PRODUCT_PARAMETERS_N] = {
 {{~it.product.parameters.filter(x => !x.isLatency) :p:i}}
@@ -142,7 +144,8 @@ static struct {
 		/* .min		= */ {{=p.minimum.toExponential()}},
 		/* .max		= */ {{=p.maximum.toExponential()}},
 		/* .def		= */ {{=p.defaultValue.toExponential()}},
-		/* .flags	= */ {{?p.isBypass}}DATA_PARAM_BYPASS{{??}}0{{?p.toggled}} | DATA_PARAM_TOGGLED{{?}}{{?p.integer}} | DATA_PARAM_INTEGER{{?}}{{?}}
+		/* .flags	= */ {{?p.isBypass}}DATA_PARAM_BYPASS{{??}}0{{?p.toggled}} | DATA_PARAM_TOGGLED{{?}}{{?p.integer}} | DATA_PARAM_INTEGER{{?}}{{?p.map == "logarithmic"}} | DATA_PARAM_MAP_LOG{{?}}{{?}},
+		/* .mapK	= */ {{?p.map == "logarithmic"}}{{=Number(2.0 * Math.log(Math.sqrt(p.maximum * p.minimum) / Math.abs(p.minimum))).toExponential()}}{{??}}0.0{{?}}
 	},
 {{~}}
 };

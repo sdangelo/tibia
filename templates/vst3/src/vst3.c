@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "vst3_c_api.h"
 #include "data.h"
 #include "plugin.h"
@@ -9,11 +10,11 @@
 //   https://github.com/rubberduck-vba/Rubberduck/wiki/COM-in-plain-C
 //   https://devblogs.microsoft.com/oldnewthing/20040205-00/?p=40733
 
-#ifdef NDEBUG
-# define TRACE(...)	/* do nothing */
-#else
+#ifdef TIBIA_TRACE
 # include <stdio.h>
 # define TRACE(...)	printf(__VA_ARGS__)
+#else
+# define TRACE(...)	/* do nothing */
 #endif
 
 #if defined(__i386__) || defined(__x86_64__)
@@ -25,12 +26,19 @@ static double clamp(double x, double m, double M) {
 	return x < m ? m : (x > M ? M : x);
 }
 
-static double parameterMap(Steinberg_Vst_ParamID id, double v) {
+static double parameterMapLinear(Steinberg_Vst_ParamID id, double v) {
 	return parameterData[id].min + (parameterData[id].max - parameterData[id].min) * v;
 }
 
-static double parameterUnmap(Steinberg_Vst_ParamID id, double v) {
+static double parameterUnmapLinear(Steinberg_Vst_ParamID id, double v) {
 	return (v - parameterData[id].min) / (parameterData[id].max - parameterData[id].min);
+}
+static double parameterMap(Steinberg_Vst_ParamID id, double v) {
+	return parameterData[id].flags & DATA_PARAM_MAP_LOG ? parameterData[id].min * exp(parameterData[id].mapK * v) : parameterMapLinear(id, v);
+}
+
+static double parameterUnmap(Steinberg_Vst_ParamID id, double v) {
+	return parameterData[id].flags & DATA_PARAM_MAP_LOG ? log(v / parameterData[id].min) / parameterData[id].mapK : parameterUnmapLinear(id, v);
 }
 
 static double parameterAdjust(Steinberg_Vst_ParamID id, double v) {
@@ -437,7 +445,7 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 			if (o != 0)
 				continue;
 			Steinberg_Vst_ParamID id = q->lpVtbl->getParameterId(q);
-			v = parameterAdjust(id, parameterMap(id, v));
+			v = parameterAdjust(id, parameterMapLinear(id, v));
 			if (v != p->parameters[id]) {
 				p->parameters[id] = v;
 				plugin_set_parameter(&p->p, parameterData[id].index, p->parameters[id]);
@@ -504,7 +512,7 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 			if (o <= 0)
 				continue;
 			Steinberg_Vst_ParamID id = q->lpVtbl->getParameterId(q);
-			v = parameterAdjust(id, parameterMap(id, v));
+			v = parameterAdjust(id, parameterMapLinear(id, v));
 			if (v != p->parameters[id]) {
 				p->parameters[id] = v;
 				plugin_set_parameter(&p->p, parameterData[id].index, p->parameters[id]);
@@ -526,7 +534,7 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 		struct Steinberg_Vst_IParamValueQueue *q = data->outputParameterChanges->lpVtbl->addParameterData(data->outputParameterChanges, &id, &index);
 		if (q == NULL)
 			continue;
-		q->lpVtbl->addPoint(q, data->numSamples - 1, v, &index);
+		q->lpVtbl->addPoint(q, data->numSamples - 1, parameterUnmap(id, v), &index);
 	}
 #endif
 
@@ -789,11 +797,13 @@ static Steinberg_tresult controllerGetParamValueByString(void* thisInterface, St
 
 static Steinberg_Vst_ParamValue controllerNormalizedParamToPlain(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue valueNormalized) {
 	TRACE("controller normalized param to plain\n");
+printf("map %d %g -> %g\n", id, valueNormalized, parameterMap(id, valueNormalized));
 	return parameterMap(id, valueNormalized);
 }
 
 static Steinberg_Vst_ParamValue controllerPlainParamToNormalized(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue plainValue) {
 	TRACE("controller plain param to normalized\n");
+printf("unmap %d %g -> %g\n", id, plainValue, parameterUnmap(id, plainValue));
 	return parameterUnmap(id, plainValue);
 }
 

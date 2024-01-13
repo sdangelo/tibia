@@ -7,6 +7,7 @@ module.exports = function (data, api) {
 			{ id: "doap",	uri: "http://usefulinc.com/ns/doap#" },
 			{ id: "foaf",	uri: "http://xmlns.com/foaf/0.1/" },
 			{ id: "lv2",	uri: "http://lv2plug.in/ns/lv2core#" },
+			{ id: "pprops",	uri: "http://lv2plug.in/ns/ext/port-props#" },
 			{ id: "rdf",	uri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#" },
 			{ id: "rdfs",	uri: "http://www.w3.org/2000/01/rdf-schema#" },
 			{ id: "units",	uri: "http://lv2plug.in/ns/extensions/units#" }

@@ -78,6 +78,9 @@
 {{?p.integer}}
 		lv2:portProperty lv2:integer ;
 {{?}}
+{{?p.map == "logarithmic"}}
+		lv2:portProperty pprops:logarithmic ;
+{{?}}
 {{?p.scalePoints}}
 		lv2:scalePoint [
 {{~Object.entries(p.scalePoints) :sp:j}}
