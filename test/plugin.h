@@ -2,20 +2,18 @@
 #include <math.h>
 
 typedef struct plugin {
-	float	gain;
-	char	bypass;
-	size_t	delay;
-
 	float	sample_rate;
 	size_t	delay_line_length;
+
+	float	gain;
+	float	delay;
+	char	bypass;
 
 	float *	delay_line;
 	size_t	delay_line_cur;
 } plugin;
 
 static void plugin_init(plugin *instance) {
-	instance->gain = 1.f;
-	instance->bypass = 0;
 }
 
 static void plugin_fini(plugin *instance) {
@@ -42,10 +40,10 @@ static void plugin_reset(plugin *instance) {
 static void plugin_set_parameter(plugin *instance, size_t index, float value) {
 	switch (index) {
 	case 0:
-		instance->gain = value;
+		instance->gain = powf(10.f, 0.05f * value);
 		break;
 	case 1:
-		instance->delay = roundf(instance->sample_rate * 0.001f * value);
+		instance->delay = 0.001f * value;
 		break;
 	case 2:
 		instance->bypass = value >= 0.5f;
@@ -63,13 +61,13 @@ static size_t calc_index(size_t cur, size_t delay, size_t len) {
 }
 
 static void plugin_process(plugin *instance, const float **inputs, float **outputs, size_t n_samples) {
-	const float g = powf(10.f, 0.05f * instance->gain);
+	size_t delay = roundf(instance->sample_rate * instance->delay);
 	for (size_t i = 0; i < n_samples; i++) {
 		instance->delay_line[instance->delay_line_cur] = inputs[0][i];
-		const float y = g * instance->delay_line[calc_index(instance->delay_line_cur, instance->delay, instance->delay_line_length)];
+		const float y = instance->delay_line[calc_index(instance->delay_line_cur, delay, instance->delay_line_length)];
 		instance->delay_line_cur++;
 		if (instance->delay_line_cur == instance->delay_line_length)
 			instance->delay_line_cur = 0;
-		outputs[0][i] = instance->bypass ? inputs[0][i] : y;
+		outputs[0][i] = instance->bypass ? inputs[0][i] : instance->gain * y;
 	}
 }

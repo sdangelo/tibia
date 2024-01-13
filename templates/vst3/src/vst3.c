@@ -26,8 +26,6 @@ static double clamp(double x, double m, double M) {
 	return x < m ? m : (x > M ? M : x);
 }
 
-static double parameterUnmapLinear(Steinberg_Vst_ParamID id, double v) {
-}
 static double parameterMap(Steinberg_Vst_ParamID id, double v) {
 	return parameterData[id].flags & DATA_PARAM_MAP_LOG ? parameterData[id].min * exp(parameterData[id].mapK * v) : parameterData[id].min + (parameterData[id].max - parameterData[id].min) * v;
 }
@@ -59,6 +57,7 @@ typedef struct pluginInstance {
 #if DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N > 0
 	float *						outputs[DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N];
 #endif
+	void *						mem;
 } pluginInstance;
 
 static Steinberg_Vst_IComponentVtbl pluginVtblIComponent;
@@ -132,6 +131,7 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 			plugin_set_parameter(&p->p, parameterData[i].index, parameterData[i].def);
 	}
 #endif
+	p->mem = NULL;
 	return Steinberg_kResultOk;
 }
 
@@ -140,6 +140,8 @@ static Steinberg_tresult pluginTerminate(void *thisInterface) {
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
 	p->context = NULL;
 	plugin_fini(&p->p);
+	if (p->mem)
+		free(p->mem);
 	return Steinberg_kResultOk;
 }
 
@@ -257,8 +259,19 @@ static Steinberg_tresult pluginActivateBus(void* thisInterface, Steinberg_Vst_Me
 static Steinberg_tresult pluginSetActive(void* thisInterface, Steinberg_TBool state) {
 	TRACE("plugin set active\n");
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
+	if (p->mem != NULL) {
+		free(p->mem);
+		p->mem = NULL;
+	}
 	if (state) {
 		plugin_set_sample_rate(&p->p, p->sampleRate);
+		size_t req = plugin_mem_req(&p->p);
+		if (req != 0) {
+			p->mem = malloc(req);
+			if (p->mem == NULL)
+				return Steinberg_kOutOfMemory;
+			plugin_mem_set(&p->p, p->mem);
+		}
 		plugin_reset(&p->p);
 	}
 	return Steinberg_kResultOk;
@@ -269,7 +282,7 @@ static Steinberg_tresult pluginSetActive(void* thisInterface, Steinberg_TBool st
 // https://stackoverflow.com/questions/2182002/how-to-convert-big-endian-to-little-endian-in-c-without-using-library-functions
 #define SWAP_UINT32(x) (((x) >> 24) | (((x) & 0x00FF0000) >> 8) | (((x) & 0x0000FF00) << 8) | ((x) << 24))
 
-static  Steinberg_tresult pluginSetState(void* thisInterface, struct Steinberg_IBStream* state) {
+static Steinberg_tresult pluginSetState(void* thisInterface, struct Steinberg_IBStream* state) {
 	TRACE("plugin set state\n");
 	if (state == NULL)
 		return Steinberg_kResultFalse;
