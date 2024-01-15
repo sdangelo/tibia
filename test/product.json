@@ -24,6 +24,24 @@
 				"sidechain": false,
 				"cv": false,
 				"optional": false
+			},
+			{
+				"type": "midi",
+				"direction": "input",
+				"name": "MIDI input",
+				"shortName": "MIDI input",
+				"sidechain": true,
+				"control": true,
+				"optional": true
+			},
+			{
+				"type": "midi",
+				"direction": "output",
+				"name": "MIDI output",
+				"shortName": "MIDI output",
+				"sidechain": true,
+				"control": true,
+				"optional": true
 			}
 		],
 		"parameters": [
@@ -63,6 +81,22 @@
 				"list": false,
 				"unit": "ms",
 				"map": "linear"
+			},
+			{
+				"name": "Cutoff",
+				"shortName": "Cutoff",
+				"direction": "input",
+				"isBypass": false,
+				"isLatency": false,
+				"defaultValue": 1000.0,
+				"minimum": 20.0,
+				"maximum": 20e3,
+				"toggled": false,
+				"optional": false,
+				"integer": false,
+				"list": false,
+				"unit": "hz",
+				"map": "logarithmic"
 			},
 			{
 				"name": "Bypass",

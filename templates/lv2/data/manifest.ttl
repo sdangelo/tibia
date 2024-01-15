@@ -54,7 +54,7 @@
 		lv2:portProperty lv2:integer ;
 		lv2:portProperty lv2:reportsLatency ;
 {{??}}
-		a {{?p.type == "control"}}lv2:ControlPort{{??}}{{?p.cv}}lv2:CVPort{{??}}lv2:AudioPort{{?}}{{?}} ,
+		a {{?p.type == "control"}}lv2:ControlPort{{??p.type == "midi"}}atom:AtomPort{{??}}{{?p.cv}}lv2:CVPort{{??}}lv2:AudioPort{{?}}{{?}} ,
 			{{?p.direction == "input"}}lv2:InputPort{{??}}lv2:OutputPort{{?}} ;
 		lv2:name "{{=p.name}}" ;
 {{?"shortName" in p}}
@@ -65,9 +65,15 @@
 		lv2:minimum {{=p.minimum.toExponential()}} ;
 		lv2:maximum {{=p.maximum.toExponential()}} ;
 		lv2:default {{=p.defaultValue.toExponential()}} ;
+{{??p.type == "midi"}}
+		atom:bufferType atom:Sequence ;
+		atom:supports midi:MidiEvent ;
 {{?}}
 {{?p.sidechain}}
 		lv2:portProperty lv2:isSideChain ;
+{{?}}
+{{?p.control}}
+		lv2:designation lv2:control ;
 {{?}}
 {{?p.toggled}}
 		lv2:portProperty lv2:toggled ;

@@ -86,7 +86,7 @@ product {
 				LV2: manifest.ttl lv2:port units:unit
 			map:
 				"linear" vs "logarithmic"
-				VST3:
+				VST3: many places (requires libm)
 				LV2: manifest.ttl lv2:port lv2:portProperty pprops:logarithmic
 		}
 	]

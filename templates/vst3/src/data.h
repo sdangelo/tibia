@@ -30,8 +30,8 @@ static const Steinberg_TUID dataControllerCID = SMTG_INLINE_UID(DATA_VST3_CONTRO
 
 #define DATA_PRODUCT_BUSES_AUDIO_INPUT_N	{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length}}
 #define DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N	{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "output").length}}
-#define DATA_PRODUCT_BUSES_EVENT_INPUT_N	{{=it.product.buses.filter(x => x.type == "event" && x.direction == "input").length}}
-#define DATA_PRODUCT_BUSES_EVENT_OUTPUT_N	{{=it.product.buses.filter(x => x.type == "event" && x.direction == "output").length}}
+#define DATA_PRODUCT_BUSES_MIDI_INPUT_N		{{=it.product.buses.filter(x => x.type == "midi" && x.direction == "input").length}}
+#define DATA_PRODUCT_BUSES_MIDI_OUTPUT_N	{{=it.product.buses.filter(x => x.type == "midi" && x.direction == "output").length}}
 
 #define DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N	{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "input").reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0)}}
 #define DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N	{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "output").reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0)}}
@@ -66,30 +66,30 @@ static struct Steinberg_Vst_BusInfo busInfoAudioOutput[DATA_PRODUCT_BUSES_AUDIO_
 };
 #endif
 
-#if DATA_PRODUCT_BUSES_EVENT_INPUT_N > 0
-static struct Steinberg_Vst_BusInfo busInfoEventInput[DATA_PRODUCT_BUSES_EVENT_INPUT_N] = {
-{{~it.product.buses.filter(x => x.type == "event" && x.direction == "input") :b}}
+#if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+static struct Steinberg_Vst_BusInfo busInfoMidiInput[DATA_PRODUCT_BUSES_MIDI_INPUT_N] = {
+{{~it.product.buses.filter(x => x.type == "midi" && x.direction == "input") :b}}
 	{
 		/* .mediaType		= */ Steinberg_Vst_MediaTypes_kEvent,
 		/* .direction		= */ Steinberg_Vst_BusDirections_kInput,
-		/* .channelCount	= */ 1,
+		/* .channelCount	= */ 16,
 		/* .name		= */ { {{~Array.from(b.name) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .busType		= */ Steinberg_Vst_BusTypes_kMain,
+		/* .busType		= */ {{?b.sidechain}}Steinberg_Vst_BusTypes_kAux{{??}}Steinberg_Vst_BusTypes_kMain{{?}},
 		/* .flags		= */ 0{{?!b.optional}} | Steinberg_Vst_BusInfo_BusFlags_kDefaultActive{{?}}
 	},
 {{~}}
 };
 #endif
 
-#if DATA_PRODUCT_BUSES_EVENT_OUTPUT_N > 0
-static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PRODUCT_BUSES_EVENT_OUTPUT_N] = {
-{{~it.product.buses.filter(x => x.type == "event" && x.direction == "output") :b}}
+#if DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
+static struct Steinberg_Vst_BusInfo busInfoMidiOutput[DATA_PRODUCT_BUSES_MIDI_OUTPUT_N] = {
+{{~it.product.buses.filter(x => x.type == "midi" && x.direction == "output") :b}}
 	{
 		/* .mediaType		= */ Steinberg_Vst_MediaTypes_kEvent,
 		/* .direction		= */ Steinberg_Vst_BusDirections_kOutput,
-		/* .channelCount	= */ 1,
+		/* .channelCount	= */ 16,
 		/* .name		= */ { {{~Array.from(b.name) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .busType		= */ Steinberg_Vst_BusTypes_kMain,
+		/* .busType		= */ {{?b.sidechain}}Steinberg_Vst_BusTypes_kAux{{??}}Steinberg_Vst_BusTypes_kMain{{?}},
 		/* .flags		= */ 0{{?!b.optional}} | Steinberg_Vst_BusInfo_BusFlags_kDefaultActive{{?}}
 	},
 {{~}}
@@ -98,8 +98,8 @@ static struct Steinberg_Vst_BusInfo busInfoAudioInput[DATA_PRODUCT_BUSES_EVENT_O
 
 #define DATA_PRODUCT_PARAMETERS_N		{{=it.product.parameters.filter(x => !x.isLatency).length}}
 
-#if DATA_PRODUCT_PARAMETERS_N > 0
-static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_N] = {
+#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N + DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
+static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_N + 2 * (DATA_PRODUCT_BUSES_MIDI_INPUT_N + DATA_PRODUCT_BUSES_MIDI_OUTPUT_N)] = {
 {{~it.product.parameters.filter(x => !x.isLatency) :p:i}}
 	{
 		/* .id				= */ {{=i}},
@@ -120,6 +120,50 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 		/* .unitId			= */ 0,
 		/* .flags			= */ {{?p.direction == "input"}}Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate{{??}}Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly{{?}}
 {{?}}
+	},
+{{~}}
+{{~it.product.buses.filter(x => x.type == "midi" && x.direction == "input") :b:i}}
+	{
+		/* .id				= */ {{=it.product.parameters.filter(x => !x.isLatency).length + 2 * i}},
+		/* .title			= */ { {{~Array.from(b.name + " CP") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .shortTitle			= */ { {{~Array.from(b.shortName + " CP") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .units			= */ { 0 },
+		/* .stepCount			= */ 0,
+		/* .defaultNormalizedValue	= */ 0.0,
+		/* .unitId			= */ 0,
+		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly
+	},
+	{
+		/* .id				= */ {{=it.product.parameters.filter(x => !x.isLatency).length + 2 * i + 1}},
+		/* .title			= */ { {{~Array.from(b.name + " PB") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .shortTitle			= */ { {{~Array.from(b.shortName + " PB") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .units			= */ { 0 },
+		/* .stepCount			= */ 0,
+		/* .defaultNormalizedValue	= */ 0.0,
+		/* .unitId			= */ 0,
+		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly
+	},
+{{~}}
+{{~it.product.buses.filter(x => x.type == "midi" && x.direction == "output") :b:i}}
+	{
+		/* .id				= */ {{=it.product.parameters.filter(x => !x.isLatency).length + 2 * it.product.buses.filter(x => x.type == "midi" && x.direction == "input").length + 2 * i}},
+		/* .title			= */ { {{~Array.from(b.name + " CP") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .shortTitle			= */ { {{~Array.from(b.shortName + " CP") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .units			= */ { 0 },
+		/* .stepCount			= */ 0,
+		/* .defaultNormalizedValue	= */ 0.0,
+		/* .unitId			= */ 0,
+		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly
+	},
+	{
+		/* .id				= */ {{=it.product.parameters.filter(x => !x.isLatency).length + 2 * it.product.buses.filter(x => x.type == "midi" && x.direction == "input").length + 2 * i + 1}},
+		/* .title			= */ { {{~Array.from(b.name + " PB") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .shortTitle			= */ { {{~Array.from(b.shortName + " PB") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .units			= */ { 0 },
+		/* .stepCount			= */ 0,
+		/* .defaultNormalizedValue	= */ 0.0,
+		/* .unitId			= */ 0,
+		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly
 	},
 {{~}}
 };

@@ -7,7 +7,7 @@
 		"project": "@example:project",
 		"types": [ "@lv2:AmplifierPlugin" ],
 		"version": "1.0",
-		"busSymbols": [ "input", "output" ],
-		"parameterSymbols": [ "gain", "enabled" ]
+		"busSymbols": [ "input", "output", "midi_in", "midi_out" ],
+		"parameterSymbols": [ "gain", "delay", "cutoff", "enabled" ]
 	}
 }

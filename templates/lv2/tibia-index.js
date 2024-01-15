@@ -4,9 +4,11 @@ var sep = path.sep;
 module.exports = function (data, api) {
 	data.tibia.lv2 = {
 		prefixes: [
+			{ id: "atom",	uri: "http://lv2plug.in/ns/ext/atom#" },
 			{ id: "doap",	uri: "http://usefulinc.com/ns/doap#" },
 			{ id: "foaf",	uri: "http://xmlns.com/foaf/0.1/" },
 			{ id: "lv2",	uri: "http://lv2plug.in/ns/lv2core#" },
+			{ id: "midi",	uri: "http://lv2plug.in/ns/ext/midi#" },
 			{ id: "pprops",	uri: "http://lv2plug.in/ns/ext/port-props#" },
 			{ id: "rdf",	uri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#" },
 			{ id: "rdfs",	uri: "http://www.w3.org/2000/01/rdf-schema#" },
@@ -56,33 +58,49 @@ module.exports = function (data, api) {
 	for (var id in data.lv2.prefixes)
 		data.tibia.lv2.prefixes.push({ id: id, uri: data.lv2.prefixes[id] });
 
+	var audioBuses = data.product.buses.filter(x => x.type == "audio");
+	var ports = [];
+	var bi = 0;
+	for (; bi < audioBuses.length; bi++) {
+		var b = audioBuses[bi];
+		if (b.channels == "mono") {
+			var e = { type: "audio", direction: b.direction, name: b.name, sidechain: b.sidechain, cv: b.cv, optional: b.optional };
+			e.symbol = data.lv2.busSymbols[bi];
+			ports.push(e);
+		} else {
+			var e = { type: "audio", direction: b.direction, name: b.name + " Left", shortName: b.shortName + " L", sidechain: b.sidechain, cv: b.cv };
+			e.symbol = data.lv2.busSymbols[bi] + "_L";
+			data.tibia.lv2.ports.push(e);
+			var e = { type: "audio", direction: b.direction, name: b.name + " Right", shortName: b.shortName + " R", sidechain: b.sidechain, cv: b.cv };
+			e.symbol = data.lv2.busSymbols[bi] + "_R";
+			ports.push(e);
+		}
+	}
+	ports.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
+	data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, ports);
+
+	var midiBuses = data.product.buses.filter(x => x.type == "midi");
+	var ports = [];
+	for (var i = 0; i < midiBuses.length; i++, bi++) {
+		var b = midiBuses[i];
+		var e = { type: "midi", direction: b.direction, name: b.name, sidechain: b.sidechain, control: b.control, optional: b.optional };
+		e.symbol = data.lv2.busSymbols[bi];
+		ports.push(e);
+	}
+	ports.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
+	data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, ports);
+
+	var ports = [];
 	for (var i = 0; i < data.product.parameters.length; i++) {
 		var p = data.product.parameters[i];
 		var e = Object.create(p);
 		e.type = "control";
 		e.symbol = data.lv2.parameterSymbols[i];
 		e.paramIndex = i;
-		data.tibia.lv2.ports.push(e);
+		ports.push(e);
 	}
-
-	var audioBuses = data.product.buses.filter(x => x.type == "audio");
-	for (var i = 0; i < audioBuses.length; i++) {
-		var b = audioBuses[i];
-		if (b.channels == "mono") {
-			var e = { type: "audio", direction: b.direction, name: b.name, sidechain: b.sidechain, cv: b.cv };
-			e.symbol = data.lv2.busSymbols[i];
-			data.tibia.lv2.ports.push(e);
-		} else {
-			var e = { type: "audio", direction: b.direction, name: b.name + " Left", shortName: b.shortName + " L", sidechain: b.sidechain, cv: b.cv };
-			e.symbol = data.lv2.busSymbols[i] + "_L";
-			data.tibia.lv2.ports.push(e);
-			var e = { type: "audio", direction: b.direction, name: b.name + " Right", shortName: b.shortName + " R", sidechain: b.sidechain, cv: b.cv };
-			e.symbol = data.lv2.busSymbols[i] + "_R";
-			data.tibia.lv2.ports.push(e);
-		}
-	}
-
-	data.tibia.lv2.ports.sort((a, b) => a.type != b.type ? (a.type == "audio" ? -1 : 1) : (a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0));
+	ports.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
+	data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, ports);
 
 	api.generateFileFromTemplateFile(`data${sep}manifest.ttl`, `data${sep}manifest.ttl`, data);
 	api.copyFile(`src${sep}lv2.c`, `src${sep}lv2.c`);

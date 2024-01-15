@@ -168,9 +168,9 @@ static Steinberg_int32 pluginGetBusCount(void *thisInterface, Steinberg_Vst_Medi
 			return DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N;
 	} else if (type == Steinberg_Vst_MediaTypes_kEvent) {
 		if (dir == Steinberg_Vst_BusDirections_kInput)
-			return DATA_PRODUCT_BUSES_EVENT_INPUT_N;
+			return DATA_PRODUCT_BUSES_MIDI_INPUT_N;
 		else if (dir == Steinberg_Vst_BusDirections_kOutput)
-			return DATA_PRODUCT_BUSES_EVENT_OUTPUT_N;
+			return DATA_PRODUCT_BUSES_MIDI_OUTPUT_N;
 	}
 	return 0;
 }
@@ -197,17 +197,17 @@ static Steinberg_tresult pluginGetBusInfo(void* thisInterface, Steinberg_Vst_Med
 		}
 	} else if (type == Steinberg_Vst_MediaTypes_kEvent) {
 		if (dir == Steinberg_Vst_BusDirections_kInput) {
-#if DATA_PRODUCT_BUSES_EVENT_INPUT_N > 0
-			if (index >= DATA_PRODUCT_BUSES_AUDIO_INPUT_N)
+#if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+			if (index >= DATA_PRODUCT_BUSES_MIDI_INPUT_N)
 				return Steinberg_kInvalidArgument;
-			*bus = busInfoEventInput[index];
+			*bus = busInfoMidiInput[index];
 			return Steinberg_kResultTrue;
 #endif
 		} else if (dir == Steinberg_Vst_BusDirections_kOutput) {
-#if DATA_PRODUCT_BUSES_EVENT_OUTPUT_N > 0
-			if (index >= DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N)
+#if DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
+			if (index >= DATA_PRODUCT_BUSES_MIDI_OUTPUT_N)
 				return Steinberg_kInvalidArgument;
-			*bus = busInfoEventOutput[index];
+			*bus = busInfoMidiOutput[index];
 			return Steinberg_kResultTrue;
 #endif
 		}
@@ -240,14 +240,14 @@ static Steinberg_tresult pluginActivateBus(void* thisInterface, Steinberg_Vst_Me
 		}
 	} else if (type == Steinberg_Vst_MediaTypes_kEvent) {
 		if (dir == Steinberg_Vst_BusDirections_kInput) {
-#if DATA_PRODUCT_BUSES_EVENT_INPUT_N > 0
-			if (index >= DATA_PRODUCT_BUSES_AUDIO_INPUT_N)
+#if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+			if (index >= DATA_PRODUCT_BUSES_MIDI_INPUT_N)
 				return Steinberg_kInvalidArgument;
 			return Steinberg_kResultTrue;
 #endif
 		} else if (dir == Steinberg_Vst_BusDirections_kOutput) {
-#if DATA_PRODUCT_BUSES_EVENT_OUTPUT_N > 0
-			if (index >= DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N)
+#if DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
+			if (index >= DATA_PRODUCT_BUSES_MIDI_OUTPUT_N)
 				return Steinberg_kInvalidArgument;
 			return Steinberg_kResultTrue;
 #endif
@@ -704,12 +704,12 @@ static Steinberg_tresult controllerGetState(void* thisInterface, struct Steinber
 
 static Steinberg_int32 controllerGetParameterCount(void* thisInterface) {
 	TRACE("controller get parameter count\n");
-	return DATA_PRODUCT_PARAMETERS_N;
+	return DATA_PRODUCT_PARAMETERS_N + 2 * (DATA_PRODUCT_BUSES_MIDI_INPUT_N + DATA_PRODUCT_BUSES_MIDI_OUTPUT_N);
 }
 
 static Steinberg_tresult controllerGetParameterInfo(void* thisInterface, Steinberg_int32 paramIndex, struct Steinberg_Vst_ParameterInfo* info) {
 	TRACE("controller get parameter info\n");
-	if (paramIndex < 0 || paramIndex >= DATA_PRODUCT_PARAMETERS_N)
+	if (paramIndex < 0 || paramIndex >= DATA_PRODUCT_PARAMETERS_N + 2 * (DATA_PRODUCT_BUSES_MIDI_INPUT_N + DATA_PRODUCT_BUSES_MIDI_OUTPUT_N))
 		return Steinberg_kResultFalse;
 	*info = parameterInfo[paramIndex];
 	return Steinberg_kResultTrue;

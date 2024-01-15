@@ -73,6 +73,20 @@ static void connect_port(LV2_Handle instance, uint32_t port, void * data_locatio
 	}
 	port -= DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N;
 #endif
+#if DATA_PRODUCT_MIDI_INPUTS_N > 0
+	if (port < DATA_PRODUCT_MIDI_INPUTS_N) {
+		// TBD
+		return;
+	}
+	port -= DATA_PRODUCT_MIDI_INPUTS_N;
+#endif
+#if DATA_PRODUCT_MIDI_OUTPUTS_N > 0
+	if (port < DATA_PRODUCT_MIDI_OUTPUTS_N) {
+		// TBD
+		return;
+	}
+	port -= DATA_PRODUCT_MIDI_OUTPUTS_N;
+#endif
 #if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
 	i->c[port] = data_location;
 #endif
