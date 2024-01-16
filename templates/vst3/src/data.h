@@ -98,8 +98,8 @@ static struct Steinberg_Vst_BusInfo busInfoMidiOutput[DATA_PRODUCT_BUSES_MIDI_OU
 
 #define DATA_PRODUCT_PARAMETERS_N		{{=it.product.parameters.filter(x => !x.isLatency).length}}
 
-#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N + DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
-static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_N + 2 * (DATA_PRODUCT_BUSES_MIDI_INPUT_N + DATA_PRODUCT_BUSES_MIDI_OUTPUT_N)] = {
+#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_N + 2 * DATA_PRODUCT_BUSES_MIDI_INPUT_N] = {
 {{~it.product.parameters.filter(x => !x.isLatency) :p:i}}
 	{
 		/* .id				= */ {{=i}},
@@ -139,29 +139,7 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 		/* .shortTitle			= */ { {{~Array.from(b.shortName + " PB") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { 0 },
 		/* .stepCount			= */ 0,
-		/* .defaultNormalizedValue	= */ 0.0,
-		/* .unitId			= */ 0,
-		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly
-	},
-{{~}}
-{{~it.product.buses.filter(x => x.type == "midi" && x.direction == "output") :b:i}}
-	{
-		/* .id				= */ {{=it.product.parameters.filter(x => !x.isLatency).length + 2 * it.product.buses.filter(x => x.type == "midi" && x.direction == "input").length + 2 * i}},
-		/* .title			= */ { {{~Array.from(b.name + " CP") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .shortTitle			= */ { {{~Array.from(b.shortName + " CP") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .units			= */ { 0 },
-		/* .stepCount			= */ 0,
-		/* .defaultNormalizedValue	= */ 0.0,
-		/* .unitId			= */ 0,
-		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly
-	},
-	{
-		/* .id				= */ {{=it.product.parameters.filter(x => !x.isLatency).length + 2 * it.product.buses.filter(x => x.type == "midi" && x.direction == "input").length + 2 * i + 1}},
-		/* .title			= */ { {{~Array.from(b.name + " PB") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .shortTitle			= */ { {{~Array.from(b.shortName + " PB") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .units			= */ { 0 },
-		/* .stepCount			= */ 0,
-		/* .defaultNormalizedValue	= */ 0.0,
+		/* .defaultNormalizedValue	= */ 0.5,
 		/* .unitId			= */ 0,
 		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly
 	},
