@@ -16,4 +16,5 @@
 * proper parameter automation
 * proper sample accurate midi (see https://lv2plug.in/book/#_midi_gate)
 * whole midi properly (see https://github.com/harryhaaren/lv2/blob/master/lv2/lv2plug.in/ns/ext/midi/midi.h, https://www.midi.org/specifications-old/item/table-1-summary-of-midi-message, http://midi.teragonaudio.com/tech/midispec.htm)
-* uneven midi pitch bend, what to do?
+* LV2 (and raw midi): uneven midi pitch bend, what to do?
+* VST3: noteOn, noteOff tuning, what to do? (https://steinbergmedia.github.io/vst3_doc/vstinterfaces/structSteinberg_1_1Vst_1_1NoteOnEvent.html, https://steinbergmedia.github.io/vst3_doc/vstinterfaces/structSteinberg_1_1Vst_1_1NoteOffEvent.html)
