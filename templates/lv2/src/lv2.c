@@ -1,8 +1,19 @@
-#include "lv2/core/lv2.h"
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "data.h"
 #include "plugin.h"
+
+#include "lv2/core/lv2.h"
+#if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
+#include "lv2/core/lv2_util.h"
+#include "lv2/atom/util.h"
+#include "lv2/atom/atom.h"
+#include "lv2/log/log.h"
+#include "lv2/log/logger.h"
+#include "lv2/midi/midi.h"
+#include "lv2/urid/urid.h"
+#endif
 
 #if defined(__i386__) || defined(__x86_64__)
 #include <xmmintrin.h>
@@ -10,27 +21,57 @@
 #endif
 
 typedef struct {
-	plugin		p;
+	plugin				p;
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
-	const float *	x[DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N];
+	const float *			x[DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N];
 #endif
 #if DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N > 0
-	float *		y[DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N];
+	float *				y[DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N];
+#endif
+#if DATA_PRODUCT_MIDI_INPUTS_N > 0
+	const LV2_Atom_Sequence *	x_midi[DATA_PRODUCT_MIDI_INPUTS_N];
+#endif
+#if DATA_PRODUCT_MIDI_OUTPUTS_N > 0
+	LV2_Atom_Sequence *		y_midi[DATA_PRODUCT_MIDI_OUTPUTS_N];
 #endif
 #if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
-	float *		c[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N];
+	float *				c[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N];
 #endif
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-	float		params[DATA_PRODUCT_CONTROL_INPUTS_N];
+	float				params[DATA_PRODUCT_CONTROL_INPUTS_N];
 #endif
-	void *		mem;
+	void *				mem;
+#if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUT_N > 0
+	LV2_URID_Map *			map;
+	LV2_Log_Logger			logger;
+	LV2_URID			uri_midi_MidiEvent;
+#endif
 } plugin_instance;
 
 static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double sample_rate, const char * bundle_path, const LV2_Feature * const * features) {
 	plugin_instance *instance = malloc(sizeof(plugin_instance));
 	if (instance == NULL)
 		return NULL;
+
+#if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUT_N > 0
+	// from https://lv2plug.in/book
+	const char* missing = lv2_features_query(features,
+		LV2_LOG__log,	&instance->logger.log,	false,
+		LV2_URID__map,	&instance->map,		true,
+		NULL);
+
+	lv2_log_logger_set_map(&instance->logger, instance->map);
+	if (missing) {
+		lv2_log_error(&instance->logger, "Missing feature <%s>\n", missing);
+		free(instance);
+		return NULL;
+	}
+
+	instance->uri_midi_MidiEvent = instance->map->map(instance->map->handle, LV2_MIDI__MidiEvent);
+#endif
+
 	plugin_init(&instance->p);
+
 	plugin_set_sample_rate(&instance->p, sample_rate);
 	size_t req = plugin_mem_req(&instance->p);
 	if (req != 0) {
@@ -42,6 +83,7 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 		plugin_mem_set(&instance->p, instance->mem);
 	} else
 		instance->mem = NULL;
+
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
 	for (uint32_t i = 0; i < DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N; i++)
 		instance->x[i] = NULL;
@@ -50,10 +92,19 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	for (uint32_t i = 0; i < DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N; i++)
 		instance->y[i] = NULL;
 #endif
+#if DATA_PRODUCT_MIDI_INPUTS_N > 0
+	for (uint32_t i = 0; i < DATA_PRODUCT_MIDI_INPUTS_N; i++)
+		instance->x_midi[i] = NULL;
+#endif
+#if DATA_PRODUCT_MIDI_OUTPUTS_N > 0
+	for (uint32_t i = 0; i < DATA_PRODUCT_MIDI_OUTPUTS_N; i++)
+		instance->y_midi[i] = NULL;
+#endif
 #if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
 	for (uint32_t i = 0; i < DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N; i++)
 		instance->c[i] = NULL;
 #endif
+
 	return instance;
 }
 
@@ -75,14 +126,14 @@ static void connect_port(LV2_Handle instance, uint32_t port, void * data_locatio
 #endif
 #if DATA_PRODUCT_MIDI_INPUTS_N > 0
 	if (port < DATA_PRODUCT_MIDI_INPUTS_N) {
-		// TBD
+		i->x_midi[port] = data_location;
 		return;
 	}
 	port -= DATA_PRODUCT_MIDI_INPUTS_N;
 #endif
 #if DATA_PRODUCT_MIDI_OUTPUTS_N > 0
 	if (port < DATA_PRODUCT_MIDI_OUTPUTS_N) {
-		// TBD
+		i->y_midi[port] = data_location;
 		return;
 	}
 	port -= DATA_PRODUCT_MIDI_OUTPUTS_N;
@@ -144,6 +195,47 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 
 	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 	_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+#endif
+
+	// from https://lv2plug.in/book
+#if DATA_PRODUCT_MIDI_INPUTS_N > 0
+	for (size_t j = 0; j < DATA_PRODUCT_MIDI_INPUTS_N; j++)
+		LV2_ATOM_SEQUENCE_FOREACH(i->x_midi[j], ev) {
+			if (ev->body.type == i->uri_midi_MidiEvent) {
+				const uint8_t * const msg = (const uint8_t *)(ev + 1);
+				switch (lv2_midi_message_type(msg)) {
+				case LV2_MIDI_MSG_NOTE_ON:
+					if (msg[2] == 0)
+						plugin_note_off(&i->p, midi_in_index[j], msg[1], 64.f / 127.f);
+					else
+						plugin_note_on(&i->p, midi_in_index[j], msg[1], (1.f / 127.f) * msg[2]);
+					break;
+				case LV2_MIDI_MSG_NOTE_OFF:
+					plugin_note_off(&i->p, midi_in_index[j], msg[1], (1.f / 127.f) * msg[2]);
+					break;
+				case LV2_MIDI_MSG_CONTROLLER:
+					switch (msg[1]) {
+					case LV2_MIDI_CTL_ALL_SOUNDS_OFF:
+						plugin_all_sounds_off(&i->p, midi_in_index[j]);
+						break;
+					case LV2_MIDI_CTL_ALL_NOTES_OFF:
+						plugin_all_notes_off(&i->p, midi_in_index[j]);
+						break;
+					default:
+						break;
+					}
+					break;
+				case LV2_MIDI_MSG_CHANNEL_PRESSURE:
+					plugin_channel_pressure(&i->p, midi_in_index[j], (1.f / 127.f) * msg[1]);
+					break;
+				case LV2_MIDI_MSG_BENDER:
+					plugin_pitch_bend_change(&i->p, midi_in_index[j], (1.f / 8192.f) * (msg[2] << 7 | msg[1]) - 1.f);
+					break;
+				default:
+					break;
+				}
+			}
+		}
 #endif
 
 	plugin_process(&i->p, i->x, i->y, sample_count);

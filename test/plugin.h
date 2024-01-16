@@ -13,6 +13,7 @@ typedef struct plugin {
 	float *	delay_line;
 	size_t	delay_line_cur;
 	float	z1;
+	float	cutoff_k;
 } plugin;
 
 static void plugin_init(plugin *instance) {
@@ -38,6 +39,7 @@ static void plugin_reset(plugin *instance) {
 	memset(instance->delay_line, 0, instance->delay_line_length * sizeof(float));
 	instance->delay_line_cur = 0;
 	instance->z1 = 0.f;
+	instance->cutoff_k = 1.f;
 }
 
 static void plugin_set_parameter(plugin *instance, size_t index, float value) {
@@ -68,7 +70,7 @@ static size_t calc_index(size_t cur, size_t delay, size_t len) {
 
 static void plugin_process(plugin *instance, const float **inputs, float **outputs, size_t n_samples) {
 	size_t delay = roundf(instance->sample_rate * instance->delay);
-	const float mA1 = instance->sample_rate / (instance->sample_rate + 6.283185307179586f * instance->cutoff);
+	const float mA1 = instance->sample_rate / (instance->sample_rate + 6.283185307179586f * instance->cutoff * instance->cutoff_k);
 	for (size_t i = 0; i < n_samples; i++) {
 		instance->delay_line[instance->delay_line_cur] = inputs[0][i];
 		const float x = instance->delay_line[calc_index(instance->delay_line_cur, delay, instance->delay_line_length)];
@@ -79,4 +81,23 @@ static void plugin_process(plugin *instance, const float **inputs, float **outpu
 		instance->z1 = y;
 		outputs[0][i] = instance->bypass ? inputs[0][i] : instance->gain * y;
 	}
+}
+
+static void plugin_note_on(plugin *instance, size_t index, uint8_t note, float velocity) {
+	instance->cutoff_k = powf(2.f, (1.f / 12.f) * (note - 60));
+}
+
+static void plugin_note_off(plugin *instance, size_t index, uint8_t note, float velocity) {
+}
+
+static void plugin_all_sounds_off(plugin *instance, size_t index) {
+}
+
+static void plugin_all_notes_off(plugin *instance, size_t index) {
+}
+
+static void plugin_channel_pressure(plugin *instance, size_t index, float value) {
+}
+
+static void plugin_pitch_bend_change(plugin *instance, size_t index, float value) {
 }

@@ -7,6 +7,12 @@
 #define DATA_PRODUCT_CONTROL_INPUTS_N		{{=it.product.parameters.filter(x => x.direction == "input").length}}
 #define DATA_PRODUCT_CONTROL_OUTPUTS_N		{{=it.product.parameters.filter(x => x.direction == "output").length}}
 
+#if DATA_PRODUCT_MIDI_INPUTS_N > 0
+static uint32_t midi_in_index[DATA_PRODUCT_MIDI_INPUTS_N] = {
+	{{~it.tibia.lv2.ports.filter(x => x.type == "midi" && x.direction == "input") :p}}{{=p.busIndex}}, {{~}}
+};
+#endif
+
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 
 # define DATA_PARAM_BYPASS	1

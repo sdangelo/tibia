@@ -7,12 +7,14 @@ module.exports = function (data, api) {
 			{ id: "atom",	uri: "http://lv2plug.in/ns/ext/atom#" },
 			{ id: "doap",	uri: "http://usefulinc.com/ns/doap#" },
 			{ id: "foaf",	uri: "http://xmlns.com/foaf/0.1/" },
+			{ id: "log",	uri: "http://lv2plug.in/ns/ext/log#" },
 			{ id: "lv2",	uri: "http://lv2plug.in/ns/lv2core#" },
 			{ id: "midi",	uri: "http://lv2plug.in/ns/ext/midi#" },
 			{ id: "pprops",	uri: "http://lv2plug.in/ns/ext/port-props#" },
 			{ id: "rdf",	uri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#" },
 			{ id: "rdfs",	uri: "http://www.w3.org/2000/01/rdf-schema#" },
-			{ id: "units",	uri: "http://lv2plug.in/ns/extensions/units#" }
+			{ id: "units",	uri: "http://lv2plug.in/ns/extensions/units#" },
+			{ id: "urid",	uri: "http://lv2plug.in/ns/ext/urid#" }
 		],
 		units: {
 			"bar":			"@units:bar",
@@ -64,14 +66,14 @@ module.exports = function (data, api) {
 	for (; bi < audioBuses.length; bi++) {
 		var b = audioBuses[bi];
 		if (b.channels == "mono") {
-			var e = { type: "audio", direction: b.direction, name: b.name, sidechain: b.sidechain, cv: b.cv, optional: b.optional };
+			var e = { type: "audio", direction: b.direction, name: b.name, sidechain: b.sidechain, cv: b.cv, optional: b.optional, busIndex: bi };
 			e.symbol = data.lv2.busSymbols[bi];
 			ports.push(e);
 		} else {
-			var e = { type: "audio", direction: b.direction, name: b.name + " Left", shortName: b.shortName + " L", sidechain: b.sidechain, cv: b.cv };
+			var e = { type: "audio", direction: b.direction, name: b.name + " Left", shortName: b.shortName + " L", sidechain: b.sidechain, cv: b.cv, busIndex: bi };
 			e.symbol = data.lv2.busSymbols[bi] + "_L";
 			data.tibia.lv2.ports.push(e);
-			var e = { type: "audio", direction: b.direction, name: b.name + " Right", shortName: b.shortName + " R", sidechain: b.sidechain, cv: b.cv };
+			var e = { type: "audio", direction: b.direction, name: b.name + " Right", shortName: b.shortName + " R", sidechain: b.sidechain, cv: b.cv, busIndex: bi };
 			e.symbol = data.lv2.busSymbols[bi] + "_R";
 			ports.push(e);
 		}
@@ -83,7 +85,7 @@ module.exports = function (data, api) {
 	var ports = [];
 	for (var i = 0; i < midiBuses.length; i++, bi++) {
 		var b = midiBuses[i];
-		var e = { type: "midi", direction: b.direction, name: b.name, sidechain: b.sidechain, control: b.control, optional: b.optional };
+		var e = { type: "midi", direction: b.direction, name: b.name, sidechain: b.sidechain, control: b.control, optional: b.optional, busIndex: bi };
 		e.symbol = data.lv2.busSymbols[bi];
 		ports.push(e);
 	}

@@ -20,6 +20,10 @@
 	] ;
 	lv2:minorVersion {{=/^([0-9]+)\./.exec(it.lv2.version)[1]}} ;
 	lv2:microVersion {{=/^[0-9]+\.([0-9]+)/.exec(it.lv2.version)[1]}} ;
+{{?it.tibia.lv2.ports.find(p => p.type == "midi")}}
+	lv2:requiredFeature urid:map ;
+	lv2:optionalFeature log:log ;
+{{?}}
 	lv2:optionalFeature lv2:hardRTCapable ;
 	lv2:port [
 {{~it.tibia.lv2.ports :p:i}}
