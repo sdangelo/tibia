@@ -23,7 +23,46 @@ product {
 	bundleName:
 		VST3: plugin folder name, plugin .dll name, Info.plist
 		LV2: plugin folder name, plugin .dll name, manifest.ttl plugin lv2:binary
-	buses: ...
+	buses: [
+		{
+			name:
+				bus name string, required
+				VST3: BusInfo name
+				LV2: manifest.ttl lv2:port lv2:name
+			shortName:
+				bus short name string, required
+				VST3: not used
+				LV2: manifest.ttl lv2:port lv2:shortName
+			direction:
+				"input" or "output", required
+				VST3: BusInfo flags - lots of implications
+				LV2: manifest.ttl lv2:port a - lots of implications
+			type:
+				"audio" or "midi", required
+				VST3: BusInfo mediaType, ParameterInfo (channel pressure, pitch bend params) - lots of implications
+				LV2: lots of implications everywhere
+			channels:
+				"mono" or "stereo", audio type only, required
+				VST3: BusInfo channelCount, plugin get/set bus arrangements
+				LV2: manifest.ttl lv2:port - lots of implications
+			sidechain:
+				bus is not part of main audio path (sidechain)? boolean, default false
+				VST3: BusInfo busType
+				LV2: manifest.ttl lv2:port lv2:portProperty lv2:isSideChain
+			cv:
+				bus is control voltage audio-rate? boolean, audio type only, default false
+				VST3: BusInfo flags
+				LV2: manifest.ttl lv2:port a lv2:CVPort
+			control:
+				bus is the "primary control channel" (send cmds, receive responses)? boolean, midi type only, default false
+				VST3: not used
+				LV2: manifest.ttl lv2:port lv2:designation lv2:control
+			optional:
+				bus is optionally connected? boolean, default false
+				VST3: BusInfo flags, plugin initialize, activate bus, set active
+				LV2: manifest.ttl lv2:port lv2:portProperty lv2:connectionOptional
+		}
+	]
 	parameters: [
 		{
 			name:
@@ -36,8 +75,8 @@ product {
 				LV2: manifest.ttl lv2:port lv2:shortName
 			direction:
 				"input" or "output", required
-				VST3: ParameterInfo flags
-				LV2: manifest.ttl lv2:port a
+				VST3: ParameterInfo flags - lots of implications
+				LV2: manifest.ttl lv2:port a - lots of implications
 			isBypass:
 				parameter is bypass/enabled? boolean - lots of implications, default false
 				VST3: ParameterInfo, controller get/set parameter/state

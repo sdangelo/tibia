@@ -33,15 +33,6 @@
 				"sidechain": true,
 				"control": true,
 				"optional": true
-			},
-			{
-				"type": "midi",
-				"direction": "output",
-				"name": "MIDI output",
-				"shortName": "MIDI output",
-				"sidechain": true,
-				"control": true,
-				"optional": true
 			}
 		],
 		"parameters": [

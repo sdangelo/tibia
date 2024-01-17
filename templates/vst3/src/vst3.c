@@ -57,6 +57,18 @@ typedef struct pluginInstance {
 #if DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N > 0
 	float *						outputs[DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N];
 #endif
+#if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
+	char						inputsActive[DATA_PRODUCT_BUSES_AUDIO_INPUT_N];
+#endif
+#if DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N > 0
+	char						outputsActive[DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N];
+#endif
+#if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+	char						midiInputsActive[DATA_PRODUCT_BUSES_MIDI_INPUT_N];
+#endif
+#if DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
+	char						midiOutputsActive[DATA_PRODUCT_BUSES_MIDI_OUTPUT_N];
+#endif
 	void *						mem;
 } pluginInstance;
 
@@ -130,6 +142,22 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 		if (!(parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly))
 			plugin_set_parameter(&p->p, parameterData[i].index, parameterData[i].def);
 	}
+#endif
+#if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
+	for (size_t i = 0; i < DATA_PRODUCT_BUSES_AUDIO_INPUT_N; i++)
+		p->inputsActive[i] = 0;
+#endif
+#if DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N > 0
+	for (size_t i = 0; i < DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N; i++)
+		p->outputsActive[i] = 0;
+#endif
+#if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+	for (size_t i = 0; i < DATA_PRODUCT_BUSES_MIDI_INPUT_N; i++)
+		p->midiInputsActive[i] = 0;
+#endif
+#if DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
+	for (size_t i = 0; i < DATA_PRODUCT_BUSES_MIDI_OUTPUT_N; i++)
+		p->midiOutputsActive[i] = 0;
 #endif
 	p->mem = NULL;
 	return Steinberg_kResultOk;
@@ -224,17 +252,20 @@ static Steinberg_tresult pluginActivateBus(void* thisInterface, Steinberg_Vst_Me
 	TRACE("plugin activate bus\n");
 	if (index < 0)
 		return Steinberg_kInvalidArgument;
+	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
 	if (type == Steinberg_Vst_MediaTypes_kAudio) {
 		if (dir == Steinberg_Vst_BusDirections_kInput) {
 #if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
 			if (index >= DATA_PRODUCT_BUSES_AUDIO_INPUT_N)
 				return Steinberg_kInvalidArgument;
+			p->inputsActive[index] = state;
 			return Steinberg_kResultTrue;
 #endif
 		} else if (dir == Steinberg_Vst_BusDirections_kOutput) {
 #if DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N > 0
 			if (index >= DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N)
 				return Steinberg_kInvalidArgument;
+			p->outputsActive[index] = state;
 			return Steinberg_kResultTrue;
 #endif
 		}
@@ -243,12 +274,14 @@ static Steinberg_tresult pluginActivateBus(void* thisInterface, Steinberg_Vst_Me
 #if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 			if (index >= DATA_PRODUCT_BUSES_MIDI_INPUT_N)
 				return Steinberg_kInvalidArgument;
+			p->midiInputsActive[index] = state;
 			return Steinberg_kResultTrue;
 #endif
 		} else if (dir == Steinberg_Vst_BusDirections_kOutput) {
 #if DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
 			if (index >= DATA_PRODUCT_BUSES_MIDI_OUTPUT_N)
 				return Steinberg_kInvalidArgument;
+			p->midiOutputsActive[index] = state;
 			return Steinberg_kResultTrue;
 #endif
 		}
@@ -264,6 +297,26 @@ static Steinberg_tresult pluginSetActive(void* thisInterface, Steinberg_TBool st
 		p->mem = NULL;
 	}
 	if (state) {
+#if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
+		for (size_t i = 0; i < DATA_PRODUCT_BUSES_AUDIO_INPUT_N; i++)
+			if (!p->inputsActive[i] && (busInfoAudioInput[i].flags & Steinberg_Vst_BusInfo_BusFlags_kDefaultActive))
+				return Steinberg_kResultFalse;
+#endif
+#if DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N > 0
+		for (size_t i = 0; i < DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N; i++)
+			if (!p->outputsActive[i] && (busInfoAudioOutput[i].flags & Steinberg_Vst_BusInfo_BusFlags_kDefaultActive))
+				return Steinberg_kResultFalse;
+#endif
+#if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+		for (size_t i = 0; i < DATA_PRODUCT_BUSES_MIDI_INPUT_N; i++)
+			if (!p->midiInputsActive[i] && (busInfoMidiInput[i].flags & Steinberg_Vst_BusInfo_BusFlags_kDefaultActive))
+				return Steinberg_kResultFalse;
+#endif
+#if DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
+		for (size_t i = 0; i < DATA_PRODUCT_BUSES_MIDI_OUTPUT_N; i++)
+			if (!p->midiOutputsActive[i] && (busInfoMidiOutput[i].flags & Steinberg_Vst_BusInfo_BusFlags_kDefaultActive))
+				return Steinberg_kResultFalse;
+#endif
 		plugin_set_sample_rate(&p->p, p->sampleRate);
 		size_t req = plugin_mem_req(&p->p);
 		if (req != 0) {

@@ -199,7 +199,9 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 
 	// from https://lv2plug.in/book
 #if DATA_PRODUCT_MIDI_INPUTS_N > 0
-	for (size_t j = 0; j < DATA_PRODUCT_MIDI_INPUTS_N; j++)
+	for (size_t j = 0; j < DATA_PRODUCT_MIDI_INPUTS_N; j++) {
+		if (i->x_midi[j] == NULL)
+			continue;
 		LV2_ATOM_SEQUENCE_FOREACH(i->x_midi[j], ev) {
 			if (ev->body.type == i->uri_midi_MidiEvent) {
 				const uint8_t * const msg = (const uint8_t *)(ev + 1);
@@ -236,6 +238,7 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 				}
 			}
 		}
+	}
 #endif
 
 	plugin_process(&i->p, i->x, i->y, sample_count);

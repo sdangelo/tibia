@@ -174,5 +174,5 @@ static struct {
 #endif
 
 {{?it.product.parameters.find(x => x.isLatency)}}
-# define DATA_PARAM_LATENCY_INDEX	{{=it.product.parameters.find(x => x.isLatency).paramIndex}}
+#define DATA_PARAM_LATENCY_INDEX	{{=it.product.parameters.find(x => x.isLatency).paramIndex}}
 {{?}}
