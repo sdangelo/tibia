@@ -108,6 +108,22 @@
 				"list": true,
 				"unit": "",
 				"map": "linear"
+			},
+			{
+				"name": "yz1",
+				"shortName": "yz1",
+				"direction": "output",
+				"isBypass": false,
+				"isLatency": false,
+				"defaultValue": 0.0,
+				"minimum": -1.0,
+				"maximum": 1.0,
+				"toggled": false,
+				"optional": false,
+				"integer": false,
+				"list": false,
+				"unit": "",
+				"map": "linear"
 			}
 		]
 	}

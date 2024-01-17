@@ -254,7 +254,7 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_OUTPUTS_N; j++) {
 		uint32_t k = param_out_index[j];
 		if (i->c[k] != NULL)
-			i->c[k] = plugin_get_parameter(&i->p, k);
+			*i->c[k] = plugin_get_parameter(&i->p, k);
 	}
 #endif
 }
