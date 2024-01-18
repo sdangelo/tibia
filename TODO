@@ -19,3 +19,5 @@
 * LV2 (and raw midi): uneven midi pitch bend, what to do?
 * VST3: noteOn, noteOff tuning, what to do? (https://steinbergmedia.github.io/vst3_doc/vstinterfaces/structSteinberg_1_1Vst_1_1NoteOnEvent.html, https://steinbergmedia.github.io/vst3_doc/vstinterfaces/structSteinberg_1_1Vst_1_1NoteOffEvent.html)
 * midi out
+* vst3 tail, web process return true/false
+* error checking etc. web, especially processor.js

@@ -27,7 +27,7 @@ typedef struct {
 #endif
 } instance;
 
-instance * wrapper_new(float sample_rate) {
+instance * processor_new(float sample_rate) {
 	instance * i = malloc(sizeof(instance));
 	if (i == NULL)
 		return NULL;
@@ -66,32 +66,32 @@ instance * wrapper_new(float sample_rate) {
 	return i;
 }
 
-void wrapper_free(instance * i) {
+void processor_free(instance * i) {
 	plugin_fini(&i->p);
 	if (i->mem)
 		free(i->mem);
 	free(i);
 }
 
-float * wrapper_get_x_buf(instance * i) {
+float * processor_get_x_buf(instance * i) {
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
 	return i->x_buf;
 #else
-	(void *)i;
+	(void)i;
 	return NULL;
 #endif
 }
 
-float * wrapper_get_y_buf(instance * i) {
+float * processor_get_y_buf(instance * i) {
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
 	return i->y_buf;
 #else
-	(void *)i;
+	(void)i;
 	return NULL;
 #endif
 }
 
-float * wrapper_get_out_params(instance *i) {
+float * processor_get_out_params(instance *i) {
 #if DATA_PRODUCT_PARAMETERS_OUTPUT_N > 0
 	return i->out_params;
 #else
@@ -100,11 +100,11 @@ float * wrapper_get_out_params(instance *i) {
 #endif
 }
 
-void wrapper_set_parameter(instance *i, int32_t index, float value) {
+void processor_set_parameter(instance *i, int32_t index, float value) {
 	plugin_set_parameter(&i->p, index, value);
 }
 
-void wrapper_process(instance *i, int32_t n_samples) {
+void processor_process(instance *i, int32_t n_samples) {
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
 	const float **x = i->x;
 #else
