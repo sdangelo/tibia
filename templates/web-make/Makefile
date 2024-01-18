@@ -18,12 +18,21 @@ LDFLAGS = \
 	-Wl,-z,stack-size=$$((8*1024*1024)) \
 	-nostdlib
 
-all: build/${BUNDLE_NAME}.wasm build/${BUNDLE_NAME}_processor.js
+ALL = build/${BUNDLE_NAME}.wasm build/${BUNDLE_NAME}_processor.js build/${BUNDLE_NAME}.js
+
+default: all
+
+-include demo.mk
+
+all: ${ALL}
 
 build/${BUNDLE_NAME}.wasm: src/data.h src/memset.h src/plugin.h src/walloc.h src/processor.c | build
 	${CC} src/processor.c -o $@ ${CFLAGS} ${LDFLAGS} ${CFLAGS_EXTRA} ${LIBS_EXTRA}
 
 build/${BUNDLE_NAME}_processor.js: src/processor.js | build
+	cp $^ $@
+
+build/${BUNDLE_NAME}.js: src/module.js | build
 	cp $^ $@
 
 build:

@@ -11,4 +11,5 @@ cp $dir/plugin.h $dir/../out/lv2/src
 
 $dir/../tibia $dir/product.json,$dir/company.json $dir/../templates/web $dir/../out/web
 $dir/../tibia $dir/product.json,$dir/company.json $dir/../templates/web-make $dir/../out/web
+$dir/../tibia $dir/product.json,$dir/company.json $dir/../templates/web-demo $dir/../out/web
 cp $dir/plugin.h $dir/../out/web/src

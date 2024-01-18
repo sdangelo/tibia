@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>{{=it.product.name}}</title>
+		<script type="module">
+import * as demo from "./{{=it.product.bundleName}}.js";
+window.demo = demo;
+		</script>
+		<script>
+		</script>
+	</head>
+	<body>
+		<h1>{{=it.product.name}}</h1>
+		<input id="start" type="button" value="Start">
+	</body>
+</html>
