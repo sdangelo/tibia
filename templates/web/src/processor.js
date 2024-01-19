@@ -138,7 +138,7 @@ class Processor extends AudioWorkletProcessor {
 			}
 		}
 
-		return false;
+		return true; // because Chrome sucks: https://bugs.chromium.org/p/chromium/issues/detail?id=921354
 	}
 
 	static get parameterDescriptors() {
