@@ -15,9 +15,11 @@ typedef struct plugin {
 } plugin;
 
 static void plugin_init(plugin *instance) {
+	(void)instance;
 }
 
 static void plugin_fini(plugin *instance) {
+	(void)instance;
 }
 
 static void plugin_set_sample_rate(plugin *instance, float sample_rate) {
@@ -62,6 +64,7 @@ static void plugin_set_parameter(plugin *instance, size_t index, float value) {
 }
 
 static float plugin_get_parameter(plugin *instance, size_t index) {
+	(void)index;
 	return instance->yz1;
 }
 
@@ -87,21 +90,37 @@ static void plugin_process(plugin *instance, const float **inputs, float **outpu
 }
 
 static void plugin_note_on(plugin *instance, size_t index, uint8_t note, float velocity) {
+	(void)index;
+	(void)velocity;
 	//approx instance->cutoff_k = powf(2.f, (1.f / 12.f) * (note - 60));
 	instance->cutoff_k = note < 64 ? (-0.19558034980097166f * note - 2.361735109225749f) / (note - 75.57552349522389f) : (393.95397927344214f - 7.660826245588588f * note) / (note - 139.0755234952239f);
 }
 
 static void plugin_note_off(plugin *instance, size_t index, uint8_t note, float velocity) {
+	(void)instance;
+	(void)index;
+	(void)note;
+	(void)velocity;
 }
 
 static void plugin_all_sounds_off(plugin *instance, size_t index) {
+	(void)instance;
+	(void)index;
 }
 
 static void plugin_all_notes_off(plugin *instance, size_t index) {
+	(void)instance;
+	(void)index;
 }
 
 static void plugin_channel_pressure(plugin *instance, size_t index, float value) {
+	(void)instance;
+	(void)index;
+	(void)value;
 }
 
 static void plugin_pitch_bend_change(plugin *instance, size_t index, float value) {
+	(void)instance;
+	(void)index;
+	(void)value;
 }

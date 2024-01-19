@@ -52,6 +52,30 @@ class Processor extends AudioWorkletProcessor {
 			this.parametersOutValues = new Float32Array(this.module.memory.buffer, this.module.processor_get_out_params(this.instance), this.parametersOut.length);
 		
 		this.paramOutChangeMsg = { type: "paramOutChange", index: NaN, value: NaN };
+
+		var self = this;
+		this.port.onmessage = function (e) {
+			switch (e.data.type) {
+			case "noteOn":
+				self.module.processor_note_on(self.instance, e.data.index, e.data.note, e.data.velocity);
+				break;
+			case "noteOff":
+				self.module.processor_note_off(self.instance, e.data.index, e.data.note, e.data.velocity);
+				break;
+			case "allSoundsOff":
+				self.module.processor_all_sounds_off(self.instance, e.data.index);
+				break;
+			case "allNotesOff":
+				self.module.processor_all_notes_off(self.instance, e.data.index);
+				break;
+			case "channelPressure":
+				self.module.processor_channel_pressure(self.instance, e.data.index, e.data.value);
+				break;
+			case "pitchBendChange":
+				self.module.processor_pitch_bend_change(self.instance, e.data.index, e.data.value);
+				break;
+			}
+		};
 	}
 
 	process(inputs, outputs, params) {

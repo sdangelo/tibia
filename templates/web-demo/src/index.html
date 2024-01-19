@@ -7,8 +7,9 @@ import * as demo from "./{{=it.product.bundleName}}.js";
 window.demo = demo;
 		</script>
 		<script>
-var audioCtx;
+var audioCtx, midi;
 var module, node;
+var hasAudioInput, hasMidiInput;
 
 var Player = {
 	sourceBuffer: null,
@@ -68,9 +69,18 @@ window.addEventListener("load", function (e) {
 	var start = document.getElementById("start");
 	var starting = document.getElementById("starting");
 	var main = document.getElementById("main");
+	var player = document.getElementById("player");
 	var file = document.getElementById("file");
 	var playPause = document.getElementById("playPause");
 	var controls = document.getElementById("controls");
+
+	hasAudioInput = demo.Module.data.product.buses.filter(x => x.type == "audio" && x.direction == "input").length > 0;
+	hasMidiInput = demo.Module.data.product.buses.filter(x => x.type == "midi" && x.direction == "input").length > 0;
+
+	if (hasMidiInput && !navigator.requestMIDIAccess)
+		alert("Your browser doesn't support the Web MIDI API");
+
+	player.hidden = !hasAudioInput;
 
 	// reset on refresh
 	file.value = "";
@@ -131,6 +141,8 @@ window.addEventListener("load", function (e) {
 				audioCtx = new AudioContext();
 			if (!module)
 				module = new demo.Module();
+			if (!midi && hasMidiInput)
+				midi = await navigator.requestMIDIAccess();
 			await module.init(audioCtx, "{{=it.product.bundleName}}_processor.js", "{{=it.product.bundleName}}.wasm");
 			node = new demo.Node(module);
 			node.connect(audioCtx.destination);
@@ -150,6 +162,52 @@ window.addEventListener("load", function (e) {
 					document.getElementById("p" + e.data.index).value = unmap(e.data.index, e.data.value);
 					document.getElementById("v" + e.data.index).innerText = e.data.value;
 			};
+
+			if (midi) {
+				function forwardMIDIMessage(msg) {
+					for (var i = 0; i < demo.Module.data.product.buses.length; i++) {
+						var b = demo.Module.data.product.buses[i];
+						if (b.type != "midi" || b.direction != "input")
+							continue;
+						var m = {};
+						for (p in msg)
+							m[p] = msg[p];
+						m.index = i;
+						node.port.postMessage(m);
+					}
+				}
+
+				function onMIDIMessage(e) {
+					switch (e.data[0] & 0xf0) {
+					case 0x90:
+						if (e.data[2] != 0)
+							forwardMIDIMessage({ type: "noteOn", note: e.data[1], velocity: e.data[2] / 127 });
+						else
+							forwardMIDIMessage({ type: "noteOff", note: e.data[1], velocity: 64 / 127 });
+						break;
+					case 0x80:
+						forwardMIDIMessage({ type: "noteOff", note: e.data[1], velocity: e.data[2] / 127 });
+						break;
+					case 0xb0:
+						switch(e.data[1]) {
+						case 120:
+							forwardMIDIMessage({ type: "allSoundsOff" });
+							break;
+						case 123:
+							forwardMIDIMessage({ type: "allNotesOff" });
+							break;
+						}
+						break;
+					case 0xd0:
+						forwardMIDIMessage({ type: "channelPressure", value: e.data[1] / 127 });
+						break;
+					case 0xe0:
+						forwardMIDIMessage({ type: "pitchBendChange", value: (e.data[2] << 7 | e.data[1]) / 8192 - 1 });
+						break;
+					}
+				}
+				midi.inputs.forEach(x => { x.onmidimessage = onMIDIMessage; });
+			}
 			
 			initState = 2;
 			start.hidden = true;
@@ -187,12 +245,13 @@ window.addEventListener("load", function (e) {
 		<input id="start" type="button" value="Start">
 		<p id="starting" hidden>Starting...</p>
 		<div id="main" hidden>
-			<h2>Player</h2>
-			<label for="file">Choose a file:</label>
-			<input type="file" id="file" name="file" accept="audio/*">
-			<br>
+			<div id="player" hidden>
+				<h2>Player</h2>
+				<label for="file">Choose a file:</label>
+				<input type="file" id="file" name="file" accept="audio/*">
+			</div>
 			<button id="playPause" disabled>Play</button>
-			<h2>Effect</h2>
+			<h2>Controls</h2>
 			<div id="controls">
 			</div>
 		</div>
