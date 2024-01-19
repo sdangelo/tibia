@@ -7,10 +7,194 @@ import * as demo from "./{{=it.product.bundleName}}.js";
 window.demo = demo;
 		</script>
 		<script>
+var audioCtx;
+var module, node;
+
+var Player = {
+	sourceBuffer: null,
+	playing: false,
+	started: false,
+
+	load: function (buffer, successCb, errorCb) {
+		let t = this;
+		audioCtx.decodeAudioData(buffer,
+			function (data) {
+				if (t.started)
+					t.sourceBuffer.stop();
+				if (t.playing)
+					t.sourceBuffer.disconnect();
+				t.sourceBuffer = audioCtx.createBufferSource();
+				t.sourceBuffer.buffer = data;
+				t.sourceBuffer.loop = true;
+				if (t.started)
+					t.sourceBuffer.start();
+				if (t.playing) {
+					t.started = true;
+					t.sourceBuffer.connect(node);
+				}
+				successCb();
+			},
+			function () { errorCb(); });
+	},
+	
+	togglePlayPause: function () {
+		if (this.playing) {
+			this.sourceBuffer.disconnect();
+			this.playing = false;
+		} else {
+			if (!this.started) {
+				this.sourceBuffer.start();
+				this.started = true;
+			}
+			this.sourceBuffer.connect(node);
+			this.playing = true;
+		}
+	}
+};
+
+function map(index, value) {
+	var p = demo.Module.data.product.parameters[index];
+	return p.map == "logarithmic" ? p.minimum * Math.exp((2.0 * Math.log(Math.sqrt(p.maximum * p.minimum) / Math.abs(p.minimum))) * value) : p.minimum + (p.maximum - p.minimum) * value;
+}
+
+function unmap(index, value) {
+	var p = demo.Module.data.product.parameters[index];
+	return p.map == "logarithmic" ? Math.log(value / p.minimum) / (2.0 * Math.log(Math.sqrt(p.maximum * p.minimum) / Math.abs(p.minimum))) : (value - p.minimum) / (p.maximum - p.minimum);
+}
+
+var initState = 0; // 0 = not inited, 1 = in progress, 2 = inited
+
+window.addEventListener("load", function (e) {
+	var start = document.getElementById("start");
+	var starting = document.getElementById("starting");
+	var main = document.getElementById("main");
+	var file = document.getElementById("file");
+	var playPause = document.getElementById("playPause");
+	var controls = document.getElementById("controls");
+
+	// reset on refresh
+	file.value = "";
+	playPause.disabled = true; 
+
+	var parameters = demo.Module.data.product.parameters;
+	for (var i = 0; i < parameters.length; i++) {
+		var div = document.createElement("div");
+
+		var label = document.createElement("label");
+		label.setAttribute("for", "p" + i);
+		label.innerText = parameters[i].name;
+
+		var value = document.createElement("span");
+		value.setAttribute("id", "v" + i);
+		value.innerText = parameters[i].defaultValue;
+
+		var range = document.createElement("input");
+		range.setAttribute("type", "range");
+		range.setAttribute("id", "p" + i);
+		range.setAttribute("name", "p" + i);
+		if (parameters[i].isBypass || parameters[i].toggled) {
+			range.setAttribute("min", 0);
+			range.setAttribute("max", 1);
+			range.setAttribute("step", 1);
+		} else {
+			range.setAttribute("min", 0);
+			range.setAttribute("max", 1);
+			range.setAttribute("step", parameters[i].integer ? 1 / (parameters[i].maximum - parameters[i].minimum) : "any");
+		}
+		range.value = unmap(i, parameters[i].defaultValue);
+		if (parameters[i].direction == "output")
+			range.setAttribute("readonly", "true");
+		else {
+			let index = i;
+			let v = value;
+			range.addEventListener("input", function (e) {
+				var p = node.parameters.get(parameters[index].name);
+				var val = map(index, e.target.value);
+				p.setValueAtTime(val, 0);
+				v.innerText = val;
+			});
+		}
+
+		div.appendChild(label);
+		div.appendChild(range);
+		div.appendChild(value);
+		controls.appendChild(div);
+	}
+
+	start.addEventListener("click", async function () {
+		initState = 1;
+		start.disabled = true;
+		starting.hidden = false;
+
+		try {
+			if (!audioCtx)
+				audioCtx = new AudioContext();
+			if (!module)
+				module = new demo.Module();
+			await module.init(audioCtx, "{{=it.product.bundleName}}_processor.js", "{{=it.product.bundleName}}.wasm");
+			node = new demo.Node(module);
+			node.connect(audioCtx.destination);
+
+			node.addEventListener("processorerror", function (e) {
+				initState = 0;
+				start.hidden = false;
+				start.disabled = false;
+				starting.hidden = true;
+				main.hidden = true;
+
+				alert("Processor error" + (e.message ? ": " + e.message : ""));
+			});
+
+			node.port.onmessage = function (e) {
+				if (e.data.type == "paramOutChange")
+					document.getElementById("p" + e.data.index).value = unmap(e.data.index, e.data.value);
+					document.getElementById("v" + e.data.index).innerText = e.data.value;
+			};
+			
+			initState = 2;
+			start.hidden = true;
+			starting.hidden = true;
+			main.hidden = false;
+		} catch (err) {
+			alert("Colud not initialize: " + err);
+
+			initState = 0;
+			start.disabled = false;
+			starting.hidden = true;
+		}
+	});
+
+	file.addEventListener("change", function () {
+		var fileReader = new FileReader();
+		fileReader.readAsArrayBuffer(this.files[0]);
+		fileReader.onload = function (e) {
+			Player.load(e.target.result,
+				function () { playPause.disabled = false; },
+				function () { alert("Could not decode the chosen file"); });
+		};
+		fileReader.onerror = function (e) { alert("Could not read file"); };
+	});
+
+	playPause.addEventListener("click", function () {
+		Player.togglePlayPause();
+		playPause.innerText = Player.playing ? "Pause" : "Play";
+	});
+});
 		</script>
 	</head>
 	<body>
 		<h1>{{=it.product.name}}</h1>
 		<input id="start" type="button" value="Start">
+		<p id="starting" hidden>Starting...</p>
+		<div id="main" hidden>
+			<h2>Player</h2>
+			<label for="file">Choose a file:</label>
+			<input type="file" id="file" name="file" accept="audio/*">
+			<br>
+			<button id="playPause" disabled>Play</button>
+			<h2>Effect</h2>
+			<div id="controls">
+			</div>
+		</div>
 	</body>
 </html>

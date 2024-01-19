@@ -10,9 +10,9 @@ LDFLAGS = \
 	-Wl,--export-table \
 	-Wl,--export=processor_new \
 	-Wl,--export=processor_free \
-	-Wl,--export=processor_get_ins \
-	-Wl,--export=processor_get_outs \
-	-Wl,--export=processor_get_param_values \
+	-Wl,--export=processor_get_x_buf \
+	-Wl,--export=processor_get_y_buf \
+	-Wl,--export=processor_get_out_params \
 	-Wl,--export=processor_process \
 	-Wl,--export=processor_set_parameter \
 	-Wl,-z,stack-size=$$((8*1024*1024)) \

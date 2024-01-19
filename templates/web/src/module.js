@@ -1,4 +1,7 @@
-const data = {{=JSON.stringify(it, null, 2)}};
+const data = {
+	company: {{=JSON.stringify(it.company, null, 2)}},
+	product: {{=JSON.stringify(it.product, null, 2)}}
+};
 
 export class Module {
 	static get data() { return data; }

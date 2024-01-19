@@ -6,11 +6,6 @@ var buses = {{=JSON.stringify(it.product.buses, null, 2)}};
 var parameters = {{=JSON.stringify(it.product.parameters, null, 2)}};
 
 class Processor extends AudioWorkletProcessor {
-	throwError(msg) {
-		this.port.postMessage({ type: "error", msg: msg);
-		throw msg;
-	}
-
 	constructor(options) {
 		super();
 
@@ -20,12 +15,12 @@ class Processor extends AudioWorkletProcessor {
 
 		this.instance = this.module.processor_new(sampleRate);
 		if (!this.instance)
-			this.throwError("Could not instantiate processor module");
+			throw "Could not instantiate processor module";
 
 		function getBuffers(p, output) {
 			var ret = [];
 			for (var i = 0; i < buses.length; i++) {
-				if ((output && buses[i].direction == "input") || (!output && buses[i].direction == "output"))
+				if (buses[i].type != "audio" || (output && buses[i].direction == "input") || (!output && buses[i].direction == "output"))
 					continue;
 				if (buses[i].channels == "mono") {
 					ret.push([ new Float32Array(this.module.memory.buffer, p, 128) ]);
@@ -59,15 +54,15 @@ class Processor extends AudioWorkletProcessor {
 		this.paramOutChangeMsg = { type: "paramOutChange", index: NaN, value: NaN };
 	}
 
-	process(input, outputs, params) {
+	process(inputs, outputs, params) {
 		for (var i = 0; i < this.parametersIn.length; i++) {
 			var index = this.parametersIn[i].index;
 			var parameter = parameters[index];
 			var name = parameter.name;
-			var value = params[p.name][0];
+			var value = params[name][0];
 			if (value != this.parametersIn[i].value) {
 				if (parameter.isBypass || parameter.toggled)
-					value = value > 0 ? 0 : 1;
+					value = value > 0 ? 1 : 0;
 				else if (parameter.integer)
 					value = Math.round(value);
 				value = Math.min(Math.max(value, parameter.minimum), parameter.maximum);
@@ -102,7 +97,7 @@ class Processor extends AudioWorkletProcessor {
 			for (var j = 0; j < this.y.length; j++) {
 				var output = outputs[j];
 				for (var k = 0; k < this.y[j].length; k++)
-					this.y[j][k].set(output[k].subarray(i, s));
+					output[k].set(this.y[j][k].subarray(i, s));
 			}
 
 			i += s;
@@ -124,8 +119,10 @@ class Processor extends AudioWorkletProcessor {
 
 	static get parameterDescriptors() {
 		var ret = [];
-		for (var i = 0; i < this.parametersIn.length; i++) {
-			var p = parameters[this.parametersIn[i].index];
+		for (var i = 0; i < parameters.length; i++) {
+			var p = parameters[i];
+			if (p.direction == "output")
+				continue;
 			ret.push({ name: p.name, minValue: p.minimum, maxValue: p.maximum, defaultValue: p.defaultValue, automationRate: "k-rate" });
 		}
 		return ret;
