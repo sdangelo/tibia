@@ -484,47 +484,72 @@ static Steinberg_tresult pluginSetProcessing(void* thisInterface, Steinberg_TBoo
 	return Steinberg_kNotImplemented;
 }
 
+static void processParams(pluginInstance *p, struct Steinberg_Vst_ProcessData *data, char before) {
+#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+	if (data->inputParameterChanges == NULL)
+		return;
+	Steinberg_int32 n = data->inputParameterChanges->lpVtbl->getParameterCount(data->inputParameterChanges);
+	for (Steinberg_int32 i = 0; i < n; i++) {
+		struct Steinberg_Vst_IParamValueQueue *q = data->inputParameterChanges->lpVtbl->getParameterData(data->inputParameterChanges, i);
+		if (q == NULL)
+			continue;
+		Steinberg_int32 c = q->lpVtbl->getPointCount(q);
+		if (c <= 0)
+			continue;
+		Steinberg_int32 o;
+		Steinberg_Vst_ParamValue v;
+		if (q->lpVtbl->getPoint(q, before ? 0 : c - 1, &o, &v) != Steinberg_kResultTrue)
+			continue;
+		if (before ? o != 0 : o <= 0)
+			continue;
+		Steinberg_Vst_ParamID id = q->lpVtbl->getParameterId(q);
+# if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+		if (id >= DATA_PRODUCT_PARAMETERS_N) {
+			size_t j = id - DATA_PRODUCT_PARAMETERS_N;
+			size_t index = j / 3;
+			uint8_t data[3];
+			switch (j & 0x3) {
+			case 0:
+				// channel pressure
+				data[0] = 0xd0 /* | channel */;
+				data[1] = (uint8_t)(127.0 * v);
+				data[2] = 0;
+				break;
+			case 1:
+			{
+				// pitch bend change
+				uint16_t x = (uint16_t)(16382.0 * v) + 1;
+				data[0] = 0xe0 /* | channel */;
+				data[1] = (x >> 7) & 0x7f;
+				data[2] = x & 0x7f;
+			}
+				break;
+			case 2:
+				// mod wheel
+				data[0] = 0xb0 /* | channel */;
+				data[1] = 1;
+				data[2] = (uint8_t)(127.0 * v);
+				break;
+			}
+			plugin_midi_msg_in(&p->p, midiInIndex[index], data);
+			continue;
+		}
+# endif
+		v = parameterAdjust(id, parameterMap(id, v));
+		if (v != p->parameters[id]) {
+			p->parameters[id] = v;
+			plugin_set_parameter(&p->p, parameterData[id].index, p->parameters[id]);
+		}
+	}
+#endif
+}
+
 static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst_ProcessData* data) {
 	TRACE("plugin IAudioProcessor process\n");
 
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIAudioProcessor));
 
-#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-	if (data->inputParameterChanges != NULL) {
-		Steinberg_int32 n = data->inputParameterChanges->lpVtbl->getParameterCount(data->inputParameterChanges);
-		for (Steinberg_int32 i = 0; i < n; i++) {
-			struct Steinberg_Vst_IParamValueQueue *q = data->inputParameterChanges->lpVtbl->getParameterData(data->inputParameterChanges, i);
-			if (q == NULL)
-				continue;
-			Steinberg_int32 c = q->lpVtbl->getPointCount(q);
-			if (c <= 0)
-				continue;
-			Steinberg_int32 o;
-			Steinberg_Vst_ParamValue v;
-			if (q->lpVtbl->getPoint(q, 0, &o, &v) != Steinberg_kResultTrue)
-				continue;
-			if (o != 0)
-				continue;
-			Steinberg_Vst_ParamID id = q->lpVtbl->getParameterId(q);
-# if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-			if (id >= DATA_PRODUCT_PARAMETERS_N) {
-				size_t j = id - DATA_PRODUCT_PARAMETERS_N;
-				size_t index = j >> 1;
-				if (j & 0x1)
-					plugin_pitch_bend_change(&p->p, index, 2.0 * v - 1.0);
-				else
-					plugin_channel_pressure(&p->p, index, v);
-				continue;
-			}
-# endif
-			v = parameterAdjust(id, parameterMap(id, v));
-			if (v != p->parameters[id]) {
-				p->parameters[id] = v;
-				plugin_set_parameter(&p->p, parameterData[id].index, p->parameters[id]);
-			}
-		}
-	}
-#endif
+	processParams(p, data, 1); 
 
 #if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 	if (data->inputEvents != NULL) {
@@ -533,16 +558,24 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 			struct Steinberg_Vst_Event ev;
 			if (data->inputEvents->lpVtbl->getEvent(data->inputEvents, i, &ev) != Steinberg_kResultOk)
 				continue;
-			size_t index = DATA_PRODUCT_BUSES_AUDIO_INPUT_N + DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N + ev.busIndex;
 			switch (ev.type) {
 			case Steinberg_Vst_Event_EventTypes_kNoteOnEvent:
-				if (ev.Steinberg_Vst_Event_noteOn.velocity == 0)
-					plugin_note_off(&p->p, index, ev.Steinberg_Vst_Event_noteOn.pitch, 0.5f);
-				else
-					plugin_note_on(&p->p, index, ev.Steinberg_Vst_Event_noteOn.pitch, ev.Steinberg_Vst_Event_noteOn.velocity);
+			{
+				const uint8_t data[3] = { 0x90 | ev.Steinberg_Vst_Event_noteOn.channel, ev.Steinberg_Vst_Event_noteOn.pitch, (uint8_t)(127.f * ev.Steinberg_Vst_Event_noteOn.velocity) };
+				plugin_midi_msg_in(&p->p, midiInIndex[ev.busIndex], data);
+			}
 				break;
 			case Steinberg_Vst_Event_EventTypes_kNoteOffEvent:
-				plugin_note_off(&p->p, index, ev.Steinberg_Vst_Event_noteOff.pitch, ev.Steinberg_Vst_Event_noteOff.velocity);
+			{
+				const uint8_t data[3] = { 0x90 | ev.Steinberg_Vst_Event_noteOff.channel, ev.Steinberg_Vst_Event_noteOff.pitch, (uint8_t)(127.f * ev.Steinberg_Vst_Event_noteOff.velocity) };
+				plugin_midi_msg_in(&p->p, midiInIndex[ev.busIndex], data);
+			}
+				break;
+			case Steinberg_Vst_Event_EventTypes_kPolyPressureEvent:
+			{
+				const uint8_t data[3] = { 0xa0 | ev.Steinberg_Vst_Event_polyPressure.channel, ev.Steinberg_Vst_Event_polyPressure.pitch, (uint8_t)(127.f * ev.Steinberg_Vst_Event_polyPressure.pressure) };
+				plugin_midi_msg_in(&p->p, midiInIndex[ev.busIndex], data);
+			}
 				break;
 			}
 		}
@@ -590,42 +623,9 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 	_MM_SET_DENORMALS_ZERO_MODE(denormals_zero_mode);
 #endif
 
-#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-	if (data->inputParameterChanges != NULL) {
-		Steinberg_int32 n = data->inputParameterChanges->lpVtbl->getParameterCount(data->inputParameterChanges);
-		for (Steinberg_int32 i = 0; i < n; i++) {
-			struct Steinberg_Vst_IParamValueQueue *q = data->inputParameterChanges->lpVtbl->getParameterData(data->inputParameterChanges, i);
-			if (q == NULL)
-				continue;
-			Steinberg_int32 c = q->lpVtbl->getPointCount(q);
-			if (c <= 0)
-				continue;
-			Steinberg_int32 o;
-			Steinberg_Vst_ParamValue v;
-			if (q->lpVtbl->getPoint(q, c - 1, &o, &v) != Steinberg_kResultTrue)
-				continue;
-			if (o <= 0)
-				continue;
-			Steinberg_Vst_ParamID id = q->lpVtbl->getParameterId(q);
-# if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-			if (id >= DATA_PRODUCT_PARAMETERS_N) {
-				size_t j = id - DATA_PRODUCT_PARAMETERS_N;
-				size_t index = j >> 1;
-				if (j & 0x1)
-					plugin_pitch_bend_change(&p->p, index, 2.0 * v - 1.0);
-				else
-					plugin_channel_pressure(&p->p, index, v);
-				continue;
-			}
-# endif
-			v = parameterAdjust(id, parameterMap(id, v));
-			if (v != p->parameters[id]) {
-				p->parameters[id] = v;
-				plugin_set_parameter(&p->p, parameterData[id].index, p->parameters[id]);
-			}
-		}
-	}
+	processParams(p, data, 0); 
 
+#if DATA_PRODUCT_PARAMETERS_N > 0
 	for (Steinberg_int32 i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
 		if (!(parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly))
 			continue;
@@ -706,8 +706,8 @@ typedef struct controller {
 	Steinberg_Vst_IMidiMappingVtbl *	vtblIMidiMapping;
 	Steinberg_uint32			refs;
 	Steinberg_FUnknown *			context;
-#if DATA_PRODUCT_PARAMETERS_N > 0
-	double					parameters[DATA_PRODUCT_PARAMETERS_N];
+#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+	double					parameters[DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N];
 #endif
 	struct Steinberg_Vst_IComponentHandler* componentHandler;
 } controller;
@@ -773,8 +773,8 @@ static Steinberg_tresult controllerInitialize(void* thisInterface, struct Steinb
 	if (c->context != NULL)
 		return Steinberg_kResultFalse;
 	c->context = context;
-#if DATA_PRODUCT_PARAMETERS_N > 0
-	for (int i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++)
+#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+	for (int i = 0; i < DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N; i++)
 		c->parameters[i] = parameterData[i].def;
 #endif
 	return Steinberg_kResultOk;
@@ -822,12 +822,12 @@ static Steinberg_tresult controllerGetState(void* thisInterface, struct Steinber
 
 static Steinberg_int32 controllerGetParameterCount(void* thisInterface) {
 	TRACE("controller get parameter count\n");
-	return DATA_PRODUCT_PARAMETERS_N + 2 * DATA_PRODUCT_BUSES_MIDI_INPUT_N;
+	return DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N;
 }
 
 static Steinberg_tresult controllerGetParameterInfo(void* thisInterface, Steinberg_int32 paramIndex, struct Steinberg_Vst_ParameterInfo* info) {
 	TRACE("controller get parameter info\n");
-	if (paramIndex < 0 || paramIndex >= DATA_PRODUCT_PARAMETERS_N + 2 * DATA_PRODUCT_BUSES_MIDI_INPUT_N)
+	if (paramIndex < 0 || paramIndex >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N)
 		return Steinberg_kResultFalse;
 	*info = parameterInfo[paramIndex];
 	return Steinberg_kResultTrue;
@@ -877,9 +877,9 @@ static void dToStr(double v, Steinberg_Vst_String128 s, int precision) {
 
 static Steinberg_tresult controllerGetParamStringByValue(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue valueNormalized, Steinberg_Vst_String128 string) {
 	TRACE("controller get param string by value\n");
-	if (id >= DATA_PRODUCT_PARAMETERS_N)
+	if (id >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N)
 		return Steinberg_kResultFalse;
-	dToStr(parameterMap(id, valueNormalized), string, 2);
+	dToStr(id >= DATA_PRODUCT_PARAMETERS_N ? valueNormalized : parameterMap(id, valueNormalized), string, 2);
 	return Steinberg_kResultTrue;
 }
 
@@ -913,29 +913,29 @@ void TCharToD(Steinberg_Vst_TChar* s, double *v) {
 
 static Steinberg_tresult controllerGetParamValueByString(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_TChar* string, Steinberg_Vst_ParamValue* valueNormalized) {
 	TRACE("controller get param value by string\n");
-	if (id >= DATA_PRODUCT_PARAMETERS_N)
+	if (id >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N)
 		return Steinberg_kResultFalse;
 	double v;
 	TCharToD(string, &v);
-	*valueNormalized = parameterUnmap(id, v);
+	*valueNormalized = id >= DATA_PRODUCT_PARAMETERS_N ? v : parameterUnmap(id, v);
 	return Steinberg_kResultTrue;
 }
 
 static Steinberg_Vst_ParamValue controllerNormalizedParamToPlain(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue valueNormalized) {
 	TRACE("controller normalized param to plain\n");
-	return parameterMap(id, valueNormalized);
+	return id >= DATA_PRODUCT_PARAMETERS_N ? valueNormalized : parameterMap(id, valueNormalized);
 }
 
 static Steinberg_Vst_ParamValue controllerPlainParamToNormalized(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue plainValue) {
 	TRACE("controller plain param to normalized\n");
-	return parameterUnmap(id, plainValue);
+	return id >= DATA_PRODUCT_PARAMETERS_N ? plainValue : parameterUnmap(id, plainValue);
 }
 
 static Steinberg_Vst_ParamValue controllerGetParamNormalized(void* thisInterface, Steinberg_Vst_ParamID id) {
 	TRACE("controller get param normalized\n");
-#if DATA_PRODUCT_PARAMETERS_N > 0
+#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
-	return parameterUnmap(id, c->parameters[id]);
+	return id >= DATA_PRODUCT_PARAMETERS_N ? c->parameters[id] : parameterUnmap(id, c->parameters[id]);
 #else
 	return 0.0;
 #endif
@@ -943,11 +943,11 @@ static Steinberg_Vst_ParamValue controllerGetParamNormalized(void* thisInterface
 
 static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue value) {
 	TRACE("controller set param normalized\n");
-#if DATA_PRODUCT_PARAMETERS_N > 0
-	if (id >= DATA_PRODUCT_PARAMETERS_N)
+#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+	if (id >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N)
 		return Steinberg_kResultFalse;
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
-	c->parameters[id] = parameterAdjust(id, parameterMap(id, value));
+	c->parameters[id] = id >= DATA_PRODUCT_PARAMETERS_N ? value : parameterAdjust(id, parameterMap(id, value));
 	return Steinberg_kResultTrue;
 #else
 	return Steinberg_kResultFalse;
@@ -1020,11 +1020,15 @@ static Steinberg_tresult controllerGetMidiControllerAssignment(void* thisInterfa
 		return Steinberg_kInvalidArgument;
 	switch (midiControllerNumber) {
 	case Steinberg_Vst_ControllerNumbers_kAfterTouch:
-		*id = DATA_PRODUCT_PARAMETERS_N + 2 * busIndex;
+		*id = DATA_PRODUCT_PARAMETERS_N + 3 * busIndex;
 		return Steinberg_kResultTrue;
 		break;
 	case Steinberg_Vst_ControllerNumbers_kPitchBend:
-		*id = DATA_PRODUCT_PARAMETERS_N + 2 * busIndex + 1;
+		*id = DATA_PRODUCT_PARAMETERS_N + 3 * busIndex + 1;
+		return Steinberg_kResultTrue;
+		break;
+	case Steinberg_Vst_ControllerNumbers_kCtrlModWheel:
+		*id = DATA_PRODUCT_PARAMETERS_N + 3 * busIndex + 2;
 		return Steinberg_kResultTrue;
 		break;
 	default:

@@ -164,46 +164,16 @@ window.addEventListener("load", function (e) {
 			};
 
 			if (midi) {
-				function forwardMIDIMessage(msg) {
+				function onMIDIMessage(e) {
+					if ((e.data[0] & 0xf0) == 0xf0)
+						return;
+					var msg = { type: "midi", data: e.data };
 					for (var i = 0; i < demo.Module.data.product.buses.length; i++) {
 						var b = demo.Module.data.product.buses[i];
 						if (b.type != "midi" || b.direction != "input")
 							continue;
-						var m = {};
-						for (p in msg)
-							m[p] = msg[p];
-						m.index = i;
-						node.port.postMessage(m);
-					}
-				}
-
-				function onMIDIMessage(e) {
-					switch (e.data[0] & 0xf0) {
-					case 0x90:
-						if (e.data[2] != 0)
-							forwardMIDIMessage({ type: "noteOn", note: e.data[1], velocity: e.data[2] / 127 });
-						else
-							forwardMIDIMessage({ type: "noteOff", note: e.data[1], velocity: 64 / 127 });
-						break;
-					case 0x80:
-						forwardMIDIMessage({ type: "noteOff", note: e.data[1], velocity: e.data[2] / 127 });
-						break;
-					case 0xb0:
-						switch(e.data[1]) {
-						case 120:
-							forwardMIDIMessage({ type: "allSoundsOff" });
-							break;
-						case 123:
-							forwardMIDIMessage({ type: "allNotesOff" });
-							break;
-						}
-						break;
-					case 0xd0:
-						forwardMIDIMessage({ type: "channelPressure", value: e.data[1] / 127 });
-						break;
-					case 0xe0:
-						forwardMIDIMessage({ type: "pitchBendChange", value: (e.data[2] << 7 | e.data[1]) / 8192 - 1 });
-						break;
+						msg.index = i;
+						node.port.postMessage(msg);
 					}
 				}
 				midi.inputs.forEach(x => { x.onmidimessage = onMIDIMessage; });

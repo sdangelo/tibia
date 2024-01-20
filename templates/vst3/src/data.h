@@ -96,10 +96,16 @@ static struct Steinberg_Vst_BusInfo busInfoMidiOutput[DATA_PRODUCT_BUSES_MIDI_OU
 };
 #endif
 
+#if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+static uint32_t midiInIndex[DATA_PRODUCT_BUSES_MIDI_INPUT_N] = {
+	{{~it.product.buses :b:i}}{{?b.type == "midi" && b.direction == "input"}}{{=i}}, {{?}}{{~}}
+};
+#endif
+
 #define DATA_PRODUCT_PARAMETERS_N		{{=it.product.parameters.filter(x => !x.isLatency).length}}
 
 #if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_N + 2 * DATA_PRODUCT_BUSES_MIDI_INPUT_N] = {
+static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N] = {
 {{~it.product.parameters.filter(x => !x.isLatency) :p:i}}
 	{
 		/* .id				= */ {{=i}},
@@ -124,24 +130,34 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 {{~}}
 {{~it.product.buses.filter(x => x.type == "midi" && x.direction == "input") :b:i}}
 	{
-		/* .id				= */ {{=it.product.parameters.filter(x => !x.isLatency).length + 2 * i}},
-		/* .title			= */ { {{~Array.from(b.name + " CP") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .shortTitle			= */ { {{~Array.from(b.shortName + " CP") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .id				= */ {{=it.product.parameters.filter(x => !x.isLatency).length + 3 * i}},
+		/* .title			= */ { {{~Array.from(b.name + " Channel Pressure") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .shortTitle			= */ { {{~Array.from(b.shortName + " Chan Pres") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { 0 },
 		/* .stepCount			= */ 0,
 		/* .defaultNormalizedValue	= */ 0.0,
 		/* .unitId			= */ 0,
-		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly
+		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate
 	},
 	{
-		/* .id				= */ {{=it.product.parameters.filter(x => !x.isLatency).length + 2 * i + 1}},
-		/* .title			= */ { {{~Array.from(b.name + " PB") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .shortTitle			= */ { {{~Array.from(b.shortName + " PB") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .id				= */ {{=it.product.parameters.filter(x => !x.isLatency).length + 3 * i + 1}},
+		/* .title			= */ { {{~Array.from(b.name + " Pitch Bend") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .shortTitle			= */ { {{~Array.from(b.shortName + " Pitch Bend") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { 0 },
 		/* .stepCount			= */ 0,
 		/* .defaultNormalizedValue	= */ 0.5,
 		/* .unitId			= */ 0,
-		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly
+		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate
+	},
+	{
+		/* .id				= */ {{=it.product.parameters.filter(x => !x.isLatency).length + 3 * i + 2}},
+		/* .title			= */ { {{~Array.from(b.name + " Mod Wheel") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .shortTitle			= */ { {{~Array.from(b.shortName + " Mod Wheel") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .units			= */ { 0 },
+		/* .stepCount			= */ 0,
+		/* .defaultNormalizedValue	= */ 0.0,
+		/* .unitId			= */ 0,
+		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate
 	},
 {{~}}
 };

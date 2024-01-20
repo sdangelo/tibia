@@ -89,38 +89,9 @@ static void plugin_process(plugin *instance, const float **inputs, float **outpu
 	}
 }
 
-static void plugin_note_on(plugin *instance, size_t index, uint8_t note, float velocity) {
+static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * data) {
 	(void)index;
-	(void)velocity;
-	//approx instance->cutoff_k = powf(2.f, (1.f / 12.f) * (note - 60));
-	instance->cutoff_k = note < 64 ? (-0.19558034980097166f * note - 2.361735109225749f) / (note - 75.57552349522389f) : (393.95397927344214f - 7.660826245588588f * note) / (note - 139.0755234952239f);
-}
-
-static void plugin_note_off(plugin *instance, size_t index, uint8_t note, float velocity) {
-	(void)instance;
-	(void)index;
-	(void)note;
-	(void)velocity;
-}
-
-static void plugin_all_sounds_off(plugin *instance, size_t index) {
-	(void)instance;
-	(void)index;
-}
-
-static void plugin_all_notes_off(plugin *instance, size_t index) {
-	(void)instance;
-	(void)index;
-}
-
-static void plugin_channel_pressure(plugin *instance, size_t index, float value) {
-	(void)instance;
-	(void)index;
-	(void)value;
-}
-
-static void plugin_pitch_bend_change(plugin *instance, size_t index, float value) {
-	(void)instance;
-	(void)index;
-	(void)value;
+	if ((data[0] & 0xf0) && (data[2] != 0))
+		//approx instance->cutoff_k = powf(2.f, (1.f / 12.f) * (note - 60));
+		instance->cutoff_k = data[1] < 64 ? (-0.19558034980097166f * data[1] - 2.361735109225749f) / (data[1] - 75.57552349522389f) : (393.95397927344214f - 7.660826245588588f * data[1]) / (data[1] - 139.0755234952239f);
 }

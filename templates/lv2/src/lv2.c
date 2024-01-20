@@ -204,38 +204,9 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 			continue;
 		LV2_ATOM_SEQUENCE_FOREACH(i->x_midi[j], ev) {
 			if (ev->body.type == i->uri_midi_MidiEvent) {
-				const uint8_t * const msg = (const uint8_t *)(ev + 1);
-				switch (lv2_midi_message_type(msg)) {
-				case LV2_MIDI_MSG_NOTE_ON:
-					if (msg[2] == 0)
-						plugin_note_off(&i->p, midi_in_index[j], msg[1], 64.f / 127.f);
-					else
-						plugin_note_on(&i->p, midi_in_index[j], msg[1], (1.f / 127.f) * msg[2]);
-					break;
-				case LV2_MIDI_MSG_NOTE_OFF:
-					plugin_note_off(&i->p, midi_in_index[j], msg[1], (1.f / 127.f) * msg[2]);
-					break;
-				case LV2_MIDI_MSG_CONTROLLER:
-					switch (msg[1]) {
-					case LV2_MIDI_CTL_ALL_SOUNDS_OFF:
-						plugin_all_sounds_off(&i->p, midi_in_index[j]);
-						break;
-					case LV2_MIDI_CTL_ALL_NOTES_OFF:
-						plugin_all_notes_off(&i->p, midi_in_index[j]);
-						break;
-					default:
-						break;
-					}
-					break;
-				case LV2_MIDI_MSG_CHANNEL_PRESSURE:
-					plugin_channel_pressure(&i->p, midi_in_index[j], (1.f / 127.f) * msg[1]);
-					break;
-				case LV2_MIDI_MSG_BENDER:
-					plugin_pitch_bend_change(&i->p, midi_in_index[j], (1.f / 8192.f) * (msg[2] << 7 | msg[1]) - 1.f);
-					break;
-				default:
-					break;
-				}
+				const uint8_t * data = (const uint8_t *)(ev + 1);
+				if ((data[0] & 0xf0) != 0xf0)
+					plugin_midi_msg_in(&i->p, midi_in_index[j], data);
 			}
 		}
 	}

@@ -125,27 +125,8 @@ void processor_process(instance *i, int32_t n_samples) {
 }
 
 #if DATA_PRODUCT_MIDI_INPUTS_N > 0
-void processor_note_on(instance *i, int32_t index, int32_t note, float velocity) {
-	plugin_note_on(&i->p, index, note, velocity);
-}
-
-void processor_note_off(instance *i, int32_t index, int32_t note, float velocity) {
-	plugin_note_off(&i->p, index, note, velocity);
-}
-
-void processor_all_sounds_off(instance *i, int32_t index) {
-	plugin_all_sounds_off(&i->p, index);
-}
-
-void processor_all_notes_off(instance *i, int32_t index) {
-	plugin_all_notes_off(&i->p, index);
-}
-
-void processor_channel_pressure(instance *i, int32_t index, float value) {
-	plugin_channel_pressure(&i->p, index, value);
-}
-
-void processor_pitch_bend_change(instance *i, int32_t index, float value) {
-	plugin_pitch_bend_change(&i->p, index, value);
+void processor_midi_msg_in(instance *i, int32_t index, uint8_t data0, uint8_t data1, uint8_t data2) {
+	uint8_t data[3] = { data0, data1, data2 };
+	plugin_midi_msg_in(&i->p, index, data);
 }
 #endif

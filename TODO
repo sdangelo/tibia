@@ -1,5 +1,3 @@
-* mod wheel
-
 * recursive object merge in tibia
 * copyrights
 * dotjs error on undefined or JSON schema
@@ -20,6 +18,8 @@
 * whole midi properly (see https://github.com/harryhaaren/lv2/blob/master/lv2/lv2plug.in/ns/ext/midi/midi.h, https://www.midi.org/specifications-old/item/table-1-summary-of-midi-message, http://midi.teragonaudio.com/tech/midispec.htm)
 * LV2 (and raw midi): uneven midi pitch bend, what to do?
 * VST3: noteOn, noteOff tuning, what to do? (https://steinbergmedia.github.io/vst3_doc/vstinterfaces/structSteinberg_1_1Vst_1_1NoteOnEvent.html, https://steinbergmedia.github.io/vst3_doc/vstinterfaces/structSteinberg_1_1Vst_1_1NoteOffEvent.html)
+* VST3: pitch bend/channel pressure channel, what to do? (16x2 parameters?)
+* VST3: control change and program change
 * midi out
 * vst3 tail, web process return true/false
 * error checking etc. web, especially processor.js

@@ -19,13 +19,7 @@ LDFLAGS = \
 	-nostdlib
 
 ifeq (${HAS_MIDI_IN}, yes)
-LDFLAGS += \
-	-Wl,--export=processor_note_on \
-	-Wl,--export=processor_note_off \
-	-Wl,--export=processor_all_sounds_off \
-	-Wl,--export=processor_all_notes_off \
-	-Wl,--export=processor_channel_pressure \
-	-Wl,--export=processor_pitch_bend_change
+LDFLAGS += -Wl,--export=processor_midi_msg_in
 endif
 
 ALL = build/${BUNDLE_NAME}.wasm build/${BUNDLE_NAME}_processor.js build/${BUNDLE_NAME}.js

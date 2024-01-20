@@ -55,26 +55,8 @@ class Processor extends AudioWorkletProcessor {
 
 		var self = this;
 		this.port.onmessage = function (e) {
-			switch (e.data.type) {
-			case "noteOn":
-				self.module.processor_note_on(self.instance, e.data.index, e.data.note, e.data.velocity);
-				break;
-			case "noteOff":
-				self.module.processor_note_off(self.instance, e.data.index, e.data.note, e.data.velocity);
-				break;
-			case "allSoundsOff":
-				self.module.processor_all_sounds_off(self.instance, e.data.index);
-				break;
-			case "allNotesOff":
-				self.module.processor_all_notes_off(self.instance, e.data.index);
-				break;
-			case "channelPressure":
-				self.module.processor_channel_pressure(self.instance, e.data.index, e.data.value);
-				break;
-			case "pitchBendChange":
-				self.module.processor_pitch_bend_change(self.instance, e.data.index, e.data.value);
-				break;
-			}
+			if (e.data.type == "midi")
+				self.module.processor_midi_msg_in(self.instance, e.data.index, e.data.data[0], e.data.data[1], e.data.data[2]);
 		};
 	}
 

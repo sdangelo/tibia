@@ -60,6 +60,36 @@ module.exports = function (data, api) {
 	for (var id in data.lv2.prefixes)
 		data.tibia.lv2.prefixes.push({ id: id, uri: data.lv2.prefixes[id] });
 
+	var buses = data.product.buses;
+	var audioPorts = [];
+	var midiPorts = [];
+	for (var bi = 0; bi < buses.length; bi++) {
+		var b = buses[bi];
+		if (b.type == "audio") {
+			if (b.channels == "mono") {
+				var e = { type: "audio", direction: b.direction, name: b.name, sidechain: b.sidechain, cv: b.cv, optional: b.optional, busIndex: bi };
+				e.symbol = data.lv2.busSymbols[bi];
+				audioPorts.push(e);
+			} else {
+				var e = { type: "audio", direction: b.direction, name: b.name + " Left", shortName: b.shortName + " L", sidechain: b.sidechain, cv: b.cv, busIndex: bi };
+				e.symbol = data.lv2.busSymbols[bi] + "_L";
+				data.tibia.lv2.ports.push(e);
+				var e = { type: "audio", direction: b.direction, name: b.name + " Right", shortName: b.shortName + " R", sidechain: b.sidechain, cv: b.cv, busIndex: bi };
+				e.symbol = data.lv2.busSymbols[bi] + "_R";
+				audioPorts.push(e);
+			}
+		} else {
+			var e =	{ type: "midi", direction: b.direction, name: b.name, sidechain: b.sidechain, control: b.control, optional: b.optional, busIndex: bi };
+			e.symbol = data.lv2.busSymbols[bi];
+			midiPorts.push(e);
+		}
+	}
+	audioPorts.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
+	midiPorts.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
+	data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, audioPorts);
+	data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, midiPorts);
+
+	/*
 	var audioBuses = data.product.buses.filter(x => x.type == "audio");
 	var ports = [];
 	var bi = 0;
@@ -91,6 +121,7 @@ module.exports = function (data, api) {
 	}
 	ports.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
 	data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, ports);
+	*/
 
 	var ports = [];
 	for (var i = 0; i < data.product.parameters.length; i++) {
