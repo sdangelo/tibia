@@ -13,3 +13,7 @@ $dir/../tibia $dir/product.json,$dir/company.json $dir/../templates/web $dir/../
 $dir/../tibia $dir/product.json,$dir/company.json $dir/../templates/web-make $dir/../out/web
 $dir/../tibia $dir/product.json,$dir/company.json $dir/../templates/web-demo $dir/../out/web
 cp $dir/plugin.h $dir/../out/web/src
+
+$dir/../tibia $dir/product.json,$dir/company.json,$dir/android.json $dir/../templates/android $dir/../out/android
+$dir/../tibia $dir/product.json,$dir/company.json,$dir/android.json,$dir/android-make.json $dir/../templates/android-make $dir/../out/android
+cp $dir/keystore.jks $dir/../out/android
