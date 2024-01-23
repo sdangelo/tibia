@@ -6,7 +6,7 @@
 		"keyPass": "android",
 		"sdkDir": "${HOME}/Android/Sdk",
 		"buildToolsVersion": "34.0.0",
-		"androidxDir": "{HOME}/Android/androidx",
+		"androidxDir": "${HOME}/Android/androidx",
 		"kotlinDir": "${HOME}/Android/kotlin",
 		"androidVersion": "34",
 		"androidxCoreVersion": "1.10.1",

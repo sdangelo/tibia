@@ -25,9 +25,11 @@ public class MainActivity extends Activity {
 	public native void nativeAudioStop();
 	public native float nativeGetParameter(int i);
 	public native void nativeSetParameter(int i, float v);
+*/
 
 	private WebView webView;
 
+/*
 	public class WebAppInterface {
 		@JavascriptInterface
 		public boolean hasAudioPermission() {
@@ -71,9 +73,8 @@ public class MainActivity extends Activity {
 		webView.setWebChromeClient(new WebChromeClient());
 		webView.setWebViewClient(new WebViewClient());
 		webSettings.setDomStorageEnabled(true);
-		webView.addJavascriptInterface(new WebAppInterface(), "Android");
-		//webView.loadUrl("file:///android_asset/index.html");
-		webView.loadUrl("https://www.orastron.com/");
+		//webView.addJavascriptInterface(new WebAppInterface(), "Android");
+		webView.loadUrl("file:///android_asset/index.html");
 	}
 
 /*
