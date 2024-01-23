@@ -7,6 +7,7 @@ STORE_PASS := {{=it.android_make.storePass}}
 KEY_PASS := {{=it.android_make.keyPass}}
 
 ANDROID_SDK_DIR := {{=it.android_make.sdkDir}}
+ANDROID_NDK_DIR := ${ANDROID_SDK_DIR}/ndk/{{=it.android_make.ndkVersion}}
 BUILD_TOOLS_DIR := ${ANDROID_SDK_DIR}/build-tools/{{=it.android_make.buildToolsVersion}}
 ANDROIDX_DIR := {{=it.android_make.androidxDir}}
 KOTLIN_DIR := {{=it.android_make.kotlinDir}}

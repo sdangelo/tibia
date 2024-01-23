@@ -1,8 +1,9 @@
 include vars.mk
 
 CC = gcc
+
 CFLAGS = -fPIC -Wall -Wpedantic -Wextra -Wno-unused-parameter
-LIBS = -lm
+LDFLAGS = -shared -lm
 
 BUNDLE_DIR = ${BUNDLE_NAME}.vst3
 
@@ -15,7 +16,7 @@ build/${BUNDLE_DIR}/Contents/Info.plist: data/Info.plist | build/${BUNDLE_DIR}/C
 	cp $^ $@
 
 build/${BUNDLE_DIR}/Contents/${SO_FILE}: src/vst3.c | build/${BUNDLE_DIR}/Contents/${SO_DIR}
-	${CC} $^ -o $@ ${CFLAGS} ${CFLAGS_EXTRA} ${LIBS} ${LIBS_EXTRA} -shared
+	${CC} $^ -o $@ ${CFLAGS} ${CFLAGS_EXTRA} ${LDFLAGS} ${LDFLAGS_EXTRA}
 
 build/${BUNDLE_DIR}/Contents build/${BUNDLE_DIR}/Contents/${SO_DIR}:
 	mkdir -p $@

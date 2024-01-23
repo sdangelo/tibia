@@ -1,6 +1,13 @@
 include vars.mk
 
+ifeq (${HAS_MIDI_IN}, yes)
+MIN_API := 29
+else
+MIN_API := 26
+endif
+
 JAVAC = javac
+CXX = ${ANDROID_NDK_DIR}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi${MIN_API}-clang++
 
 APKSIGNER = ${BUILD_TOOLS_DIR}/apksigner
 ZIPALIGN = ${BUILD_TOOLS_DIR}/zipalign
@@ -19,13 +26,25 @@ JARS := \
 
 CLASSES_PATH := $(subst .,/,$(JAVA_PACKAGE_NAME))
 
-CLASSES := MainActivity
+CLASSES := \
+	MainActivity \
+	MainActivity$$WebAppInterface
 
-ifeq (${HAS_MIDI_IN}, yes)
-MIN_API := 29
-else
-MIN_API := 26
-endif
+CXXFLAGS := \
+	-fPIC \
+	-DNDEBUG \
+	-DBW_NO_DEBUG \
+	-O3 \
+	-Wall \
+	-Wextra \
+	-Wpedantic \
+	-std=c++11
+LDFLAGS := \
+	-shared \
+	-static-libstdc++ \
+	-ljnigraphics \
+	-llog \
+	-landroid
 
 all: build/${BUNDLE_NAME}.apk
 
@@ -35,7 +54,7 @@ build/${BUNDLE_NAME}.apk: build/gen/${BUNDLE_NAME}.aligned.apk ${KEY_STORE}
 build/gen/${BUNDLE_NAME}.aligned.apk: build/gen/${BUNDLE_NAME}.unsigned.apk
 	${ZIPALIGN} -f -p 4 $^ $@
 
-build/gen/${BUNDLE_NAME}.unsigned.apk: build/apk/classes.dex data/AndroidManifest.xml build/assets/index.html | build/gen
+build/gen/${BUNDLE_NAME}.unsigned.apk: build/apk/classes.dex build/apk/lib/armeabi-v7a/lib${BUNDLE_NAME}.so data/AndroidManifest.xml build/assets/index.html | build/gen
 	${AAPT} package -f -M data/AndroidManifest.xml -A build/assets $(foreach jar,$(JARS),-I $(jar)) -F $@ build/apk
 
 build/apk/classes.dex: build/apk/my_classes.jar
@@ -48,10 +67,13 @@ build/apk/my_classes.jar: $(foreach class,$(CLASSES),build/obj/$(CLASSES_PATH)/$
 build/obj/${CLASSES_PATH}/MainActivity.class: src/MainActivity.java | build/obj
 	${JAVAC} -classpath "$(subst $() $(),:,$(JARS))" -d build/obj $^
 
+build/apk/lib/armeabi-v7a/lib${BUNDLE_NAME}.so: src/jni.cpp | build/apk/lib/armeabi-v7a
+	${CXX} $^ ${CXXFLAGS} ${LDFLAGS} -o $@
+
 build/assets/index.html: src/index.html | build/assets
 	cp $^ $@
 
-build/gen build/apk build/obj build/assets:
+build/gen build/apk build/obj build/apk/lib/armeabi-v7a build/assets:
 	mkdir -p $@
 
 clean:

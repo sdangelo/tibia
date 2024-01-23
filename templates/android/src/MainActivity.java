@@ -16,20 +16,17 @@ import android.content.pm.PackageManager;
 import androidx.core.app.ActivityCompat;
 
 public class MainActivity extends Activity {
-/*
 	static {
-		System.loadLibrary("{{=it.android.javaPackageName}}");
+		System.loadLibrary("{{=it.product.bundleName}}");
 	}
 
 	public native boolean nativeAudioStart();
 	public native void nativeAudioStop();
 	public native float nativeGetParameter(int i);
 	public native void nativeSetParameter(int i, float v);
-*/
 
 	private WebView webView;
 
-/*
 	public class WebAppInterface {
 		@JavascriptInterface
 		public boolean hasAudioPermission() {
@@ -60,8 +57,11 @@ public class MainActivity extends Activity {
 		public void setParameter(int i, float v) {
 			nativeSetParameter(i, v);
 		}
+
+		@JavascriptInterface
+		public void dummyFunc() {
+		}
 	}
-*/
 
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -73,15 +73,13 @@ public class MainActivity extends Activity {
 		webView.setWebChromeClient(new WebChromeClient());
 		webView.setWebViewClient(new WebViewClient());
 		webSettings.setDomStorageEnabled(true);
-		//webView.addJavascriptInterface(new WebAppInterface(), "Android");
+		webView.addJavascriptInterface(new WebAppInterface(), "Android");
 		webView.loadUrl("file:///android_asset/index.html");
 	}
 
-/*
 	@Override
 	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
 		if (grantResults.length > 0)
 			webView.loadUrl("javascript:gotAudioPermission()");
 	}
-*/
 }
