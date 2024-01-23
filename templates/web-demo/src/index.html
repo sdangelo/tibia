@@ -9,7 +9,7 @@ window.demo = demo;
 		<script>
 var audioCtx, midi;
 var module, node;
-var hasAudioInput, hasMidiInput;
+var audioInputIndex, audioOutputIndex, hasMidiInput;
 
 var Player = {
 	sourceBuffer: null,
@@ -31,7 +31,7 @@ var Player = {
 					t.sourceBuffer.start();
 				if (t.playing) {
 					t.started = true;
-					t.sourceBuffer.connect(node);
+					t.sourceBuffer.connect(node, 0, audioInputIndex);
 				}
 				successCb();
 			},
@@ -47,7 +47,7 @@ var Player = {
 				this.sourceBuffer.start();
 				this.started = true;
 			}
-			this.sourceBuffer.connect(node);
+			this.sourceBuffer.connect(node, 0, audioInputIndex);
 			this.playing = true;
 		}
 	}
@@ -101,13 +101,14 @@ window.addEventListener("load", function (e) {
 	var playPause = document.getElementById("playPause");
 	var controls = document.getElementById("controls");
 
-	hasAudioInput = demo.Module.data.product.buses.filter(x => x.type == "audio" && x.direction == "input").length > 0;
+	audioInputIndex = demo.Module.data.product.buses.filter(x => x.type == "audio" && x.direction == "input").findIndex(x => !x.cv && !x.sidechain);
+	audioOutputIndex = demo.Module.data.product.buses.filter(x => x.type == "audio" && x.direction == "output").findIndex(x => !x.cv && !x.sidechain);
 	hasMidiInput = demo.Module.data.product.buses.filter(x => x.type == "midi" && x.direction == "input").length > 0;
 
 	if (hasMidiInput && !navigator.requestMIDIAccess)
 		alert("Your browser doesn't support the Web MIDI API");
 
-	player.hidden = !hasAudioInput;
+	player.hidden = audioInputIndex < 0;
 
 	// reset on refresh
 	file.value = "";
@@ -174,7 +175,7 @@ window.addEventListener("load", function (e) {
 				midi = await navigator.requestMIDIAccess();
 			await module.init(audioCtx, "{{=it.product.bundleName}}_processor.js", "{{=it.product.bundleName}}.wasm");
 			node = new demo.Node(module);
-			node.connect(audioCtx.destination);
+			node.connect(audioCtx.destination, audioOutputIndex);
 
 			node.addEventListener("processorerror", function (e) {
 				initState = 0;

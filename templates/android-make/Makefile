@@ -68,7 +68,7 @@ build/obj/${CLASSES_PATH}/MainActivity.class: src/MainActivity.java | build/obj
 	${JAVAC} -classpath "$(subst $() $(),:,$(JARS))" -d build/obj $^
 
 build/apk/lib/armeabi-v7a/lib${BUNDLE_NAME}.so: src/jni.cpp | build/apk/lib/armeabi-v7a
-	${CXX} $^ ${CXXFLAGS} ${LDFLAGS} -o $@
+	${CXX} $^ ${CXXFLAGS} ${CXXFLAGS_EXTRA} ${LDFLAGS} ${LDFLAGS_EXTRA} -o $@
 
 build/assets/index.html: src/index.html | build/assets
 	cp $^ $@

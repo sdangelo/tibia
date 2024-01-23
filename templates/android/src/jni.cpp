@@ -6,10 +6,7 @@
 #include <algorithm>
 #include <mutex>
 #include <vector>
-*/
 #include <jni.h>
-#include "data.h"
-/*
 #define MINIAUDIO_IMPLEMENTATION
 #define MA_ENABLE_ONLY_SPECIFIC_BACKENDS
 #define MA_ENABLE_AAUDIO
@@ -266,15 +263,105 @@ Java_com_orastron_@JNI_NAME@_MainActivity_removeMidiPort(JNIEnv* env, jobject th
 #endif
 */
 
+#include <stdlib.h>
+#include <stdint.h>
+
+#include "data.h"
+#include "plugin.h"
+
+#include <jni.h>
+#if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
+# define MINIAUDIO_IMPLEMENTATION
+# define MA_ENABLE_ONLY_SPECIFIC_BACKENDS
+# define MA_ENABLE_AAUDIO
+# include <miniaudio.h>
+
+# define BLOCK_SIZE	32
+# define NUM_BUFS	(NUM_CHANNELS_IN > NUM_CHANNELS_OUT ? NUM_CHANNELS_IN : NUM_CHANNELS_OUT)
+
+static ma_device	device;
+#endif
+static plugin		instance;
+static void *		mem;
+
+static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
+}
+
 extern "C"
 JNIEXPORT jboolean JNICALL
 JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
+	(void)env;
+	(void)thiz;
+
+#if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
+# if NUM_CHANNELS_IN == 0
+	ma_device_config deviceConfig = ma_device_config_init(ma_device_type_playback);
+# elif NUM_CHANNELS_OUT == 0
+	ma_device_config deviceConfig = ma_device_config_init(ma_device_type_capture);
+# else
+	ma_device_config deviceConfig = ma_device_config_init(ma_device_type_duplex);
+# endif
+	deviceConfig.periodSizeInFrames		= BLOCK_SIZE;
+	deviceConfig.periods			= 1;
+	deviceConfig.performanceProfile		= ma_performance_profile_low_latency;
+	deviceConfig.noPreSilencedOutputBuffer	= 1;
+	deviceConfig.noClip			= 0;
+	deviceConfig.noDisableDenormals		= 0;
+	deviceConfig.noFixedSizedCallback	= 1;
+	deviceConfig.dataCallback		= data_callback;
+	deviceConfig.capture.pDeviceID		= NULL;
+	deviceConfig.capture.format		= ma_format_f32;
+	deviceConfig.capture.channels		= NUM_CHANNELS_IN;
+	deviceConfig.capture.shareMode		= ma_share_mode_shared;
+	deviceConfig.playback.pDeviceID		= NULL;
+	deviceConfig.playback.format		= ma_format_f32;
+	deviceConfig.playback.channels		= NUM_CHANNELS_OUT;
+	deviceConfig.playback.shareMode		= ma_share_mode_shared;
+
+	if (ma_device_init(NULL, &deviceConfig, &device) != MA_SUCCESS)
+		return false;
+#endif
+
+	plugin_init(&instance);
+
+#if PARAMETERS_N > 0
+	for (size_t i = 0; i < PARAMETERS_N; i++)
+		if (!param_data[i].out)
+			plugin_set_parameter(&instance, i, param_data[i].def);
+#endif
+
+	plugin_set_sample_rate(&instance, (float)device.sampleRate);
+	size_t req = plugin_mem_req(&instance);
+	if (req != 0) {
+		mem = malloc(req);
+		if (mem == NULL) {
+			plugin_fini(&instance);
+#if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
+			ma_device_uninit(&device);
+#endif
+			return false;
+		}
+		plugin_mem_set(&instance, mem);
+	} else
+		mem = NULL;
+
+	plugin_reset(&instance);
+
 	return true;
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 JNI_FUNC(nativeAudioStop)(JNIEnv* env, jobject thiz) {
+	(void)env;
+	(void)thiz;
+
+	plugin_fini(&instance);
+
+#if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
+	ma_device_stop(&device);
+	ma_device_uninit(&device);
+#endif
 }
 
 extern "C"

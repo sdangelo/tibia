@@ -33,7 +33,7 @@ static size_t plugin_mem_req(plugin *instance) {
 }
 
 static void plugin_mem_set(plugin *instance, void *mem) {
-	instance->delay_line = mem;
+	instance->delay_line = (float *)mem;
 }
 
 static void plugin_reset(plugin *instance) {

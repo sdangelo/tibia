@@ -1,6 +1,9 @@
 BUNDLE_NAME := {{=it.product.bundleName}}
 JAVA_PACKAGE_NAME := {{=it.android.javaPackageName}}
 
+CXXFLAGS_EXTRA := {{=it.make && it.make.cxxflags ? it.make.cxxflags : ""}} {{=it.android_make && it.android_make.cxxflags ? it.android_make.cxxflags : ""}}
+LDFLAGS_EXTRA := {{=it.make && it.make.ldflags ? it.make.ldflags : ""}} {{=it.android_make && it.android_make.ldflags ? it.android_make.ldflags : ""}}
+
 KEY_STORE := {{=it.android_make.keyStore}}
 KEY_ALIAS := {{=it.android_make.keyAlias}}
 STORE_PASS := {{=it.android_make.storePass}}

@@ -1,5 +1,6 @@
 {
 	"android_make": {
+		"cxxflags": "-I../../../miniaudio",
 		"keyStore": "keystore.jks",
 		"keyAlias": "androidkey",
 		"storePass": "android",
