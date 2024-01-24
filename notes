@@ -144,9 +144,9 @@ product {
 				web: not used
 			list:
 				parameter is a list (using scalePoints values)? default false
-				VST3: TBD
+				VST3: TBD (+approx to closest?)
 				LV2: manifest.ttl lv2:port lv2:enumeration - run() (set parameter) TBD?
-				web: not used
+				web: TBD (approx to closest? dropdown? both?)
 			unit:
 				unit of measure (from predefined list, see tibia-index.js), default ""
 				VST3: ParameterInfo units
