@@ -3,32 +3,6 @@
  */
 
 /*
-#include <algorithm>
-#include <mutex>
-#include <vector>
-#include <jni.h>
-#define MINIAUDIO_IMPLEMENTATION
-#define MA_ENABLE_ONLY_SPECIFIC_BACKENDS
-#define MA_ENABLE_AAUDIO
-#include <miniaudio.h>
-#include <amidi/AMidi.h>
-#include "config.h"
-
-#define BLOCK_SIZE	32
-#define NUM_BUFS	(NUM_CHANNELS_IN > NUM_CHANNELS_OUT ? NUM_CHANNELS_IN : NUM_CHANNELS_OUT)
-
-ma_device device;
-P_TYPE instance;
-float paramValues[NUM_PARAMETERS];
-float bufs[NUM_BUFS][BLOCK_SIZE];
-#if NUM_CHANNELS_IN != 0
-const float *inBufs[NUM_CHANNELS_IN];
-#endif
-float *outBufs[NUM_CHANNELS_OUT];
-std::mutex mutex;
-#ifdef P_MEM_REQ
-void *mem;
-#endif
 #ifdef P_NOTE_ON
 struct PortData {
 	AMidiDevice	*device;
@@ -157,6 +131,7 @@ Java_com_orastron_@JNI_NAME@_MainActivity_removeMidiPort(JNIEnv* env, jobject th
 #include "data.h"
 #include "plugin.h"
 
+#include <string.h>
 #include <jni.h>
 #if PARAMETERS_N + NUM_MIDI_INPUTS > 0
 # include <mutex>
@@ -178,14 +153,25 @@ static ma_device	device;
 #endif
 static plugin		instance;
 static void *		mem;
+#if (NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN) || (NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT)
+float			zero[BLOCK_SIZE];
+#endif
 #if NUM_CHANNELS_IN > 0
 float			x_buf[NUM_CHANNELS_IN * BLOCK_SIZE];
+#endif
+#if NUM_ALL_CHANNELS_IN > 0
+const float *		x[NUM_ALL_CHANNELS_IN];
+#else
+const float **		x;
 #endif
 #if NUM_CHANNELS_OUT > 0
 float			y_buf[NUM_CHANNELS_OUT * BLOCK_SIZE];
 #endif
-const float **		x;
+#if NUM_ALL_CHANNELS_OUT > 0
+float *			y[NUM_ALL_CHANNELS_IN];
+#else
 float **		y;
+#endif
 #if PARAMETERS_N > 0
 std::mutex		mutex;
 float			param_values[PARAMETERS_N];
@@ -225,13 +211,17 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 				x_buf[BLOCK_SIZE * k + j] = in_buf[ix];
 #endif
 
+#if (NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN) || (NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT)
+		memset(zero, 0, BLOCK_SIZE * sizeof(float));
+#endif
+
 		plugin_process(&instance, x, y, n);
 
 #if NUM_CHANNELS_OUT > 0
 		size_t iy = NUM_CHANNELS_OUT * i;
 		for (ma_uint32 j = 0; j < n; j++)
 			for (size_t k = 0;  k < NUM_CHANNELS_OUT; k++, iy++)
-				y_buf[BLOCK_SIZE * k + j] = out_buf[ix];
+				out_buf[iy] = y_buf[BLOCK_SIZE * k + j];
 #endif
 
 		i += n;
@@ -300,15 +290,55 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 
 	plugin_reset(&instance);
 
-#if NUM_CHANNELS_IN > 0
-	for (size_t i = 0; i < NUM_CHANNELS_IN; i++)
-		x[i] = x_buf + BLOCK_SIZE * i;
+#if NUM_ALL_CHANNELS_IN > 0
+# if AUDIO_BUS_IN >= 0
+	size_t ix = 0;
+	size_t ixb = 0;
+	for (size_t j = 0; j < NUM_AUDIO_BUSES_IN + NUM_AUDIO_BUSES_OUT; j++) {
+		if (audio_bus_data[j].out)
+			continue;
+		if (audio_bus_data[j].index == AUDIO_BUS_IN)
+			for (char k = 0; k < audio_bus_data[j].channels; k++, ix++, ixb++)
+				x[ix] = x_buf + BLOCK_SIZE * ixb;
+# if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
+		else if (!audio_bus_data[j].optional)
+			for (char k = 0; k < audio_bus_data[j].channels; k++, ix++)
+				x[ix] = zero;
+# endif
+		else
+			for (char k = 0; k < audio_bus_data[j].channels; k++, ix++)
+				x[ix] = NULL;
+	}
+# else
+	for (size_t i = 0; i < NUM_ALL_CHANNELS_IN; i++)
+		x[i] = NULL;
+# endif
 #else
 	x = NULL;
 #endif
-#if NUM_CHANNELS_OUT > 0
-	for (size_t i = 0; i < NUM_CHANNELS_OUT; i++)
-		y[i] = y_buf + BLOCK_SIZE * i;
+#if NUM_ALL_CHANNELS_OUT > 0
+# if AUDIO_BUS_OUT >= 0
+	size_t iy = 0;
+	size_t iyb = 0;
+	for (size_t j = 0; j < NUM_AUDIO_BUSES_IN + NUM_AUDIO_BUSES_OUT; j++) {
+		if (!audio_bus_data[j].out)
+			continue;
+		if (audio_bus_data[j].index == AUDIO_BUS_OUT)
+			for (char k = 0; k < audio_bus_data[j].channels; k++, iy++, iyb++)
+				y[iy] = y_buf + BLOCK_SIZE * iyb;
+# if NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT
+		else if (!audio_bus_data[j].optional)
+			for (char k = 0; k < audio_bus_data[j].channels; k++, iy++)
+				y[iy] = zero;
+# endif
+		else
+			for (char k = 0; k < audio_bus_data[j].channels; k++, iy++)
+				y[iy] = NULL;
+	}
+# else
+	for (size_t i = 0; i < NUM_ALL_CHANNELS_OUT; i++)
+		y[i] = NULL;
+# endif
 #else
 	y = NULL;
 #endif

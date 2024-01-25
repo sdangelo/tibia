@@ -9,8 +9,18 @@ var data = {
 	parameters: {{=JSON.stringify(it.product.parameters, null, 2)}}
 };
 
+function map(index, value) {
+	var p = data.parameters[index];
+	return p.map == "logarithmic" ? p.minimum * Math.exp((2.0 * Math.log(Math.sqrt(p.maximum * p.minimum) / Math.abs(p.minimum))) * value) : p.minimum + (p.maximum - p.minimum) * value;
+}
+
+function unmap(index, value) {
+	var p = data.parameters[index];
+	return p.map == "logarithmic" ? Math.log(value / p.minimum) / (2.0 * Math.log(Math.sqrt(p.maximum * p.minimum) / Math.abs(p.minimum))) : (value - p.minimum) / (p.maximum - p.minimum);
+}
+
 var hasAudioPermission = true;
-for (var i = 0; i < buses.length; i++)
+for (var i = 0; i < data.buses.length; i++)
 	if (!data.buses[i].output) {
 		hasAudioPermission = Android.hasAudioPermission();
 		break;
@@ -24,6 +34,77 @@ window.onload = function () {
 	var paramsElem = document.getElementById("params");
 
 	topButtonElem.value = hasAudioPermission ? "START" : "INIT";
+	topButtonElem.addEventListener("click", function () {
+		if (!hasAudioPermission) {
+			Android.requestAudioPermission();
+			return;
+		}
+
+		if (audioStarted) {
+			clearInterval(outParamInterval);
+			Android.audioStop();
+
+			paramsElem.innerHTML = "";
+
+			topButtonElem.value = "START";
+			audioStarted = false;
+
+			return;
+		}
+		
+		if (!Android.audioStart()) {
+			alert("Could not start audio");
+			return;
+		}
+		
+		for (var i = 0; i < data.parameters.length; i++) {
+			var div = document.createElement("div");
+
+			var label = document.createElement("label");
+			label.setAttribute("for", "p" + i);
+			label.innerText = data.parameters[i].name;
+
+			var range = document.createElement("input");
+			range.classList.add("range");
+			range.setAttribute("type", "range");
+			range.setAttribute("id", "p" + i);
+			range.setAttribute("name", "p" + i);
+			if (data.parameters[i].isBypass || data.parameters[i].toggled) {
+				range.setAttribute("min", 0);
+				range.setAttribute("max", 1);
+				range.setAttribute("step", 1);
+			} else {
+				range.setAttribute("min", 0);
+				range.setAttribute("max", 1);
+				range.setAttribute("step", data.parameters[i].integer ? 1 / (data.parameters[i].maximum - data.parameters[i].minimum) : "any");
+			}
+			range.value = unmap(i, data.parameters[i].defaultValue);
+			if (data.parameters[i].direction == "output")
+				range.setAttribute("readonly", "true");
+			else {
+				let index = i;
+				range.addEventListener("input",
+					function (ev) {
+						Android.setParameter(index, map(index, parseFloat(ev.target.value)));
+					});
+			}
+
+			div.appendChild(label);
+			div.appendChild(document.createElement("br"));
+			div.appendChild(range);
+			paramsElem.appendChild(div);
+		}
+
+		outParamInterval = setInterval(
+			function () {
+				for (var i = 0; i < data.parameters.length; i++)
+					if (data.parameters[i].direction == "output")
+						document.getElementById("p" + i).value = unmap(i, Android.getParameter(i));
+			}, 50);
+					    
+		topButtonElem.value = "STOP";
+		audioStarted = true;
+	});
 };
 
 function gotAudioPermission() {
