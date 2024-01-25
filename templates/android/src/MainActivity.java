@@ -57,10 +57,6 @@ public class MainActivity extends Activity {
 		public void setParameter(int i, float v) {
 			nativeSetParameter(i, v);
 		}
-
-		@JavascriptInterface
-		public void dummyFunc() {
-		}
 	}
 
 	public void onCreate(Bundle savedInstanceState) {
