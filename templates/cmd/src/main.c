@@ -13,11 +13,18 @@
 
 plugin		instance;
 void *		mem;
-#if NUM_CHANNELS_IN > 0
-float *		x[NUM_CHANNELS_IN];
+#if (NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN) || (NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT)
+float		zero[BLOCK_SIZE];
 #endif
-#if NUM_CHANNELS_OUT > 0
-float *		y[NUM_CHANNELS_OUT];
+#if NUM_ALL_CHANNELS_IN > 0
+float *		x[NUM_ALL_CHANNELS_IN];
+#else
+const float **	x = NULL;
+#endif
+#if NUM_ALL_CHANNELS_OUT > 0
+float *		y[NUM_ALL_CHANNELS_OUT];
+#else
+float **	y = NULL;
 #endif
 float		fs = 44100.f;
 size_t		bufsize = 128;
@@ -271,10 +278,30 @@ int main(int argc, char * argv[]) {
 		fprintf(stderr, "Out of memory\n");
 		return EXIT_FAILURE;
 	}
-	for (size_t i = 0; i < NUM_CHANNELS_IN; i++)
-		x[i] = x_buf + i * bufsize;
-#else
-	float ** x = NULL;
+#endif
+#if NUM_ALL_CHANNELS_IN > 0
+# if AUDIO_BUS_IN >= 0
+	size_t ix = 0;
+	size_t ixb = 0;
+	for (size_t j = 0; j < NUM_AUDIO_BUSES_IN + NUM_AUDIO_BUSES_OUT; j++) {
+		if (audio_bus_data[j].out)
+			continue;
+		if (audio_bus_data[j].index == AUDIO_BUS_IN)
+			for (char k = 0; k < audio_bus_data[j].channels; k++, ix++, ixb++)
+				x[ix] = x_buf + bufsize * ixb;
+#  if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
+		else if (!audio_bus_data[j].optional)
+			for (char k = 0; k < audio_bus_data[j].channels; k++, ix++)
+				x[ix] = zero;
+#  endif
+		else
+			for (char k = 0; k < audio_bus_data[j].channels; k++, ix++)
+				x[ix] = NULL;
+	}
+# else
+	for (size_t i = 0; i < NUM_ALL_CHANNELS_IN; i++)
+		x[i] = NULL;
+# endif
 #endif
 
 #if NUM_CHANNELS_OUT > 0
@@ -292,10 +319,30 @@ int main(int argc, char * argv[]) {
 		fprintf(stderr, "Out of memory\n");
 		return EXIT_FAILURE;
 	}
-	for (size_t i = 0; i < NUM_CHANNELS_IN; i++)
-		y[i] = y_buf + i * bufsize;
-#else
-	float ** y = NULL;
+#endif
+#if NUM_ALL_CHANNELS_OUT > 0
+# if AUDIO_BUS_OUT >= 0
+	size_t iy = 0;
+	size_t iyb = 0;
+	for (size_t j = 0; j < NUM_AUDIO_BUSES_IN + NUM_AUDIO_BUSES_OUT; j++) {
+		if (!audio_bus_data[j].out)
+			continue;
+		if (audio_bus_data[j].index == AUDIO_BUS_OUT)
+			for (char k = 0; k < audio_bus_data[j].channels; k++, iy++, iyb++)
+				y[iy] = y_buf + bufsize * iyb;
+#  if NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT
+		else if (!audio_bus_data[j].optional)
+			for (char k = 0; k < audio_bus_data[j].channels; k++, iy++)
+				y[iy] = zero;
+#  endif
+		else
+			for (char k = 0; k < audio_bus_data[j].channels; k++, iy++)
+				y[iy] = NULL;
+	}
+# else
+	for (size_t i = 0; i < NUM_ALL_CHANNELS_OUT; i++)
+		y[i] = NULL;
+# endif
 #endif
 
 #if NUM_CHANNELS_OUT > 0
@@ -320,7 +367,13 @@ int main(int argc, char * argv[]) {
 		int32_t n = tinywav_read_f(&tw_in, x, bufsize);
 		if (n == 0)
 			break;
+
+#if (NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN) || (NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT)
+		memset(zero, 0, bufsize * sizeof(float));
+#endif
+
 		plugin_process(&instance, (const float **)x, y, n);
+
 # if PARAMETERS_N > 0
 		for (size_t j = 0; j < PARAMETERS_N; j++) {
 			if (!param_data[j].out)

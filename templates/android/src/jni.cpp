@@ -300,11 +300,11 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 		if (audio_bus_data[j].index == AUDIO_BUS_IN)
 			for (char k = 0; k < audio_bus_data[j].channels; k++, ix++, ixb++)
 				x[ix] = x_buf + BLOCK_SIZE * ixb;
-# if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
+#  if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
 		else if (!audio_bus_data[j].optional)
 			for (char k = 0; k < audio_bus_data[j].channels; k++, ix++)
 				x[ix] = zero;
-# endif
+#  endif
 		else
 			for (char k = 0; k < audio_bus_data[j].channels; k++, ix++)
 				x[ix] = NULL;
@@ -326,11 +326,11 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 		if (audio_bus_data[j].index == AUDIO_BUS_OUT)
 			for (char k = 0; k < audio_bus_data[j].channels; k++, iy++, iyb++)
 				y[iy] = y_buf + BLOCK_SIZE * iyb;
-# if NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT
+#  if NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT
 		else if (!audio_bus_data[j].optional)
 			for (char k = 0; k < audio_bus_data[j].channels; k++, iy++)
 				y[iy] = zero;
-# endif
+#  endif
 		else
 			for (char k = 0; k < audio_bus_data[j].channels; k++, iy++)
 				y[iy] = NULL;
