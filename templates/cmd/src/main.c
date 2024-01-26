@@ -9,7 +9,12 @@
 #include <errno.h>
 #include <math.h>
 
-#include <tinywav.h>
+#if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
+# include <tinywav.h>
+#endif
+#if NUM_MIDI_INPUTS > 0
+# include <midi-parser.h>
+#endif
 
 plugin		instance;
 void *		mem;
@@ -36,6 +41,7 @@ float		param_values[PARAMETERS_N];
 #endif
 const char *	infile = NULL;
 const char *	outfile = NULL;
+const char *	midifile = NULL;
 
 void usage(const char * argv0) {
 #if NUM_CHANNELS_IN > 0
@@ -45,6 +51,9 @@ void usage(const char * argv0) {
 #endif
 #if NUM_CHANNELS_OUT > 0
 	fprintf(stderr, " outfile");
+#endif
+#if NUM_MIDI_INPUTS > 0
+	fprintf(stderr, " [midifile]");
 #endif
 #if PARAMETERS_N > 0
 	fprintf(stderr, " [param=value] ...");
@@ -143,6 +152,10 @@ int main(int argc, char * argv[]) {
 			if (next == NULL && outfile == NULL)
 				next = &outfile;
 #endif
+#if NUM_MIDI_INPUTS > 0
+			if (next == NULL && midifile == NULL)
+				next = &midifile;
+#endif
 			if (next == NULL) {
 				fprintf(stderr, "invalid argument '%s' (in/out files already specified)\n", argv[i]);
 				usage(argv[0]);
@@ -214,13 +227,15 @@ int main(int argc, char * argv[]) {
 	}
 #endif
 
+	int exit_code = EXIT_FAILURE;
+
 #if NUM_CHANNELS_IN > 0
 	TinyWav tw_in;
 	if (tinywav_open_read(&tw_in, infile, TW_SPLIT) != 0)
 		return EXIT_FAILURE;
 	if (tw_in.h.NumChannels != NUM_CHANNELS_IN) {
 		fprintf(stderr, "input file has %d channels but %d channels were expected\n", tw_in.h.NumChannels, NUM_CHANNELS_IN);
-		return EXIT_FAILURE;
+		goto err_num_channels_in;
 	}
 	fs = tw_in.h.SampleRate;
 #endif
@@ -235,6 +250,9 @@ int main(int argc, char * argv[]) {
 #endif
 #if NUM_CHANNELS_OUT > 0
 	printf(" outfile: %s\n", outfile);
+#endif
+#if NUM_MIDI_INPUTS > 0
+	printf(" midifile: %s\n", midifile ? midifile : "[none]");
 #endif
 #if PARAMETERS_N > 0
 	for (size_t i = 0; i < PARAMETERS_N; i++)
@@ -255,12 +273,8 @@ int main(int argc, char * argv[]) {
 	if (req != 0) {
 		mem = malloc(req);
 		if (mem == NULL) {
-			plugin_fini(&instance);
-#if NUM_CHANNELS_IN > 0
-			tinywav_close_read(&tw_in);
-#endif
 			fprintf(stderr, "Out of memory\n");
-			return EXIT_FAILURE;
+			goto err_mem_alloc;
 		}
 		plugin_mem_set(&instance, mem);
 	} else
@@ -271,12 +285,8 @@ int main(int argc, char * argv[]) {
 #if NUM_CHANNELS_IN > 0
 	float * x_buf = malloc(NUM_CHANNELS_IN * bufsize * sizeof(float));
 	if (x_buf == NULL) {
-		if (mem != NULL)
-			free(mem);
-		plugin_fini(&instance);
-		tinywav_close_read(&tw_in);
 		fprintf(stderr, "Out of memory\n");
-		return EXIT_FAILURE;
+		goto err_x_buf;
 	}
 #endif
 #if NUM_ALL_CHANNELS_IN > 0
@@ -307,17 +317,8 @@ int main(int argc, char * argv[]) {
 #if NUM_CHANNELS_OUT > 0
 	float * y_buf = malloc(NUM_CHANNELS_OUT * bufsize * sizeof(float));
 	if (y_buf == NULL) {
-# if NUM_CHANNELS_IN > 0
-		free(x_buf);
-# endif
-		if (mem != NULL)
-			free(mem);
-		plugin_fini(&instance);
-# if NUM_CHANNELS_IN > 0
-		tinywav_close_read(&tw_in);
-# endif
 		fprintf(stderr, "Out of memory\n");
-		return EXIT_FAILURE;
+		goto err_y_buf;
 	}
 #endif
 #if NUM_ALL_CHANNELS_OUT > 0
@@ -347,19 +348,8 @@ int main(int argc, char * argv[]) {
 
 #if NUM_CHANNELS_OUT > 0
 	TinyWav tw_out;
-	if (tinywav_open_write(&tw_out, 1, fs, TW_FLOAT32, TW_SPLIT, outfile) != 0) {
-		free(y_buf);
-# if NUM_CHANNELS_IN > 0
-		free(x_buf);
-# endif
-		if (mem != NULL)
-			free(mem);
-		plugin_fini(&instance);
-# if NUM_CHANNELS_IN > 0
-		tinywav_close_read(&tw_in);
-# endif
-		return EXIT_FAILURE;
-	}
+	if (tinywav_open_write(&tw_out, 1, fs, TW_FLOAT32, TW_SPLIT, outfile) != 0)
+		goto err_outfile;
 #endif
 
 #if NUM_CHANNELS_IN > 0
@@ -408,19 +398,28 @@ int main(int argc, char * argv[]) {
 	}
 #endif
 
+	exit_code = EXIT_SUCCESS;
+
 #if NUM_CHANNELS_OUT > 0
 	tinywav_close_write(&tw_out);
+#endif
+err_outfile:
+#if NUM_CHANNELS_OUT > 0
 	free(y_buf);
 #endif
+err_y_buf:
 #if NUM_CHANNELS_IN > 0
 	free(x_buf);
 #endif
+err_x_buf:
 	if (mem != NULL)
 		free(mem);
+err_mem_alloc:
 	plugin_fini(&instance);
+err_num_channels_in:
 #if NUM_CHANNELS_IN > 0
 	tinywav_close_read(&tw_in);
 #endif
 
-	return EXIT_SUCCESS;
+	return exit_code;
 }

@@ -2,11 +2,11 @@ include vars.mk
 
 CC = gcc
 
-CFLAGS = -I${TINYWAV_DIR} -fPIC -Wall -Wpedantic -Wextra -Wno-unused-parameter
+CFLAGS = -I${TINYWAV_DIR} -I${MIDI_PARSER_DIR}/include -fPIC -Wall -Wpedantic -Wextra -Wno-unused-parameter
 
 all: build/${BUNDLE_NAME}
 
-build/${BUNDLE_NAME}: src/main.c ${TINYWAV_DIR}/tinywav.c | build
+build/${BUNDLE_NAME}: src/main.c ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c | build
 	${CC} $^ -o $@ ${CFLAGS} ${CFLAGS_EXTRA} ${LDFLAGS_EXTRA}
 
 build:

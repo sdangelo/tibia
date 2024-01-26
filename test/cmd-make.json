@@ -1,5 +1,6 @@
 {
 	"cmd_make": {
-		"tinywavDir": "../../../tinywav"
+		"tinywavDir": "../../../tinywav",
+		"midiParserDir": "../../../midi-parser"
 	}
 }
