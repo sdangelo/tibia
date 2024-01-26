@@ -16,32 +16,43 @@
 # include <midi-parser.h>
 #endif
 
-plugin		instance;
-void *		mem;
+plugin			instance;
+void *			mem;
 #if (NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN) || (NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT)
-float		zero[BLOCK_SIZE];
+float			zero[BLOCK_SIZE];
 #endif
 #if NUM_ALL_CHANNELS_IN > 0
-float *		x[NUM_ALL_CHANNELS_IN];
+float *			x[NUM_ALL_CHANNELS_IN];
 #else
-const float **	x = NULL;
+const float **		x = NULL;
 #endif
 #if NUM_ALL_CHANNELS_OUT > 0
-float *		y[NUM_ALL_CHANNELS_OUT];
+float *			y[NUM_ALL_CHANNELS_OUT];
 #else
-float **	y = NULL;
+float **		y = NULL;
 #endif
-float		fs = 44100.f;
-size_t		bufsize = 128;
+float			fs = 44100.f;
+size_t			bufsize = 128;
 #if NUM_CHANNELS_IN == 0
-float		length = 1.f;
+float			length = 1.f;
 #endif
 #if PARAMETERS_N > 0
-float		param_values[PARAMETERS_N];
+float			param_values[PARAMETERS_N];
 #endif
-const char *	infile = NULL;
-const char *	outfile = NULL;
-const char *	midifile = NULL;
+#if NUM_CHANNELS_IN > 0
+const char *		infile = NULL;
+#endif
+#if NUM_CHANNELS_OUT > 0
+const char *		outfile = NULL;
+#endif
+#if NUM_MIDI_INPUTS > 0
+const char *		midifile = NULL;
+void *			midi_data = NULL;
+struct midi_parser	midi_parser;
+enum midi_parser_status	midi_status;
+int16_t			midi_ticks = 0;
+uint32_t		midi_tempo = 500000; // microseconds per quarter-note -> 120 bpm
+#endif
 
 void usage(const char * argv0) {
 #if NUM_CHANNELS_IN > 0
@@ -72,6 +83,41 @@ void usage(const char * argv0) {
 #endif
 	fprintf(stderr, "\n");
 }
+
+#if NUM_MIDI_INPUTS > 0
+char * read_file(const char * filename, int32_t * size) {
+	FILE * fp = fopen(filename, "r");
+	if (fp == NULL)
+		return NULL;
+	if (fseek(fp, 0, SEEK_END) != 0) {
+		fclose(fp);
+		return NULL;
+	}
+	*size = ftell(fp);
+	if (*size < 0) {
+		fclose(fp);
+		return NULL;
+	}
+	void * mem = malloc(*size);
+	if (mem == NULL) {
+		fclose(fp);
+		return NULL;
+	}
+	if (fseek(fp, 0L, SEEK_SET) != 0) {
+		free(mem);
+		fclose(fp);
+		return NULL;
+	}
+	size_t n = fread(mem, 1, *size, fp);
+	if (n != (uint32_t)(*size)) {
+		free(mem);
+		fclose(fp);
+		return NULL;
+	}
+	fclose(fp);
+	return mem;
+}
+#endif
 
 float clampf(float x, float m, float M) {
 	return x < m ? m : (x > M ? M : x);
@@ -346,6 +392,54 @@ int main(int argc, char * argv[]) {
 # endif
 #endif
 
+#if NUM_MIDI_INPUTS > 0
+	if (midifile != NULL) {
+		int32_t midi_data_size;
+		midi_data = read_file(midifile, &midi_data_size);
+		if (midi_data == NULL)
+			goto err_midi_read;
+
+		midi_parser.state = MIDI_PARSER_INIT;
+		midi_parser.size = midi_data_size;
+		midi_parser.in = midi_data;
+
+		char done = 0;
+		while (!done) {
+			midi_status = midi_parse(&midi_parser);
+			switch (midi_status) {
+			case MIDI_PARSER_EOB:
+				done = 1;
+				break;
+			case MIDI_PARSER_ERROR:
+				fprintf(stderr, "Error while parsing MIDI file\n");
+				goto err_midi_parse;
+				break;
+			case MIDI_PARSER_HEADER:
+				if (midi_parser.header.format != 0) {
+					fprintf(stderr, "Only MIDI file format 0 is supported\n");
+					goto err_midi_parse;
+				}
+				if ((midi_parser.header.time_division & 0x80) != 0x80) {
+					fprintf(stderr, "Only ticks per quarter-note time division is supported when reading MIDI files\n");
+					goto err_midi_parse;
+				}
+				if (midi_parser.header.time_division == 0) {
+					fprintf(stderr, "Invalid 0 tick per quarter-note in MIDI file\n");
+					goto err_midi_parse;
+				}
+				midi_ticks = midi_parser.header.time_division;
+				break;
+			case MIDI_PARSER_TRACK_META:
+			case MIDI_PARSER_TRACK_MIDI:
+				done = 1;
+				break;
+			default:
+				break;
+			}
+		}
+	}
+#endif
+
 #if NUM_CHANNELS_OUT > 0
 	TinyWav tw_out;
 	if (tinywav_open_write(&tw_out, 1, fs, TW_FLOAT32, TW_SPLIT, outfile) != 0)
@@ -357,13 +451,10 @@ int main(int argc, char * argv[]) {
 		int32_t n = tinywav_read_f(&tw_in, x, bufsize);
 		if (n == 0)
 			break;
-
 #if (NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN) || (NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT)
 		memset(zero, 0, bufsize * sizeof(float));
 #endif
-
 		plugin_process(&instance, (const float **)x, y, n);
-
 # if PARAMETERS_N > 0
 		for (size_t j = 0; j < PARAMETERS_N; j++) {
 			if (!param_data[j].out)
@@ -404,6 +495,12 @@ int main(int argc, char * argv[]) {
 	tinywav_close_write(&tw_out);
 #endif
 err_outfile:
+err_midi_parse:
+#if NUM_MIDI_INPUTS > 0
+	if (midi_data != NULL)
+		free(midi_data);
+#endif
+err_midi_read:
 #if NUM_CHANNELS_OUT > 0
 	free(y_buf);
 #endif
