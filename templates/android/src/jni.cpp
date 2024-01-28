@@ -104,11 +104,16 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 	const float * in_buf = reinterpret_cast<const float *>(pInput);
 	float * out_buf = reinterpret_cast<float *>(pOutput);
 	ma_uint32 i = 0;
+#if NUM_CHANNELS_IN > 0
+	size_t ix = 0;
+#endif
+#if NUM_CHANNELS_OUT > 0
+	size_t iy = 0;
+#endif
 	while (i < frameCount) {
 		ma_uint32 n = std::min(frameCount - i, static_cast<ma_uint32>(BLOCK_SIZE));
 
 #if NUM_CHANNELS_IN > 0
-		size_t ix = NUM_CHANNELS_IN * i;
 		for (ma_uint32 j = 0; j < n; j++)
 			for (size_t k = 0;  k < NUM_CHANNELS_IN; k++, ix++)
 				x_buf[BLOCK_SIZE * k + j] = in_buf[ix];
@@ -121,7 +126,6 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 		plugin_process(&instance, x, y, n);
 
 #if NUM_CHANNELS_OUT > 0
-		size_t iy = NUM_CHANNELS_OUT * i;
 		for (ma_uint32 j = 0; j < n; j++)
 			for (size_t k = 0;  k < NUM_CHANNELS_OUT; k++, iy++)
 				out_buf[iy] = y_buf[BLOCK_SIZE * k + j];
