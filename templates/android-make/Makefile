@@ -30,6 +30,10 @@ CLASSES := \
 	MainActivity \
 	MainActivity$$WebAppInterface
 
+ifeq (${HAS_MIDI_IN}, yes)
+	CLASSES += MainActivity$$WebAppInterface$$MidiDeviceCallback MainActivity$$WebAppInterface$$1
+endif
+
 CXXFLAGS := \
 	-fPIC \
 	-DNDEBUG \
@@ -45,6 +49,10 @@ LDFLAGS := \
 	-ljnigraphics \
 	-llog \
 	-landroid
+
+ifeq (${HAS_MIDI_IN}, yes)
+	LDFLAGS += -lamidi
+endif
 
 all: build/${BUNDLE_NAME}.apk
 

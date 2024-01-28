@@ -2,129 +2,6 @@
  * Copyright (C) 2023, 2024 Orastron Srl unipersonale
  */
 
-/*
-#ifdef P_NOTE_ON
-struct PortData {
-	AMidiDevice	*device;
-	int		 portNumber;
-	AMidiOutputPort	*port;
-};
-std::vector<PortData> midiPorts;
-#define MIDI_BUFFER_SIZE 1024
-uint8_t midiBuffer[MIDI_BUFFER_SIZE];
-#endif
-
-static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
-	(void)pDevice;
-#if NUM_CHANNELS_IN == 0
-	(void)pInput;
-#else
-	const float *x = reinterpret_cast<const float *>(pInput);
-#endif
-	float *y = reinterpret_cast<float *>(pOutput);
-
-	if (mutex.try_lock()) {
-		for (int i = 0; i < NUM_PARAMETERS; i++)
-			if (config_parameters[i].out)
-				paramValues[i] = P_GET_PARAMETER(&instance, i);
-			else
-				P_SET_PARAMETER(&instance, i, paramValues[i]);
-#ifdef P_NOTE_ON
-	for (std::vector<PortData>::iterator it = midiPorts.begin(); it != midiPorts.end(); it++) {
-		int32_t opcode;
-		size_t numBytes;
-		while (AMidiOutputPort_receive(it->port, &opcode, midiBuffer, MIDI_BUFFER_SIZE, &numBytes, NULL) > 0) {
-			if (opcode != AMIDI_OPCODE_DATA)
-				continue;
-			switch (midiBuffer[0] & 0xf0) {
-			case 0x90:
-				P_NOTE_ON(&instance, midiBuffer[1], midiBuffer[2]);
-				break;
-			case 0x80:
-				P_NOTE_OFF(&instance, midiBuffer[1]);
-				break;
-#ifdef P_PITCH_BEND
-			case 0xe0:
-				P_PITCH_BEND(&instance, midiBuffer[2] << 7 | midiBuffer[1]);
-				break;
-#endif
-#ifdef P_MOD_WHEEL
-			case 0xb0:
-				if (midiBuffer[1] == 1)
-					P_MOD_WHEEL(&instance, midiBuffer[2]);
-				break;
-#endif
-			}
-		}
-	}
-#endif
-		mutex.unlock();
-	}
-
-	ma_uint32 i = 0;
-	while (i < frameCount) {
-		ma_uint32 n = std::min(frameCount - i, static_cast<ma_uint32>(BLOCK_SIZE));
-
-		int l;
-#if NUM_CHANNELS_IN != 0
-		l = NUM_CHANNELS_IN * i;
-		for (ma_uint32 j = 0; j < n; j++)
-			for (int k = 0;  k < NUM_CHANNELS_IN; k++, l++)
-				bufs[k][j] = x[l];
-#endif
-
-#if NUM_CHANNELS_IN != 0
-		P_PROCESS(&instance, inBufs, outBufs, n);
-#else
-		P_PROCESS(&instance, NULL, outBufs, n);
-#endif
-
-		l = NUM_CHANNELS_OUT * i;
-		for (ma_uint32 j = 0; j < n; j++)
-			for (int k = 0;  k < NUM_CHANNELS_OUT; k++, l++)
-				y[l] = bufs[k][j];
-
-		i += n;
-	}
-}
-
-#ifdef P_NOTE_ON
-extern "C"
-JNIEXPORT void JNICALL
-Java_com_orastron_@JNI_NAME@_MainActivity_addMidiPort(JNIEnv* env, jobject thiz, jobject d, jint p) {
-	(void)thiz;
-
-	PortData data;
-	AMidiDevice_fromJava(env, d, &data.device);
-	data.portNumber = p;
-	mutex.lock();
-	if (AMidiOutputPort_open(data.device, p, &data.port) == AMEDIA_OK)
-		midiPorts.push_back(data);
-	mutex.unlock();
-}
-
-extern "C"
-JNIEXPORT void JNICALL
-Java_com_orastron_@JNI_NAME@_MainActivity_removeMidiPort(JNIEnv* env, jobject thiz, jobject d, jint p) {
-	(void)thiz;
-
-	AMidiDevice *device;
-	AMidiDevice_fromJava(env, d, &device);
-	mutex.lock();
-	for (std::vector<PortData>::iterator it = midiPorts.begin(); it != midiPorts.end(); ) {
-		PortData data = *it;
-		if (data.device != device || data.portNumber != p) {
-			it++;
-			continue;
-		}
-		AMidiOutputPort_close(data.port);
-		it = midiPorts.erase(it);
-	}
-	mutex.unlock();
-}
-#endif
-*/
-
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -146,6 +23,11 @@ Java_com_orastron_@JNI_NAME@_MainActivity_removeMidiPort(JNIEnv* env, jobject th
 # include <miniaudio.h>
 
 # define BLOCK_SIZE	32
+#endif
+#if NUM_MIDI_INPUTS > 0
+# include <vector>
+
+# include <amidi/AMidi.h>
 #endif
 
 #if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
@@ -177,6 +59,16 @@ std::mutex		mutex;
 float			param_values[PARAMETERS_N];
 float			param_values_prev[PARAMETERS_N];
 #endif
+#if NUM_MIDI_INPUTS > 0
+struct PortData {
+	AMidiDevice	*device;
+	int		 portNumber;
+	AMidiOutputPort	*port;
+};
+std::vector<PortData> midiPorts;
+# define MIDI_BUFFER_SIZE 1024
+uint8_t midiBuffer[MIDI_BUFFER_SIZE];
+#endif
 
 static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
 	(void)pDevice;
@@ -191,7 +83,18 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 				plugin_set_parameter(&instance, i, param_values[i]);
 				param_values_prev[i] = param_values[i];
 			}
-			// TODO: midi
+		}
+# endif
+
+# if NUM_MIDI_INPUTS > 0
+		for (std::vector<PortData>::iterator it = midiPorts.begin(); it != midiPorts.end(); it++) {
+			int32_t opcode;
+			size_t numBytes;
+			while (AMidiOutputPort_receive(it->port, &opcode, midiBuffer, MIDI_BUFFER_SIZE, &numBytes, NULL) > 0) {
+				if (opcode != AMIDI_OPCODE_DATA || (midiBuffer[0] & 0xf0) == 0xf0)
+					continue;
+				plugin_midi_msg_in(&instance, MIDI_BUS_IN, midiBuffer);
+			}
 		}
 # endif
 		mutex.unlock();
@@ -404,20 +307,38 @@ JNI_FUNC(nativeSetParameter)(JNIEnv* env, jobject thiz, jint i, jfloat v) {
 #endif
 }
 
+#if NUM_MIDI_INPUTS > 0
 extern "C"
 JNIEXPORT void JNICALL
 JNI_FUNC(addMidiPort)(JNIEnv* env, jobject thiz, jobject d, jint p) {
-	(void)env;
 	(void)thiz;
 
-	//TBD
+	PortData data;
+	AMidiDevice_fromJava(env, d, &data.device);
+	data.portNumber = p;
+	mutex.lock();
+	if (AMidiOutputPort_open(data.device, p, &data.port) == AMEDIA_OK)
+		midiPorts.push_back(data);
+	mutex.unlock();
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 JNI_FUNC(removeMidiPort)(JNIEnv* env, jobject thiz, jobject d, jint p) {
-	(void)env;
 	(void)thiz;
 
-	//TBD
+	AMidiDevice *device;
+	AMidiDevice_fromJava(env, d, &device);
+	mutex.lock();
+	for (std::vector<PortData>::iterator it = midiPorts.begin(); it != midiPorts.end(); ) {
+		PortData data = *it;
+		if (data.device != device || data.portNumber != p) {
+			it++;
+			continue;
+		}
+		AMidiOutputPort_close(data.port);
+		it = midiPorts.erase(it);
+	}
+	mutex.unlock();
 }
+#endif

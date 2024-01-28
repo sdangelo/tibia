@@ -13,6 +13,8 @@
 
 #define NUM_MIDI_INPUTS			{{=it.product.buses.filter(x => x.type == "midi" && x.direction == "input").length}}
 
+#define MIDI_BUS_IN			{{=it.product.buses.findIndex(x => x.type == "midi" && x.direction == "input")}}
+
 #if (AUDIO_BUS_IN >= 0) || (AUDIO_BUS_OUT >= 0)
 static struct {
 	size_t	index;
