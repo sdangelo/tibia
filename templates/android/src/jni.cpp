@@ -211,7 +211,7 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 				x_buf[BLOCK_SIZE * k + j] = in_buf[ix];
 #endif
 
-#if (NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN) || (NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT)
+#if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
 		memset(zero, 0, BLOCK_SIZE * sizeof(float));
 #endif
 

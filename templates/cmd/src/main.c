@@ -49,9 +49,11 @@ const char *		outfile = NULL;
 const char *		midifile = NULL;
 void *			midi_data = NULL;
 struct midi_parser	midi_parser;
-enum midi_parser_status	midi_status;
 int16_t			midi_ticks = 0;
 uint32_t		midi_tempo = 500000; // microseconds per quarter-note -> 120 bpm
+enum midi_parser_status	midi_status;
+double			midi_next;
+char			midi_next_read;
 #endif
 
 void usage(const char * argv0) {
@@ -403,40 +405,31 @@ int main(int argc, char * argv[]) {
 		midi_parser.size = midi_data_size;
 		midi_parser.in = midi_data;
 
-		char done = 0;
-		while (!done) {
-			midi_status = midi_parse(&midi_parser);
-			switch (midi_status) {
-			case MIDI_PARSER_EOB:
-				done = 1;
-				break;
-			case MIDI_PARSER_ERROR:
-				fprintf(stderr, "Error while parsing MIDI file\n");
-				goto err_midi_parse;
-				break;
-			case MIDI_PARSER_HEADER:
-				if (midi_parser.header.format != 0) {
-					fprintf(stderr, "Only MIDI file format 0 is supported\n");
-					goto err_midi_parse;
-				}
-				if ((midi_parser.header.time_division & 0x80) != 0x80) {
-					fprintf(stderr, "Only ticks per quarter-note time division is supported when reading MIDI files\n");
-					goto err_midi_parse;
-				}
-				if (midi_parser.header.time_division == 0) {
-					fprintf(stderr, "Invalid 0 tick per quarter-note in MIDI file\n");
-					goto err_midi_parse;
-				}
-				midi_ticks = midi_parser.header.time_division;
-				break;
-			case MIDI_PARSER_TRACK_META:
-			case MIDI_PARSER_TRACK_MIDI:
-				done = 1;
-				break;
-			default:
-				break;
-			}
+		midi_status = midi_parse(&midi_parser);
+		if (midi_status != MIDI_PARSER_HEADER) {
+			fprintf(stderr, "Header not found in MIDI file\n");
+			goto err_midi_parse;
 		}
+		if (midi_parser.header.format != 0) {
+			fprintf(stderr, "Only MIDI file format 0 is supported\n");
+			goto err_midi_parse;
+		}
+		if ((midi_parser.header.time_division & 0x80) != 0x80) {
+			fprintf(stderr, "Only ticks per quarter-note time division is supported when reading MIDI files\n");
+			goto err_midi_parse;
+		}
+		if (midi_parser.header.time_division == 0) {
+			fprintf(stderr, "Invalid 0 tick per quarter-note in MIDI file\n");
+			goto err_midi_parse;
+		}
+
+		midi_ticks = midi_parser.header.time_division;
+		midi_next = 0.0;
+		midi_next_read = 1;
+	} else {
+		midi_status = MIDI_PARSER_EOB;
+		midi_next = 0.0;
+		midi_next_read = 0;
 	}
 #endif
 
@@ -451,43 +444,75 @@ int main(int argc, char * argv[]) {
 		int32_t n = tinywav_read_f(&tw_in, x, bufsize);
 		if (n == 0)
 			break;
-#if (NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN) || (NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT)
+
+# if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
 		memset(zero, 0, bufsize * sizeof(float));
-#endif
-		plugin_process(&instance, (const float **)x, y, n);
-# if PARAMETERS_N > 0
-		for (size_t j = 0; j < PARAMETERS_N; j++) {
-			if (!param_data[j].out)
-				continue;
-			param_values[j] = plugin_get_parameter(&instance, j);
-			printf("  %s: %g\n", param_data[j].id, param_values[j]);
-		}
 # endif
-# if NUM_CHANNELS_OUT > 0
-		tinywav_write_f(&tw_out, y, n);
-# endif
-	}
+
 #else
 	size_t i = 0;
 	size_t len = (size_t)(tw_in.h.SampleRate * length + 0.5f);
 	while (i < len) {
 		size_t left = len - i;
 		size_t n = left > bufsize ? bufsize : left;
+#endif
+
+#if NUM_MIDI_INPUTS > 0
+		while (1) {
+			if (midi_next > 0.0)
+				break;
+			else if (midi_next_read == 0) {
+				if (midi_status == MIDI_PARSER_TRACK_META && midi_parser.meta.type == MIDI_META_SET_TEMPO)
+					midi_tempo = (midi_parser.meta.bytes[0] << 16) | (midi_parser.meta.bytes[1] << 8) | midi_parser.meta.bytes[2];
+				else if (midi_status == MIDI_PARSER_TRACK_MIDI) {
+					uint8_t data[3] = { (midi_parser.midi.status << 4) | midi_parser.midi.channel, midi_parser.midi.param1, midi_parser.midi.param2 };
+					plugin_midi_msg_in(&instance, MIDI_BUS_IN, data);
+				}
+				midi_next_read = 1;
+			}
+
+			if (midi_status == MIDI_PARSER_EOB)
+				break;
+
+			midi_status = midi_parse(&midi_parser);
+			switch (midi_status) {
+			case MIDI_PARSER_ERROR:
+			case MIDI_PARSER_HEADER:
+				fprintf(stderr, "Error while parsing MIDI file\n");
+				goto err_midi_parse;
+				break;
+			case MIDI_PARSER_TRACK_META:
+			case MIDI_PARSER_TRACK_MIDI:
+			case MIDI_PARSER_TRACK_SYSEX:
+				midi_next += ((double)midi_tempo / (double)midi_ticks) * midi_parser.vtime;
+				midi_next_read = 0;
+				break;
+			default:
+				break;
+			}
+		}
+		midi_next -= 1e6 * ((double)n / (double)tw_in.h.SampleRate);
+#endif
+
 		plugin_process(&instance, (const float **)x, y, n);
-# if PARAMETERS_N > 0
+
+#if PARAMETERS_N > 0
 		for (size_t j = 0; j < PARAMETERS_N; j++) {
 			if (!param_data[j].out)
 				continue;
 			param_values[j] = plugin_get_parameter(&instance, j);
 			printf("  %s: %g\n", param_data[j].id, param_values[j]);
 		}
-# endif
-# if NUM_CHANNELS_OUT > 0
-		tinywav_write_f(&tw_out, y, n);
-# endif
-		i += n;
-	}
 #endif
+
+#if NUM_CHANNELS_OUT > 0
+		tinywav_write_f(&tw_out, y, n);
+#endif
+
+#if NUM_CHANNELS_IN == 0
+		i += n;
+#endif
+	}
 
 	exit_code = EXIT_SUCCESS;
 
