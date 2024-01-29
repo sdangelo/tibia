@@ -58,7 +58,7 @@ static struct {
 		/* .def		= */ {{=p.defaultValue.toExponential()}}f,
 		/* .min		= */ {{=p.minimum.toExponential()}}f,
 		/* .max		= */ {{=p.maximum.toExponential()}}f,
-		/* .flags	= */ {{?p.isBypass}}PARAM_BYPASS{{??p.isLatency}}PARAM_INTEGER{{??}}0{{?p.toggled}} | PARAM_TOGGLED{{?}}{{?p.integer}} | PARAM_INTEGER{{?}}{{?}}
+		/* .flags	= */ {{?p.isBypass}}PARAM_BYPASS{{??}}0{{?p.toggled}} | PARAM_TOGGLED{{?}}{{?p.integer}} | PARAM_INTEGER{{?}}{{?}}
 	},
 {{~}}
 };

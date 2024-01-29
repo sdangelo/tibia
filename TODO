@@ -23,3 +23,4 @@
 * midi out
 * vst3 tail, web process return true/false
 * error checking etc. web, especially processor.js
+* LV2: round latency output value

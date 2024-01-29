@@ -9,8 +9,8 @@
     <uses-sdk android:minSdkVersion="26" /> <!-- for androidx core and AAudio -->
 {{?}}
     <uses-sdk android:targetSdkVersion="34" />
-    <application android:label="{{=it.product.bundleName}}">
-      <activity android:name=".MainActivity" android:label="{{=it.product.bundleName}}" android:exported="true">
+    <application android:label="{{=it.product.name}}">
+      <activity android:name=".MainActivity" android:label="{{=it.product.name}}" android:exported="true">
         <intent-filter>
           <action android:name="android.intent.action.MAIN" />
           <category android:name="android.intent.category.DEFAULT" />
