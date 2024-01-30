@@ -89,40 +89,6 @@ module.exports = function (data, api) {
 	data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, audioPorts);
 	data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, midiPorts);
 
-	/*
-	var audioBuses = data.product.buses.filter(x => x.type == "audio");
-	var ports = [];
-	var bi = 0;
-	for (; bi < audioBuses.length; bi++) {
-		var b = audioBuses[bi];
-		if (b.channels == "mono") {
-			var e = { type: "audio", direction: b.direction, name: b.name, sidechain: b.sidechain, cv: b.cv, optional: b.optional, busIndex: bi };
-			e.symbol = data.lv2.busSymbols[bi];
-			ports.push(e);
-		} else {
-			var e = { type: "audio", direction: b.direction, name: b.name + " Left", shortName: b.shortName + " L", sidechain: b.sidechain, cv: b.cv, busIndex: bi };
-			e.symbol = data.lv2.busSymbols[bi] + "_L";
-			data.tibia.lv2.ports.push(e);
-			var e = { type: "audio", direction: b.direction, name: b.name + " Right", shortName: b.shortName + " R", sidechain: b.sidechain, cv: b.cv, busIndex: bi };
-			e.symbol = data.lv2.busSymbols[bi] + "_R";
-			ports.push(e);
-		}
-	}
-	ports.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
-	data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, ports);
-
-	var midiBuses = data.product.buses.filter(x => x.type == "midi");
-	var ports = [];
-	for (var i = 0; i < midiBuses.length; i++, bi++) {
-		var b = midiBuses[i];
-		var e = { type: "midi", direction: b.direction, name: b.name, sidechain: b.sidechain, control: b.control, optional: b.optional, busIndex: bi };
-		e.symbol = data.lv2.busSymbols[bi];
-		ports.push(e);
-	}
-	ports.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
-	data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, ports);
-	*/
-
 	var ports = [];
 	for (var i = 0; i < data.product.parameters.length; i++) {
 		var p = data.product.parameters[i];
@@ -135,7 +101,7 @@ module.exports = function (data, api) {
 	ports.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
 	data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, ports);
 
-	api.generateFileFromTemplateFile(`data${sep}manifest.ttl`, `data${sep}manifest.ttl`, data);
+	api.generateFileFromTemplateFile(`data${sep}manifest.ttl.in`, `data${sep}manifest.ttl.in`, data);
 	api.copyFile(`src${sep}lv2.c`, `src${sep}lv2.c`);
 	api.generateFileFromTemplateFile(`src${sep}data.h`, `src${sep}data.h`, data);
 };

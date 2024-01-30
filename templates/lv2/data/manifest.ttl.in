@@ -10,7 +10,7 @@
 {{?it.lv2.project}}
 	lv2:project {{=it.tibia.lv2.ttlURI(it.lv2.project)}} ;
 {{?}}
-	lv2:binary <{{=it.product.bundleName}}.so> ;
+	lv2:binary <{{=it.product.bundleName}}@DLL_SUFFIX@> ;
 	doap:name "{{=it.product.name}}" ;
 	doap:maintainer [
 		a foaf:Organization ;
