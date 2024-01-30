@@ -2,10 +2,8 @@ include vars.mk
 
 ifeq ($(OS), Windows_NT)
 	DLL_SUFFIX = .dll
-	COMMONPROGRAMFILES = $(shell echo '${COMMONPROGRAMFILES}' | sed 's:\\:/:g')
-	APPDATA = $(shell echo '${APPDATA}' | sed 's:\\:/:g')
-	LV2DIR = ${COMMONPROGRAMFILES}/LV2
-	LV2DIR_USER = ${APPDATA}/LV2
+	LV2DIR = $(shell echo '${COMMONPROGRAMFILES}' | sed 's:\\:/:g')/LV2
+	LV2DIR_USER = $(shell echo '${APPDATA}' | sed 's:\\:/:g')/LV2
 	CC = gcc
 else
 	UNAME_S = $(shell uname -s)

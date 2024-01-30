@@ -3,10 +3,8 @@ include vars.mk
 ifeq ($(OS), Windows_NT)
 	DLL_SUFFIX = .vst3
 	PLATFORM = x86_64-win
-	COMMONPROGRAMFILES = $(shell echo '${COMMONPROGRAMFILES}' | sed 's:\\:/:g')
-	LOCALAPPDATA = $(shell echo '${LOCALAPPDATA}' | sed 's:\\:/:g')
-	VST3DIR = ${COMMONPROGRAMFILES}/VST3
-	VST3DIR_USER = ${LOCALAPPDATA}/VST3
+	VST3DIR = $(shell echo '${COMMONPROGRAMFILES}' | sed 's:\\:/:g')/VST3
+	VST3DIR_USER = $(shell echo '${LOCALAPPDATA}' | sed 's:\\:/:g')/Programs/Common/VST3
 	CC = gcc
 else
 	UNAME_S = $(shell uname -s)
