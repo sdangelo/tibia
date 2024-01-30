@@ -162,10 +162,12 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 {{~}}
 };
 
-# define DATA_PARAM_BYPASS	1
-# define DATA_PARAM_TOGGLED	(1<<1)
-# define DATA_PARAM_INTEGER	(1<<2)
-# define DATA_PARAM_MAP_LOG	(1<<3)
+# if DATA_PRODUCT_PARAMETERS_N > 0
+
+#  define DATA_PARAM_BYPASS	1
+#  define DATA_PARAM_TOGGLED	(1<<1)
+#  define DATA_PARAM_INTEGER	(1<<2)
+#  define DATA_PARAM_MAP_LOG	(1<<3)
 
 static struct {
 	size_t		index;
@@ -187,6 +189,9 @@ static struct {
 	},
 {{~}}
 };
+
+# endif
+
 #endif
 
 {{?it.product.parameters.find(x => x.isLatency)}}

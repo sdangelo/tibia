@@ -530,6 +530,8 @@ static void processParams(pluginInstance *p, struct Steinberg_Vst_ProcessData *d
 				data[1] = 1;
 				data[2] = (uint8_t)(127.0 * v);
 				break;
+			default:
+				continue;
 			}
 			plugin_midi_msg_in(&p->p, midiInIndex[index], data);
 			continue;
@@ -773,9 +775,16 @@ static Steinberg_tresult controllerInitialize(void* thisInterface, struct Steinb
 	if (c->context != NULL)
 		return Steinberg_kResultFalse;
 	c->context = context;
-#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-	for (int i = 0; i < DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N; i++)
+#if DATA_PRODUCT_PARAMETERS_N > 0
+	for (int i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++)
 		c->parameters[i] = parameterData[i].def;
+#endif
+#if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+	for (int i = DATA_PRODUCT_PARAMETERS_N; i < DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N; i += 3) {
+		c->parameters[i] = 0.0;
+		c->parameters[i + 1] = 0.5;
+		c->parameters[i + 2] = 0.0;
+	}
 #endif
 	return Steinberg_kResultOk;
 }
@@ -1260,14 +1269,34 @@ static Steinberg_IPluginFactory3Vtbl factoryVtbl = {
 };
 static Steinberg_IPluginFactory3 factory = { &factoryVtbl };
 
+#ifdef _WIN32
+#define EXPORT __declspec(dllexport)
+#else
+#define EXPORT __attribute__((visibility("default")))
+#endif
+
+EXPORT
 Steinberg_IPluginFactory * GetPluginFactory() {
 	return (Steinberg_IPluginFactory *)&factory;
 }
 
-char ModuleEntry (void *handle) {
+#ifndef _WIN32
+# if defined(__APPLE__)
+#  define ENTRY bundleEntry
+#  define EXIT bundleExit
+# else
+#  define ENTRY ModuleEntry
+#  define EXIT ModuleExit
+# endif
+
+EXPORT
+char ENTRY(void *handle) {
 	return 1;
 }
 
-char ModuleExit () {
+EXPORT
+char EXIT() {
 	return 1;
 }
+
+#endif
