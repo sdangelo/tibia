@@ -41,7 +41,7 @@ all: build/${BUNDLE_DIR}/${DLL_FILE} build/${BUNDLE_DIR}/Contents/Info.plist
 build/${BUNDLE_DIR}/Contents/Info.plist: data/Info.plist | build/${BUNDLE_DIR}/Contents
 	cp $^ $@
 
-build/${BUNDLE_DIR}/${DLL_FILE}: build/tmp/x86_64 build/tmp/arm64 | buindle/${BUNDLE_DIR}/Contents
+build/${BUNDLE_DIR}/${DLL_FILE}: build/tmp/x86_64 build/tmp/arm64 | build/${BUNDLE_DIR}/${DLL_DIR}
 	lipo -create -output $@ $^
 
 build/tmp/x86_64: src/vst3.c src/data.h src/plugin.h | build/tmp
@@ -50,7 +50,7 @@ build/tmp/x86_64: src/vst3.c src/data.h src/plugin.h | build/tmp
 build/tmp/arm64: src/vst3.c src/data.h src/plugin.h | build/tmp
 	${CC} src/vst3.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL} -arch arm64
 
-build/tmp:
+build/tmp build/${BUILD_DIR}/Contents:
 	mkdir -p $@
 
 else
@@ -62,7 +62,7 @@ build/${BUNDLE_DIR}/${DLL_FILE}: src/vst3.c src/data.h | build/${BUNDLE_DIR}/${D
 
 endif
 
-build/${BUNDLE_DIR}/Contents build/${BUNDLE_DIR}/${DLL_DIR}:
+build/${BUNDLE_DIR}/${DLL_DIR}:
 	mkdir -p $@
 
 clean:
