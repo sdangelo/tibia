@@ -167,6 +167,7 @@ int main() {
 				data[0] = 0xa0;
 				break;
 			case ControlChange:
+				//TODO: CC to param mapping
 			case ChannelMode:
 				data[0] = 0xb0;
 				break;
