@@ -26,10 +26,10 @@ ifeq ($(UNAME_S), Darwin)
 build/${PROGRAM}: build/tmp/x86_64 build/tmp/arm64
 	lipo -create -output $@ $^
 
-build/tmp/x86_64: src/main.c src/data.h src/plugin.h ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c | build
+build/tmp/x86_64: src/main.c src/data.h src/plugin.h ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c | build/tmp
 	${CC} src/main.c ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL} -arch x86_64
 
-build/tmp/arm64: src/main.c src/data.h src/plugin.h ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c | build
+build/tmp/arm64: src/main.c src/data.h src/plugin.h ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c | build/tmp
 	${CC} src/main.c ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL} -arch arm64
 
 build/tmp:
