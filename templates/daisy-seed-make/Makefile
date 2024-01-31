@@ -1,0 +1,11 @@
+include vars.mk
+
+TARGET = ${BUNDLE_NAME}
+
+CPP_SOURCES = src/main.cpp ${CPP_SOURCES_EXTRA}
+
+SYSTEM_FILES_DIR=${LIBDAISY_DIR}/core
+
+include ${SYSTEM_FILES_DIR}/Makefile
+
+#TODO: CFLAGS, LDFLAGS

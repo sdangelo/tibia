@@ -22,3 +22,7 @@ cp $dir/plugin.h $dir/../out/android/src
 $dir/../tibia $dir/product.json,$dir/company.json,$dir/cmd.json $dir/../templates/cmd $dir/../out/cmd
 $dir/../tibia $dir/product.json,$dir/company.json,$dir/cmd.json,$dir/cmd-make.json $dir/../templates/cmd-make $dir/../out/cmd
 cp $dir/plugin.h $dir/../out/cmd/src
+
+$dir/../tibia $dir/product.json,$dir/company.json,$dir/daisy-seed.json $dir/../templates/daisy-seed $dir/../out/daisy-seed
+$dir/../tibia $dir/product.json,$dir/company.json,$dir/daisy-seed.json,$dir/daisy-seed-make.json $dir/../templates/daisy-seed-make $dir/../out/daisy-seed
+cp $dir/plugin.h $dir/../out/daisy-seed/src
