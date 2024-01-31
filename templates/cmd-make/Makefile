@@ -11,7 +11,11 @@ endif
 
 CC = gcc
 
-CFLAGS = -I${TINYWAV_DIR} -I${MIDI_PARSER_DIR}/include -O3 -fPIC -Wall -Wpedantic -Wextra -Wno-unused-parameter
+CFLAGS = -O3 -Wall -Wpedantic -Wextra
+CFLAGS_ALL = -I${TINYWAV_DIR} -I${MIDI_PARSER_DIR}/include -fPIC ${CFLAGS} ${CFLAGS_EXTRA}
+
+LDFLAGS =
+LDFLAGS_ALL = ${LDFLAGS} ${LDFLAGS_EXTRA}
 
 PROGRAM = ${BUNDLE_NAME}${EXE_SUFFIX}
 
@@ -23,10 +27,10 @@ build/${PROGRAM}: build/tmp/x86_64 build/tmp/arm64
 	lipo -create -output $@ $^
 
 build/tmp/x86_64: src/main.c src/data.h src/plugin.h ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c | build
-	${CC} src/main.c ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c -o $@ ${CFLAGS} ${CFLAGS_EXTRA} ${LDFLAGS_EXTRA} -arch x86_64
+	${CC} src/main.c ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL} -arch x86_64
 
 build/tmp/arm64: src/main.c src/data.h src/plugin.h ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c | build
-	${CC} src/main.c ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c -o $@ ${CFLAGS} ${CFLAGS_EXTRA} ${LDFLAGS_EXTRA} -arch arm64
+	${CC} src/main.c ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL} -arch arm64
 
 build/tmp:
 	mkdir -p $@
@@ -34,7 +38,7 @@ build/tmp:
 else
 
 build/${PROGRAM}: src/main.c src/data.h src/plugin.h ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c | build
-	${CC} src/main.c ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c -o $@ ${CFLAGS} ${CFLAGS_EXTRA} ${LDFLAGS_EXTRA}
+	${CC} src/main.c ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
 
 endif
 

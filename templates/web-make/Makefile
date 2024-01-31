@@ -1,8 +1,11 @@
 include vars.mk
 
 CC = clang
-CFLAGS = --target=wasm32 -flto -fvisibility=hidden -Ofast -Wall -Wextra -Wpedantic
-LDFLAGS = \
+
+CFLAGS = -Ofast -Wall -Wpedantic -Wextra
+CFLAGS_ALL = --target=wasm32 -flto -fvisibility=hidden ${CFLAGS} ${CFLAGS_EXTRA}
+
+LDFLAGS_ALL = \
 	-Wl,--allow-undefined \
 	-Wl,--no-entry \
 	-Wl,--lto-O3 \
@@ -17,10 +20,10 @@ LDFLAGS = \
 	-Wl,--export=processor_set_parameter \
 	-Wl,-z,stack-size=$$((8*1024*1024)) \
 	-nostdlib
-
 ifeq (${HAS_MIDI_IN}, yes)
-LDFLAGS += -Wl,--export=processor_midi_msg_in
+LDFLAGS_ALL += -Wl,--export=processor_midi_msg_in
 endif
+LDFLAGS_ALL += ${LDFLAGS} ${LDFLAGS_EXTRA}
 
 ALL = build/${BUNDLE_NAME}.wasm build/${BUNDLE_NAME}_processor.js build/${BUNDLE_NAME}.js
 
@@ -31,7 +34,7 @@ default: all
 all: ${ALL}
 
 build/${BUNDLE_NAME}.wasm: src/data.h src/memset.h src/plugin.h src/walloc.h src/processor.c | build
-	${CC} src/processor.c -o $@ ${CFLAGS} ${CFLAGS_EXTRA} ${LDFLAGS} ${LDFLAGS_EXTRA}
+	${CC} src/processor.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
 
 build/${BUNDLE_NAME}_processor.js: src/processor.js | build
 	cp $^ $@

@@ -23,8 +23,11 @@ else
 	endif
 endif
 
-CFLAGS = -O3 -fPIC -Wall -Wpedantic -Wextra -Wno-unused-parameter
-LDFLAGS = -shared -lm
+CFLAGS = -O3 -Wall -Wpedantic -Wextra
+CFLAGS_ALL = -fPIC ${CFLAGS} ${CFLAGS_EXTRA}
+
+LDFLAGS =
+LDFLAGS_ALL = -shared -lm ${LDFLAGS} ${LDFLAGS_EXTRA}
 
 BUNDLE_DIR = ${BUNDLE_NAME}.vst3
 
@@ -42,10 +45,10 @@ build/${BUNDLE_DIR}/${DLL_FILE}: build/tmp/x86_64 build/tmp/arm64 | buindle/${BU
 	lipo -create -output $@ $^
 
 build/tmp/x86_64: src/vst3.c src/data.h src/plugin.h | build/tmp
-	${CC} src/vst3.c -o $@ ${CFLAGS} ${CFLAGS_EXTRA} ${LDFLAGS} ${LDFLAGS_EXTRA} -arch x86_64
+	${CC} src/vst3.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL} -arch x86_64
 
 build/tmp/arm64: src/vst3.c src/data.h src/plugin.h | build/tmp
-	${CC} src/vst3.c -o $@ ${CFLAGS} ${CFLAGS_EXTRA} ${LDFLAGS} ${LDFLAGS_EXTRA} -arch arm64
+	${CC} src/vst3.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL} -arch arm64
 
 build/tmp:
 	mkdir -p $@
@@ -55,7 +58,7 @@ else
 all: build/${BUNDLE_DIR}/${DLL_FILE}
 
 build/${BUNDLE_DIR}/${DLL_FILE}: src/vst3.c src/data.h | build/${BUNDLE_DIR}/${DLL_DIR}
-	${CC} src/vst3.c -o $@ ${CFLAGS} ${CFLAGS_EXTRA} ${LDFLAGS} ${LDFLAGS_EXTRA}
+	${CC} src/vst3.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
 
 endif
 

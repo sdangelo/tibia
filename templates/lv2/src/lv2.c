@@ -49,6 +49,9 @@ typedef struct {
 } plugin_instance;
 
 static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double sample_rate, const char * bundle_path, const LV2_Feature * const * features) {
+	(void)descriptor;
+	(void)bundle_path;
+
 	plugin_instance *instance = malloc(sizeof(plugin_instance));
 	if (instance == NULL)
 		return NULL;

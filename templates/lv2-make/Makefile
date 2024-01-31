@@ -21,8 +21,11 @@ else
 	endif
 endif
 
-CFLAGS = -O3 -fPIC -Wall -Wpedantic -Wextra -Wno-unused-parameter
-LDFLAGS = -shared
+CFLAGS = -O3 -Wall -Wpedantic -Wextra
+CFLAGS_ALL = -fPIC ${CFLAGS} ${CFLAGS_EXTRA}
+
+LDFLAGS =
+LDFLAGS_ALL = -shared ${LDFLAGS} ${LDFLAGS_EXTRA}
 
 BUNDLE_DIR = ${BUNDLE_NAME}.lv2
 
@@ -39,10 +42,10 @@ build/${BUNDLE_DIR}/${DLL_FILE}: build/tmp/x86_64 build/tmp/arm64 | build/${BUND
 	lipo -create -output $@ $^
 
 build/tmp/x86_64: src/lv2.c src/data.h src/plugin.h | build/tmp
-	${CC} src/lv2.c -o $@ ${CFLAGS} ${CFLAGS_EXTRA} ${LDFLAGS} ${LDFLAGS_EXTRA} -arch x86_64
+	${CC} src/lv2.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL} -arch x86_64
 
 build/tmp/arm64: src/lv2.c src/data.h src/plugin.h | build/tmp
-	${CC} src/lv2.c -o $@ ${CFLAGS} ${CFLAGS_EXTRA} ${LDFLAGS} ${LDFLAGS_EXTRA} -arch arm64
+	${CC} src/lv2.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL} -arch arm64
 
 build/tmp:
 	mkdir -p $@
@@ -50,7 +53,7 @@ build/tmp:
 else
 
 build/${BUNDLE_DIR}/${DLL_FILE}: src/lv2.c src/data.h | build/${BUNDLE_DIR}
-	${CC} src/lv2.c -o $@ ${CFLAGS} ${CFLAGS_EXTRA} ${LDFLAGS} ${LDFLAGS_EXTRA}
+	${CC} src/lv2.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
 
 endif
 

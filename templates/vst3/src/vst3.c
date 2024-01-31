@@ -174,6 +174,8 @@ static Steinberg_tresult pluginTerminate(void *thisInterface) {
 }
 
 static Steinberg_tresult pluginGetControllerClassId(void *thisInterface, Steinberg_TUID classId) {
+	(void)thisInterface;
+
 	TRACE("plugin get controller class id %p %p\n", thisInterface, classId);
 	if (classId != NULL) {
 		memcpy(classId, dataControllerCID, sizeof(Steinberg_TUID));
@@ -183,11 +185,16 @@ static Steinberg_tresult pluginGetControllerClassId(void *thisInterface, Steinbe
 }
 
 static Steinberg_tresult pluginSetIoMode(void *thisInterface, Steinberg_Vst_IoMode mode) {
+	(void)thisInterface;
+	(void)mode;
+
 	TRACE("plugin set io mode\n");
 	return Steinberg_kNotImplemented;
 }
 
 static Steinberg_int32 pluginGetBusCount(void *thisInterface, Steinberg_Vst_MediaType type, Steinberg_Vst_BusDirection dir) {
+	(void)thisInterface;
+
 	TRACE("plugin get bus count\n");
 	if (type == Steinberg_Vst_MediaTypes_kAudio) {
 		if (dir == Steinberg_Vst_BusDirections_kInput)
@@ -204,6 +211,8 @@ static Steinberg_int32 pluginGetBusCount(void *thisInterface, Steinberg_Vst_Medi
 }
 
 static Steinberg_tresult pluginGetBusInfo(void* thisInterface, Steinberg_Vst_MediaType type, Steinberg_Vst_BusDirection dir, Steinberg_int32 index, struct Steinberg_Vst_BusInfo* bus) {
+	(void)thisInterface;
+
 	TRACE("plugin get bus info\n");
 	if (index < 0)
 		return Steinberg_kInvalidArgument;
@@ -244,6 +253,10 @@ static Steinberg_tresult pluginGetBusInfo(void* thisInterface, Steinberg_Vst_Med
 }
 
 static Steinberg_tresult pluginGetRoutingInfo(void* thisInterface, struct Steinberg_Vst_RoutingInfo* inInfo, struct Steinberg_Vst_RoutingInfo* outInfo) {
+	(void)thisInterface;
+	(void)inInfo;
+	(void)outInfo;
+
 	TRACE("plugin get routing info\n");
 	return Steinberg_kNotImplemented;
 }
@@ -418,6 +431,8 @@ static Steinberg_uint32 pluginIAudioProcessorRelease(void *thisInterface) {
 }
 
 static Steinberg_tresult pluginSetBusArrangements(void* thisInterface, Steinberg_Vst_SpeakerArrangement* inputs, Steinberg_int32 numIns, Steinberg_Vst_SpeakerArrangement* outputs, Steinberg_int32 numOuts) {
+	(void)thisInterface;
+
 	TRACE("plugin IAudioProcessor set bus arrangements\n");
 	if (numIns < 0 || numOuts < 0)
 		return Steinberg_kInvalidArgument;
@@ -442,6 +457,8 @@ static Steinberg_tresult pluginSetBusArrangements(void* thisInterface, Steinberg
 }
 
 static Steinberg_tresult pluginGetBusArrangement(void* thisInterface, Steinberg_Vst_BusDirection dir, Steinberg_int32 index, Steinberg_Vst_SpeakerArrangement* arr) {
+	(void)thisInterface;
+
 	TRACE("plugin IAudioProcessor get bus arrangement\n");
 
 #if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
@@ -462,11 +479,15 @@ static Steinberg_tresult pluginGetBusArrangement(void* thisInterface, Steinberg_
 }
 
 static Steinberg_tresult pluginCanProcessSampleSize(void* thisInterface, Steinberg_int32 symbolicSampleSize) {
+	(void)thisInterface;
+
 	TRACE("plugin IAudioProcessor can process sample size\n");
 	return symbolicSampleSize == Steinberg_Vst_SymbolicSampleSizes_kSample32 ? Steinberg_kResultOk : Steinberg_kNotImplemented;
 }
 
 static Steinberg_uint32 pluginGetLatencySamples(void* thisInterface) {
+	(void)thisInterface;
+
 	TRACE("plugin IAudioProcessor get latency samples\n");
 	//TBD
 	return 0;
@@ -480,6 +501,9 @@ static Steinberg_tresult pluginSetupProcessing(void* thisInterface, struct Stein
 }
 
 static Steinberg_tresult pluginSetProcessing(void* thisInterface, Steinberg_TBool state) {
+	(void)thisInterface;
+	(void)state;
+
 	TRACE("plugin IAudioProcessor set processing\n");
 	return Steinberg_kNotImplemented;
 }
@@ -652,6 +676,8 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 }
 
 static Steinberg_uint32 pluginGetTailSamples(void* thisInterface) {
+	(void)thisInterface;
+
 	TRACE("plugin IAudioProcessor get tail samples\n");
 	//TBD
 	return 0;
@@ -689,6 +715,8 @@ static Steinberg_uint32 pluginIProcessContextRequirementsRelease(void *thisInter
 	return pluginRelease((pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIProcessContextRequirements)));
 }
 static Steinberg_uint32 pluginGetProcessContextRequirements(void* thisInterface) {
+	(void)thisInterface;
+
 	// TBD
 	return 0; 
 }
@@ -820,21 +848,31 @@ static Steinberg_tresult controllerSetComponentState(void* thisInterface, struct
 }
 
 static Steinberg_tresult controllerSetState(void* thisInterface, struct Steinberg_IBStream* state) {
+	(void)thisInterface;
+	(void)state;
+
 	TRACE("controller set state\n");
 	return Steinberg_kNotImplemented;
 }
 
 static Steinberg_tresult controllerGetState(void* thisInterface, struct Steinberg_IBStream* state) {
+	(void)thisInterface;
+	(void)state;
+
 	TRACE("controller get state\n");
 	return Steinberg_kNotImplemented;
 }
 
 static Steinberg_int32 controllerGetParameterCount(void* thisInterface) {
+	(void)thisInterface;
+
 	TRACE("controller get parameter count\n");
 	return DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N;
 }
 
 static Steinberg_tresult controllerGetParameterInfo(void* thisInterface, Steinberg_int32 paramIndex, struct Steinberg_Vst_ParameterInfo* info) {
+	(void)thisInterface;
+
 	TRACE("controller get parameter info\n");
 	if (paramIndex < 0 || paramIndex >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N)
 		return Steinberg_kResultFalse;
@@ -885,6 +923,8 @@ static void dToStr(double v, Steinberg_Vst_String128 s, int precision) {
 }
 
 static Steinberg_tresult controllerGetParamStringByValue(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue valueNormalized, Steinberg_Vst_String128 string) {
+	(void)thisInterface;
+
 	TRACE("controller get param string by value\n");
 	if (id >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N)
 		return Steinberg_kResultFalse;
@@ -921,6 +961,8 @@ void TCharToD(Steinberg_Vst_TChar* s, double *v) {
 }
 
 static Steinberg_tresult controllerGetParamValueByString(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_TChar* string, Steinberg_Vst_ParamValue* valueNormalized) {
+	(void)thisInterface;
+
 	TRACE("controller get param value by string\n");
 	if (id >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N)
 		return Steinberg_kResultFalse;
@@ -931,11 +973,15 @@ static Steinberg_tresult controllerGetParamValueByString(void* thisInterface, St
 }
 
 static Steinberg_Vst_ParamValue controllerNormalizedParamToPlain(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue valueNormalized) {
+	(void)thisInterface;
+
 	TRACE("controller normalized param to plain\n");
 	return id >= DATA_PRODUCT_PARAMETERS_N ? valueNormalized : parameterMap(id, valueNormalized);
 }
 
 static Steinberg_Vst_ParamValue controllerPlainParamToNormalized(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue plainValue) {
+	(void)thisInterface;
+
 	TRACE("controller plain param to normalized\n");
 	return id >= DATA_PRODUCT_PARAMETERS_N ? plainValue : parameterUnmap(id, plainValue);
 }
@@ -977,6 +1023,9 @@ static Steinberg_tresult controllerSetComponentHandler(void* thisInterface, stru
 }
 
 static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Steinberg_FIDString name) {
+	(void)thisInterface;
+	(void)name;
+
 	TRACE("controller create view\n");
 	//TBD
 	return NULL;
@@ -1024,6 +1073,9 @@ static Steinberg_uint32 controllerIMidiMappingRelease (void* thisInterface) {
 }
 
 static Steinberg_tresult controllerGetMidiControllerAssignment(void* thisInterface, Steinberg_int32 busIndex, Steinberg_int16 channel, Steinberg_Vst_CtrlNumber midiControllerNumber, Steinberg_Vst_ParamID* id) {
+	(void)thisInterface;
+	(void)channel;
+
 	TRACE("controller getMidiControllerAssignment\n");
 	if (busIndex < 0 || busIndex >= DATA_PRODUCT_BUSES_MIDI_INPUT_N)
 		return Steinberg_kInvalidArgument;
@@ -1071,16 +1123,22 @@ static Steinberg_tresult factoryQueryInterface(void *thisInterface, const Steinb
 }
 
 static Steinberg_uint32 factoryAddRef(void *thisInterface) {
+	(void)thisInterface;
+
 	TRACE("factory add ref\n");
 	return 1;
 }
 
 static Steinberg_uint32 factoryRelease(void *thisInterface) {
+	(void)thisInterface;
+
 	TRACE("factory release\n");
 	return 1;
 }
 
 static Steinberg_tresult factoryGetFactoryInfo(void *thisInterface, struct Steinberg_PFactoryInfo * info) {
+	(void)thisInterface;
+
 	TRACE("getFactoryInfo\n");
 	strcpy(info->vendor, DATA_COMPANY_NAME);
 	strcpy(info->url, DATA_COMPANY_URL);
@@ -1090,11 +1148,15 @@ static Steinberg_tresult factoryGetFactoryInfo(void *thisInterface, struct Stein
 }
 
 static Steinberg_int32 factoryCountClasses(void *thisInterface) {
+	(void)thisInterface;
+
 	TRACE("countClasses\n");
 	return 2;
 }
 
 static Steinberg_tresult factoryGetClassInfo(void *thisInterface, Steinberg_int32 index, struct Steinberg_PClassInfo * info) {
+	(void)thisInterface;
+
 	TRACE("getClassInfo\n");
 	switch (index) {
 	case 0:
@@ -1119,6 +1181,8 @@ static Steinberg_tresult factoryGetClassInfo(void *thisInterface, Steinberg_int3
 }
 
 static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FIDString cid, Steinberg_FIDString iid, void ** obj) {
+	(void)thisInterface;
+
 	TRACE("createInstance\n");
 	if (memcmp(cid, dataPluginCID, sizeof(Steinberg_TUID)) == 0) {
 		TRACE(" plugin\n");
@@ -1175,6 +1239,8 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 }
 
 static Steinberg_tresult factoryGetClassInfo2(void* thisInterface, Steinberg_int32 index, struct Steinberg_PClassInfo2* info) {
+	(void)thisInterface;
+
 	TRACE("getClassInfo2\n");
 	switch (index) {
 	case 0:
@@ -1209,6 +1275,8 @@ static Steinberg_tresult factoryGetClassInfo2(void* thisInterface, Steinberg_int
 }
 
 static Steinberg_tresult factoryGetClassInfoUnicode(void* thisInterface, Steinberg_int32 index, struct Steinberg_PClassInfoW* info) {
+	(void)thisInterface;
+
 	TRACE("getClassInfo unicode\n");
 	switch (index) {
 	case 0:
@@ -1243,6 +1311,9 @@ static Steinberg_tresult factoryGetClassInfoUnicode(void* thisInterface, Steinbe
 }
 
 static Steinberg_tresult factorySetHostContext(void* thisInterface, struct Steinberg_FUnknown* context) {
+	(void)thisInterface;
+	(void)context;
+
 	TRACE("factory set host context\n");
 	//XXX: Linux run loop...
 	return Steinberg_kNotImplemented;
@@ -1291,6 +1362,8 @@ Steinberg_IPluginFactory * GetPluginFactory() {
 
 EXPORT
 char ENTRY(void *handle) {
+	(void)handle;
+
 	return 1;
 }
 

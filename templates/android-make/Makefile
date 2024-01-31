@@ -6,7 +6,7 @@ else
 MIN_API := 26
 endif
 
-JAVAC = javac
+JC = javac
 CXX = ${ANDROID_NDK_DIR}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi${MIN_API}-clang++
 
 APKSIGNER = ${BUILD_TOOLS_DIR}/apksigner
@@ -29,30 +29,21 @@ CLASSES_PATH := $(subst .,/,$(JAVA_PACKAGE_NAME))
 CLASSES := \
 	MainActivity \
 	MainActivity$$WebAppInterface
-
 ifeq (${HAS_MIDI_IN}, yes)
 	CLASSES += MainActivity$$WebAppInterface$$MidiDeviceCallback MainActivity$$WebAppInterface$$1
 endif
 
-CXXFLAGS := \
-	-fPIC \
-	-DNDEBUG \
-	-DBW_NO_DEBUG \
-	-O3 \
-	-Wall \
-	-Wextra \
-	-Wpedantic \
-	-std=c++11
-LDFLAGS := \
-	-shared \
-	-static-libstdc++ \
-	-ljnigraphics \
-	-llog \
-	-landroid
+JFLAGS =
 
+CXXFLAGS = -O3 -Wall -Wextra -Wpedantic
+CXXFLAGS_ALL = -fPIC -std=c++11 ${CXXFLAGS} ${CXXFLAGS_EXTRA}
+
+LDFLAGS =
+LDFLAGS_ALL = -shared -static-libstdc++ -landroid
 ifeq (${HAS_MIDI_IN}, yes)
 	LDFLAGS += -lamidi
 endif
+LDFLAGS_ALL += ${LDFLAGS} ${LDFLAGS_EXTRA}
 
 all: build/${BUNDLE_NAME}.apk
 
@@ -73,10 +64,10 @@ build/apk/my_classes.jar: $(foreach class,$(CLASSES),build/obj/$(CLASSES_PATH)/$
 	${D8} $(foreach class,$(CLASSES),'build/obj/$(CLASSES_PATH)/$(class).class') --min-api ${MIN_API} --output $@ --no-desugaring
 
 build/obj/${CLASSES_PATH}/MainActivity.class: src/MainActivity.java | build/obj
-	${JAVAC} -classpath "$(subst $() $(),:,$(JARS))" -d build/obj $^
+	${JC} ${JFLAGS} -classpath "$(subst $() $(),:,$(JARS))" -d build/obj $^
 
 build/apk/lib/armeabi-v7a/lib${BUNDLE_NAME}.so: src/jni.cpp | build/apk/lib/armeabi-v7a
-	${CXX} $^ ${CXXFLAGS} ${CXXFLAGS_EXTRA} ${LDFLAGS} ${LDFLAGS_EXTRA} -o $@
+	${CXX} $^ ${CXXFLAGS_ALL} ${LDFLAGS_ALL} -o $@
 
 build/assets/index.html: src/index.html | build/assets
 	cp $^ $@
