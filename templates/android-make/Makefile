@@ -51,7 +51,7 @@ endif
 LDFLAGS_ALL += ${LDFLAGS} ${LDFLAGS_EXTRA}
 
 CXX_SRCS = ${COMMON_DIR}/src/jni.cpp
-CXX_OBJS = $(addprefix build/obj/, $(notdir $(CXX_SRCS:.c=.o)))
+CXX_OBJS = $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 all: build/${BUNDLE_NAME}.apk
 
@@ -80,7 +80,7 @@ build/apk/lib/armeabi-v7a/lib${BUNDLE_NAME}.so: ${CXX_OBJS} | build/apk/lib/arme
 .SECONDEXPANSION:
 
 PERCENT := %
-$(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cpp,$$(CXX_SRCS)) | build/obj
+$(CXX_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cpp,$$(CXX_SRCS)) | build/obj
 	${CXX} $^ -o $@ -c ${CXXFLAGS_ALL}
 
 build/assets/index.html: ${DATA_DIR}/src/index.html | build/assets
