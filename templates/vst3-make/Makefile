@@ -29,6 +29,9 @@ PLUGIN_DIR := $(or $(PLUGIN_DIR),src)
 
 CFLAGS = -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL = -I${DATA_DIR}/src -I${PLUGIN_DIR} -fPIC ${CFLAGS} ${CFLAGS_EXTRA}
+ifeq ($(UNAME_S), Darwin)
+CFLAGS_ALL := ${CFLAGS_ALL} -arch arm64 -arch x86_64
+endif
 
 LDFLAGS =
 LDFLAGS_ALL = -shared -lm ${LDFLAGS} ${LDFLAGS_EXTRA}
@@ -45,26 +48,14 @@ all: build/${BUNDLE_DIR}/${DLL_FILE} build/${BUNDLE_DIR}/Contents/Info.plist
 build/${BUNDLE_DIR}/Contents/Info.plist: ${DATA_DIR}/data/Info.plist | build/${BUNDLE_DIR}/Contents
 	cp $^ $@
 
-build/${BUNDLE_DIR}/${DLL_FILE}: build/tmp/x86_64 build/tmp/arm64 | build/${BUNDLE_DIR}/${DLL_DIR}
-	lipo -create -output $@ $^
-
-build/tmp/x86_64: ${COMMON_DIR}/src/vst3.c ${DATA_DIR}/src/data.h ${PLUGIN_DIR}/plugin.h | build/tmp
-	${CC} ${COMMON_DIR}/src/vst3.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL} -arch x86_64
-
-build/tmp/arm64: ${COMMON_DIR}/src/vst3.c ${DATA_DIR}/src/data.h ${PLUGIN_DIR}/plugin.h | build/tmp
-	${CC} ${COMMON_DIR}/src/vst3.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL} -arch arm64
-
-build/tmp build/${BUILD_DIR}/Contents:
-	mkdir -p $@
-
 else
 
 all: build/${BUNDLE_DIR}/${DLL_FILE}
 
+endif
+
 build/${BUNDLE_DIR}/${DLL_FILE}: ${COMMON_DIR}/src/vst3.c ${DATA_DIR}/src/data.h ${PLUGIN_DIR}/plugin.h | build/${BUNDLE_DIR}/${DLL_DIR}
 	${CC} ${COMMON_DIR}/src/vst3.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
-
-endif
 
 build/${BUNDLE_DIR}/${DLL_DIR}:
 	mkdir -p $@
