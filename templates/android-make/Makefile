@@ -33,10 +33,15 @@ ifeq (${HAS_MIDI_IN}, yes)
 	CLASSES += MainActivity$$WebAppInterface$$MidiDeviceCallback MainActivity$$WebAppInterface$$1
 endif
 
+COMMON_DIR := $(or $(COMMON_DIR),.)
+DATA_DIR := $(or $(DATA_DIR),.)
+PLUGIN_DIR := $(or $(PLUGIN_DIR),src)
+
 JFLAGS =
+JFLAGS_ALL = ${JFLAGS} ${JFLAGS_EXTRA}
 
 CXXFLAGS = -O3 -Wall -Wextra -Wpedantic
-CXXFLAGS_ALL = -fPIC -std=c++11 ${CXXFLAGS} ${CXXFLAGS_EXTRA}
+CXXFLAGS_ALL = -I${DATA_DIR}/src -I${PLUGIN_DIR} -fPIC -std=c++11 ${CXXFLAGS} ${CFLAGS_EXTRA} ${CXXFLAGS_EXTRA}
 
 LDFLAGS =
 LDFLAGS_ALL = -shared -static-libstdc++ -landroid
@@ -53,8 +58,8 @@ build/${BUNDLE_NAME}.apk: build/gen/${BUNDLE_NAME}.aligned.apk ${KEY_STORE}
 build/gen/${BUNDLE_NAME}.aligned.apk: build/gen/${BUNDLE_NAME}.unsigned.apk
 	${ZIPALIGN} -f -p 4 $^ $@
 
-build/gen/${BUNDLE_NAME}.unsigned.apk: build/apk/classes.dex build/apk/lib/armeabi-v7a/lib${BUNDLE_NAME}.so data/AndroidManifest.xml build/assets/index.html | build/gen
-	${AAPT} package -f -M data/AndroidManifest.xml -A build/assets $(foreach jar,$(JARS),-I $(jar)) -F $@ build/apk
+build/gen/${BUNDLE_NAME}.unsigned.apk: build/apk/classes.dex build/apk/lib/armeabi-v7a/lib${BUNDLE_NAME}.so ${DATA_DIR}/data/AndroidManifest.xml build/assets/index.html | build/gen
+	${AAPT} package -f -M ${DATA_DIR}/data/AndroidManifest.xml -A build/assets $(foreach jar,$(JARS),-I $(jar)) -F $@ build/apk
 
 build/apk/classes.dex: build/apk/my_classes.jar
 	cd build/apk && ${D8} --min-api ${MIN_API} ../../$^ ${JARS} && cd ../..
@@ -63,13 +68,13 @@ build/apk/my_classes.jar: $(foreach class,$(CLASSES),build/obj/$(CLASSES_PATH)/$
 	@echo ${CLASSES_PATH}
 	${D8} $(foreach class,$(CLASSES),'build/obj/$(CLASSES_PATH)/$(class).class') --min-api ${MIN_API} --output $@ --no-desugaring
 
-build/obj/${CLASSES_PATH}/MainActivity.class: src/MainActivity.java | build/obj
-	${JC} ${JFLAGS} -classpath "$(subst $() $(),:,$(JARS))" -d build/obj $^
+build/obj/${CLASSES_PATH}/MainActivity.class: ${DATA_DIR}/src/MainActivity.java | build/obj
+	${JC} ${JFLAGS_ALL} -classpath "$(subst $() $(),:,$(JARS))" -d build/obj $^
 
-build/apk/lib/armeabi-v7a/lib${BUNDLE_NAME}.so: src/jni.cpp | build/apk/lib/armeabi-v7a
-	${CXX} $^ ${CXXFLAGS_ALL} ${LDFLAGS_ALL} -o $@
+build/apk/lib/armeabi-v7a/lib${BUNDLE_NAME}.so: ${COMMON_DIR}/src/jni.cpp ${DATA_DIR}/src/data.h ${PLUGIN_DIR}/plugin.h | build/apk/lib/armeabi-v7a
+	${CXX} ${COMMON_DIR}/src/jni.cpp ${CXXFLAGS_ALL} ${LDFLAGS_ALL} -o $@
 
-build/assets/index.html: src/index.html | build/assets
+build/assets/index.html: ${DATA_DIR}/src/index.html | build/assets
 	cp $^ $@
 
 build/gen build/apk build/obj build/apk/lib/armeabi-v7a build/assets:
