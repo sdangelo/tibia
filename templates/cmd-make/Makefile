@@ -28,12 +28,21 @@ endif
 
 PROGRAM = ${BUNDLE_NAME}${EXE_SUFFIX}
 
+C_SRCS = ${COMMON_DIR}/src/main.c ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c
+C_OBJS = $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
+
 all: build/${PROGRAM}
 
-build/${PROGRAM}: ${COMMON_DIR}/src/main.c ${DATA_DIR}/src/data.h ${PLUGIN_DIR}/plugin.h ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c | build
-	${CC} ${COMMON_DIR}/src/main.c ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
+build/${PROGRAM}: ${C_OBJS} | build
+	${CC} $^ -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
 
-build:
+.SECONDEXPANSION:
+
+PERCENT := %
+$(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$(C_SRCS)) | build/obj
+	${CC} $^ -o $@ -c ${CFLAGS_ALL} ${LDFLAGS_ALL}
+
+build build/obj:
 	mkdir -p $@
 
 clean:
