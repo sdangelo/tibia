@@ -435,7 +435,7 @@ int main(int argc, char * argv[]) {
 
 #if NUM_CHANNELS_OUT > 0
 	TinyWav tw_out;
-	if (tinywav_open_write(&tw_out, 1, fs, TW_FLOAT32, TW_SPLIT, outfile) != 0)
+	if (tinywav_open_write(&tw_out, NUM_CHANNELS_OUT, fs, TW_FLOAT32, TW_SPLIT, outfile) != 0)
 		goto err_outfile;
 #endif
 
