@@ -190,8 +190,8 @@ int main() {
 				break;
 			}
 			data[0] |= ev.channel;
-			data[1] = ev.data[1];
-			data[2] = ev.data[2];
+			data[1] = ev.data[0];
+			data[2] = ev.data[1];
 			plugin_midi_msg_in(&instance, MIDI_BUS_IN, data);
 # if NUM_PARAMETERS > 0 && HAS_MIDI_CC_MAPS
 loopNext:
