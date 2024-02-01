@@ -21,8 +21,12 @@ else
 	endif
 endif
 
+COMMON_DIR := $(or $(COMMON_DIR),.)
+DATA_DIR := $(or $(DATA_DIR),.)
+PLUGIN_DIR := $(or $(PLUGIN_DIR),src)
+
 CFLAGS = -O3 -Wall -Wpedantic -Wextra
-CFLAGS_ALL = -fPIC ${CFLAGS} ${CFLAGS_EXTRA}
+CFLAGS_ALL = -I${DATA_DIR}/src -I${PLUGIN_DIR} -fPIC ${CFLAGS} ${CFLAGS_EXTRA}
 
 LDFLAGS =
 LDFLAGS_ALL = -shared ${LDFLAGS} ${LDFLAGS_EXTRA}
@@ -33,7 +37,7 @@ DLL_FILE = ${BUNDLE_NAME}${DLL_SUFFIX}
 
 all: build/${BUNDLE_DIR}/manifest.ttl build/${BUNDLE_DIR}/${DLL_FILE}
 
-build/${BUNDLE_DIR}/manifest.ttl: data/manifest.ttl.in | build/${BUNDLE_DIR}
+build/${BUNDLE_DIR}/manifest.ttl: ${DATA_DIR}/data/manifest.ttl.in | build/${BUNDLE_DIR}
 	cat $^ | sed s/@DLL_SUFFIX@/${DLL_SUFFIX}/g > $@
 
 ifeq ($(UNAME_S), Darwin)
@@ -41,19 +45,19 @@ ifeq ($(UNAME_S), Darwin)
 build/${BUNDLE_DIR}/${DLL_FILE}: build/tmp/x86_64 build/tmp/arm64 | build/${BUNDLE_DIR}
 	lipo -create -output $@ $^
 
-build/tmp/x86_64: src/lv2.c src/data.h src/plugin.h | build/tmp
-	${CC} src/lv2.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL} -arch x86_64
+build/tmp/x86_64: ${COMMON_DIR}/src/lv2.c ${DATA_DIR}/src/data.h ${PLUGIN_DIR}/plugin.h | build/tmp
+	${CC} ${COMMON_DIR}/src/lv2.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL} -arch x86_64
 
-build/tmp/arm64: src/lv2.c src/data.h src/plugin.h | build/tmp
-	${CC} src/lv2.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL} -arch arm64
+build/tmp/arm64: ${COMMON_DIR}/src/lv2.c ${DATA_DIR}/src/data.h ${PLUGIN_DIR}/plugin.h | build/tmp
+	${CC} ${COMMON_DIR}/src/lv2.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL} -arch arm64
 
 build/tmp:
 	mkdir -p $@
 
 else
 
-build/${BUNDLE_DIR}/${DLL_FILE}: src/lv2.c src/data.h | build/${BUNDLE_DIR}
-	${CC} src/lv2.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
+build/${BUNDLE_DIR}/${DLL_FILE}: ${COMMON_DIR}/src/lv2.c ${DATA_DIR}/src/data.h ${PLUGIN_DIR}/plugin.h | build/${BUNDLE_DIR}
+	${CC} ${COMMON_DIR}/src/lv2.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
 
 endif
 

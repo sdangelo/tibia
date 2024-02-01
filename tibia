@@ -144,4 +144,4 @@ data.tibia = {
 	}
 };
 
-require(path.resolve(template + path.sep + "tibia-index.js"))(data, api);
+require(path.resolve(template + path.sep + "tibia-index.js"))(data, api, outputCommon, outputData);

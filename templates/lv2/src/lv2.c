@@ -71,6 +71,8 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	}
 
 	instance->uri_midi_MidiEvent = instance->map->map(instance->map->handle, LV2_MIDI__MidiEvent);
+#else
+	(void)features;
 #endif
 
 	plugin_init(&instance->p);
@@ -230,6 +232,8 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 		if (i->c[k] != NULL)
 			*i->c[k] = plugin_get_parameter(&i->p, k);
 	}
+#else
+	(void)plugin_get_parameter;
 #endif
 }
 
