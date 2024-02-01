@@ -29,6 +29,9 @@ LDFLAGS_ALL += -Wl,--export=processor_midi_msg_in
 endif
 LDFLAGS_ALL += ${LDFLAGS} ${LDFLAGS_EXTRA}
 
+C_SRCS = ${COMMON_DIR}/src/processor.c
+C_OBJS = $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
+
 ALL = build/${BUNDLE_NAME}.wasm build/${BUNDLE_NAME}_processor.js build/${BUNDLE_NAME}.js
 
 default: all
@@ -37,8 +40,14 @@ default: all
 
 all: ${ALL}
 
-build/${BUNDLE_NAME}.wasm: ${COMMON_DIR}/src/memset.h ${COMMON_DIR}/src/walloc.h ${COMMON_DIR}/src/processor.c ${DATA_DIR}/src/data.h ${PLUGIN_DIR}/plugin.h | build
-	${CC} ${COMMON_DIR}/src/processor.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
+build/${BUNDLE_NAME}.wasm: ${C_OBJS} | build
+	${CC} $^ -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
+
+.SECONDEXPANSION:
+
+PERCENT := %
+$(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$(C_SRCS)) | build/obj
+	${CC} $^ -o $@ -c ${CFLAGS_ALL}
 
 build/${BUNDLE_NAME}_processor.js: ${DATA_DIR}/src/processor.js | build
 	cp $^ $@
@@ -46,7 +55,7 @@ build/${BUNDLE_NAME}_processor.js: ${DATA_DIR}/src/processor.js | build
 build/${BUNDLE_NAME}.js: ${DATA_DIR}/src/module.js | build
 	cp $^ $@
 
-build:
+build build/obj:
 	mkdir -p $@
 
 clean:

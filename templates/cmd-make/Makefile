@@ -40,7 +40,7 @@ build/${PROGRAM}: ${C_OBJS} | build
 
 PERCENT := %
 $(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$(C_SRCS)) | build/obj
-	${CC} $^ -o $@ -c ${CFLAGS_ALL} ${LDFLAGS_ALL}
+	${CC} $^ -o $@ -c ${CFLAGS_ALL}
 
 build build/obj:
 	mkdir -p $@

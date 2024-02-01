@@ -50,6 +50,9 @@ ifeq (${HAS_MIDI_IN}, yes)
 endif
 LDFLAGS_ALL += ${LDFLAGS} ${LDFLAGS_EXTRA}
 
+CXX_SRCS = ${COMMON_DIR}/src/jni.cpp
+CXX_OBJS = $(addprefix build/obj/, $(notdir $(CXX_SRCS:.c=.o)))
+
 all: build/${BUNDLE_NAME}.apk
 
 build/${BUNDLE_NAME}.apk: build/gen/${BUNDLE_NAME}.aligned.apk ${KEY_STORE}
@@ -71,8 +74,14 @@ build/apk/my_classes.jar: $(foreach class,$(CLASSES),build/obj/$(CLASSES_PATH)/$
 build/obj/${CLASSES_PATH}/MainActivity.class: ${DATA_DIR}/src/MainActivity.java | build/obj
 	${JC} ${JFLAGS_ALL} -classpath "$(subst $() $(),:,$(JARS))" -d build/obj $^
 
-build/apk/lib/armeabi-v7a/lib${BUNDLE_NAME}.so: ${COMMON_DIR}/src/jni.cpp ${DATA_DIR}/src/data.h ${PLUGIN_DIR}/plugin.h | build/apk/lib/armeabi-v7a
-	${CXX} ${COMMON_DIR}/src/jni.cpp ${CXXFLAGS_ALL} ${LDFLAGS_ALL} -o $@
+build/apk/lib/armeabi-v7a/lib${BUNDLE_NAME}.so: ${CXX_OBJS} | build/apk/lib/armeabi-v7a
+	${CXX} $^ -o $@ ${CXXFLAGS_ALL} ${LDFLAGS_ALL}
+
+.SECONDEXPANSION:
+
+PERCENT := %
+$(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cpp,$$(CXX_SRCS)) | build/obj
+	${CXX} $^ -o $@ -c ${CXXFLAGS_ALL}
 
 build/assets/index.html: ${DATA_DIR}/src/index.html | build/assets
 	cp $^ $@

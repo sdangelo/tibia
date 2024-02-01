@@ -43,6 +43,9 @@ BUNDLE_DIR = ${BUNDLE_NAME}.vst3
 DLL_DIR = Contents/${PLATFORM}
 DLL_FILE = ${DLL_DIR}/${BUNDLE_NAME}${DLL_SUFFIX}
 
+C_SRCS = ${COMMON_DIR}/src/vst3.c
+C_OBJS = $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
+
 ifeq ($(UNAME_S), Darwin)
 
 all: build/${BUNDLE_DIR}/${DLL_FILE} build/${BUNDLE_DIR}/Contents/Info.plist
@@ -56,10 +59,16 @@ all: build/${BUNDLE_DIR}/${DLL_FILE}
 
 endif
 
-build/${BUNDLE_DIR}/${DLL_FILE}: ${COMMON_DIR}/src/vst3.c ${DATA_DIR}/src/data.h ${PLUGIN_DIR}/plugin.h | build/${BUNDLE_DIR}/${DLL_DIR}
-	${CC} ${COMMON_DIR}/src/vst3.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
+build/${BUNDLE_DIR}/${DLL_FILE}: ${C_OBJS} | build/${BUNDLE_DIR}/${DLL_DIR}
+	${CC} $^ -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
 
-build/${BUNDLE_DIR}/${DLL_DIR}:
+.SECONDEXPANSION:
+
+PERCENT := %
+$(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$(C_SRCS)) | build/obj
+	${CC} $^ -o $@ -c ${CFLAGS_ALL}
+
+build/${BUNDLE_DIR}/${DLL_DIR} build/obj:
 	mkdir -p $@
 
 clean:

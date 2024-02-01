@@ -40,15 +40,24 @@ BUNDLE_DIR = ${BUNDLE_NAME}.lv2
 
 DLL_FILE = ${BUNDLE_NAME}${DLL_SUFFIX}
 
+C_SRCS = ${COMMON_DIR}/src/lv2.c
+C_OBJS = $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
+
 all: build/${BUNDLE_DIR}/manifest.ttl build/${BUNDLE_DIR}/${DLL_FILE}
 
 build/${BUNDLE_DIR}/manifest.ttl: ${DATA_DIR}/data/manifest.ttl.in | build/${BUNDLE_DIR}
 	cat $^ | sed s/@DLL_SUFFIX@/${DLL_SUFFIX}/g > $@
 
-build/${BUNDLE_DIR}/${DLL_FILE}: ${COMMON_DIR}/src/lv2.c ${DATA_DIR}/src/data.h ${PLUGIN_DIR}/plugin.h | build/${BUNDLE_DIR}
-	${CC} ${COMMON_DIR}/src/lv2.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
+build/${BUNDLE_DIR}/${DLL_FILE}: ${C_OBJS} | build/${BUNDLE_DIR}
+	${CC} $^ -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
 
-build/${BUNDLE_DIR}:
+.SECONDEXPANSION:
+
+PERCENT := %
+$(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$(C_SRCS)) | build/obj
+	${CC} $^ -o $@ -c ${CFLAGS_ALL}
+
+build/${BUNDLE_DIR} build/obj:
 	mkdir -p $@
 
 clean:
