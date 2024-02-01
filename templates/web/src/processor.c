@@ -121,6 +121,8 @@ void processor_process(instance *i, int32_t n_samples) {
 #if DATA_PRODUCT_PARAMETERS_OUTPUT_N > 0
 	for (size_t j = 0; j < DATA_PRODUCT_PARAMETERS_OUTPUT_N; j++)
 		i->out_params[j] = plugin_get_parameter(&i->p, param_out_index[j]);
+#else
+	(void)plugin_get_parameter;
 #endif
 }
 

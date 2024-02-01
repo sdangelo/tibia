@@ -1,9 +1,13 @@
 include vars.mk
 
+COMMON_DIR := $(or $(COMMON_DIR),.)
+DATA_DIR := $(or $(DATA_DIR),.)
+PLUGIN_DIR := $(or $(PLUGIN_DIR),src)
+
 CC = clang
 
 CFLAGS = -Ofast -Wall -Wpedantic -Wextra
-CFLAGS_ALL = --target=wasm32 -flto -fvisibility=hidden ${CFLAGS} ${CFLAGS_EXTRA}
+CFLAGS_ALL = -I${COMMON_DIR}/src -I${DATA_DIR}/src -I${PLUGIN_DIR} --target=wasm32 -flto -fvisibility=hidden ${CFLAGS} ${CFLAGS_EXTRA}
 
 LDFLAGS_ALL = \
 	-Wl,--allow-undefined \
@@ -29,17 +33,17 @@ ALL = build/${BUNDLE_NAME}.wasm build/${BUNDLE_NAME}_processor.js build/${BUNDLE
 
 default: all
 
--include demo.mk
+-include ${COMMON_DIR}/demo.mk
 
 all: ${ALL}
 
-build/${BUNDLE_NAME}.wasm: src/data.h src/memset.h src/plugin.h src/walloc.h src/processor.c | build
-	${CC} src/processor.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
+build/${BUNDLE_NAME}.wasm: ${COMMON_DIR}/src/memset.h ${COMMON_DIR}/src/walloc.h ${COMMON_DIR}/src/processor.c ${DATA_DIR}/src/data.h ${PLUGIN_DIR}/plugin.h | build
+	${CC} ${COMMON_DIR}/src/processor.c -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
 
-build/${BUNDLE_NAME}_processor.js: src/processor.js | build
+build/${BUNDLE_NAME}_processor.js: ${DATA_DIR}/src/processor.js | build
 	cp $^ $@
 
-build/${BUNDLE_NAME}.js: src/module.js | build
+build/${BUNDLE_NAME}.js: ${DATA_DIR}/src/module.js | build
 	cp $^ $@
 
 build:

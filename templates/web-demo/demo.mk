@@ -1,6 +1,6 @@
 ALL += build/index.html build/cert.pem build/key.pem
 
-build/index.html: src/index.html | build
+build/index.html: ${DATA_DIR}/src/index.html | build
 	cp $^ $@
 
 build/key.pem: build/cert.pem
