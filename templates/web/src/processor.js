@@ -91,7 +91,7 @@ class Processor extends AudioWorkletProcessor {
 						this.x[j][k].fill(0);
 				} else {
 					for (var k = 0; k < this.x[j].length; k++)
-						if (k <= input.length)
+						if (k < input.length)
 							this.x[j][k].set(input[k].subarray(i, s));
 						else
 							this.x[j][k].fill(0);
