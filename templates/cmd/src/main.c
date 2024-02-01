@@ -520,12 +520,12 @@ int main(int argc, char * argv[]) {
 	tinywav_close_write(&tw_out);
 #endif
 err_outfile:
-err_midi_parse:
 #if NUM_MIDI_INPUTS > 0
+err_midi_parse:
 	if (midi_data != NULL)
 		free(midi_data);
-#endif
 err_midi_read:
+#endif
 #if NUM_CHANNELS_OUT > 0
 	free(y_buf);
 #endif
@@ -538,8 +538,8 @@ err_x_buf:
 		free(mem);
 err_mem_alloc:
 	plugin_fini(&instance);
-err_num_channels_in:
 #if NUM_CHANNELS_IN > 0
+err_num_channels_in:
 	tinywav_close_read(&tw_in);
 #endif
 
