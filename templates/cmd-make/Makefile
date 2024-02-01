@@ -17,12 +17,14 @@ CC = gcc
 
 CFLAGS = -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL = -I${DATA_DIR}/src -I${PLUGIN_DIR} -I${TINYWAV_DIR} -I${MIDI_PARSER_DIR}/include -fPIC ${CFLAGS} ${CFLAGS_EXTRA}
-ifeq ($(UNAME_S), Darwin)
-CFLAGS_ALL := ${CFLAGS_ALL} -arch arm64 -arch x86_64
-endif
 
 LDFLAGS =
 LDFLAGS_ALL = ${LDFLAGS} ${LDFLAGS_EXTRA}
+
+ifeq ($(UNAME_S), Darwin)
+CFLAGS_ALL := ${CFLAGS_ALL} -arch arm64 -arch x86_64
+LDFLAGS_ALL := ${LDFLAGS_ALL} -arch arm64 -arch x86_64
+endif
 
 PROGRAM = ${BUNDLE_NAME}${EXE_SUFFIX}
 

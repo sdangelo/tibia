@@ -27,12 +27,14 @@ PLUGIN_DIR := $(or $(PLUGIN_DIR),src)
 
 CFLAGS = -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL = -I${DATA_DIR}/src -I${PLUGIN_DIR} -fPIC ${CFLAGS} ${CFLAGS_EXTRA}
-ifeq ($(UNAME_S), Darwin)
-CFLAGS_ALL := ${CFLAGS_ALL} -arch arm64 -arch x86_64
-endif
 
 LDFLAGS =
 LDFLAGS_ALL = -shared ${LDFLAGS} ${LDFLAGS_EXTRA}
+
+ifeq ($(UNAME_S), Darwin)
+CFLAGS_ALL := ${CFLAGS_ALL} -arch arm64 -arch x86_64
+LDFLAGS_ALL := ${LDFLAGS_ALL} -arch arm64 -arch x86_64
+endif
 
 BUNDLE_DIR = ${BUNDLE_NAME}.lv2
 
