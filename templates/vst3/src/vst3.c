@@ -990,8 +990,14 @@ static Steinberg_Vst_ParamValue controllerGetParamNormalized(void* thisInterface
 	TRACE("controller get param normalized\n");
 #if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
+# if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 	return id >= DATA_PRODUCT_PARAMETERS_N ? c->parameters[id] : parameterUnmap(id, c->parameters[id]);
+# else
+	return parameterUnmap(id, c->parameters[id]);
+# endif
 #else
+	(void)thisInterface;
+	(void)id;
 	return 0.0;
 #endif
 }
@@ -1005,6 +1011,9 @@ static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Stein
 	c->parameters[id] = id >= DATA_PRODUCT_PARAMETERS_N ? value : parameterAdjust(id, parameterMap(id, value));
 	return Steinberg_kResultTrue;
 #else
+	(void)thisInterface;
+	(void)id;
+	(void)value;
 	return Steinberg_kResultFalse;
 #endif
 }
