@@ -74,7 +74,7 @@ module.exports = function (data, api, outputCommon, outputData) {
 				} else {
 					var e = { type: "audio", direction: b.direction, name: b.name + " Left", shortName: b.shortName + " L", sidechain: b.sidechain, cv: b.cv, busIndex: bi };
 					e.symbol = data.lv2.busSymbols[bi] + "_L";
-					data.tibia.lv2.ports.push(e);
+					audioPorts.push(e);
 					var e = { type: "audio", direction: b.direction, name: b.name + " Right", shortName: b.shortName + " R", sidechain: b.sidechain, cv: b.cv, busIndex: bi };
 					e.symbol = data.lv2.busSymbols[bi] + "_R";
 					audioPorts.push(e);
