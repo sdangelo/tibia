@@ -46,13 +46,15 @@ static float parameterAdjust(int i, float v) {
 	return clampf(v, param_data[i].min, param_data[i].max);
 }
 
+static void setParameter(int i, float v) {
+	plugin_set_parameter(&instance, i, parameterAdjust(i, v));
+}
+
 static void readADCs() {
 	for (int i = 0, j = 0; i < NUM_PARAMETERS; i++) {
 		if (param_data[i].out || param_data[i].pin < 0)
 			continue;
-		float v = hardware.adc.GetFloat(j);
-		v = parameterAdjust(i, parameterMap(i, v));
-		plugin_set_parameter(&instance, i, v);
+		setParameter(i, parameterMap(i, hardware.adc.GetFloat(j)));
 		j++;
 	}
 }
@@ -127,13 +129,10 @@ int main() {
 		plugin_mem_set(&instance, (void *)0xc0000000);
 
 #if NUM_PARAMETERS > 0
-	for (int i = 0, j = 0; i < NUM_PARAMETERS; i++) {
+	for (int i = 0; i < NUM_PARAMETERS; i++) {
 		if (param_data[i].out)
 			continue;
-		float v = param_data[i].def;
-		v = parameterAdjust(i, parameterMap(i, v));
-		plugin_set_parameter(&instance, i, v);
-		j++;
+		setParameter(i, param_data[i].def);
 	}
 #endif
 
@@ -167,7 +166,13 @@ int main() {
 				data[0] = 0xa0;
 				break;
 			case ControlChange:
-				//TODO: CC to param mapping
+# if NUM_PARAMETERS > 0 && HAS_MIDI_CC_MAPS
+				for (int i = 0; i < NUM_PARAMETERS; i++)
+					if (midi_cc_maps[i] == data[1]) {
+						setParameter(i, (1.f / 127.f) * data[2]);
+						goto loopNext;
+					}
+# endif
 			case ChannelMode:
 				data[0] = 0xb0;
 				break;
@@ -188,6 +193,10 @@ int main() {
 			data[1] = ev.data[1];
 			data[2] = ev.data[2];
 			plugin_midi_msg_in(&instance, MIDI_BUS_IN, data);
+# if NUM_PARAMETERS > 0 && HAS_MIDI_CC_MAPS
+loopNext:
+			(void)data; // something to make this file build
+# endif
 		}
 #else
 		const float avgLoad = loadMeter.GetAvgCpuLoad();

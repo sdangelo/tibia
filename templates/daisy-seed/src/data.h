@@ -40,4 +40,14 @@ static struct {
 {{~}}
 };
 
+# if MIDI_BUS_IN >= 0
+
+#  define HAS_MIDI_CC_MAPS	{{=it.daisy_seed.midiCCMaps ? 1 : 0}}
+
+#  if HAS_MIDI_CC_MAPS
+static int midi_cc_maps[NUM_PARAMETERS] = { {{~it.daisy_seed.midiCCMaps :p}}{{=p}} ,{{~}} };
+#  endif
+
+# endif
+
 #endif
