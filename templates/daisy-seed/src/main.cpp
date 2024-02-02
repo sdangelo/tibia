@@ -206,7 +206,7 @@ loopNext:
 # if NUM_PARAMETERS > 0
 		for (int i = 0; i < NUM_PARAMETERS; i++)
 			if (param_data[i].out)
-				hardware.PrintLine("parameter #%i: %g", i, plugin_get_parameter(&instance, i));
+				hardware.PrintLine("parameter #%i: " FLT_FMT3, i, FLT_VAR3(plugin_get_parameter(&instance, i)));
 # endif
 		hardware.PrintLine("---");
 		hardware.PrintLine("Processing Load %:");
