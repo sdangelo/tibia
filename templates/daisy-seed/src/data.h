@@ -34,7 +34,7 @@ static struct {
 		/* .min		= */ {{=p.minimum.toExponential()}}f,
 		/* .max		= */ {{=p.maximum.toExponential()}}f,
 		/* .def		= */ {{=p.defaultValue.toExponential()}}f,
-		/* .flags	= */ {{?p.isBypass}}PARAM_BYPASS{{??}}0{{?p.toggled}} | PARAM_TOGGLED{{?}}{{?p.integer}} | PARAM_INTEGER{{?}}{{?p.map == "logarithmic"}}| PARAM_MAP_LOG{{?}}{{?}},
+		/* .flags	= */ {{?p.isBypass}}PARAM_BYPASS{{??}}0{{?p.toggled}} | PARAM_TOGGLED{{?}}{{?p.integer}} | PARAM_INTEGER{{?}}{{?p.map == "logarithmic"}} | PARAM_MAP_LOG{{?}}{{?}},
 		/* .mapK	= */ {{?p.map == "logarithmic"}}{{=Number(2.0 * Math.log(Math.sqrt(p.maximum * p.minimum) / Math.abs(p.minimum))).toExponential()}}{{??}}0.0{{?}}f
 	},
 {{~}}

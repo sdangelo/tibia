@@ -26,3 +26,4 @@
 * LV2: round latency output value
 * daisy-seed: DAC
 * plugin_init and plugin_set_sample_rate to return char (can fail)
+* daisy-seed: isolate C part from C++
