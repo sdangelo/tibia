@@ -1,0 +1,19 @@
+name: {{=it.ios_make.projectName}}
+targets:
+  {{=it.ios_make.targetName}}:
+    platform: [iOS]
+    deploymentTarget:
+      iOS: {{=it.ios_make.deploymentTarget}}
+    type: application
+    sources:
+      - path: src
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.orastron.{{=it.product.bundleName}}
+        SWIFT_OBJC_BRIDGING_HEADER: src/app-Bridging-Header.h
+        HEADER_SEARCH_PATHS: {{~it.ios_make.header_search_paths:p}}
+          - {{=p}}{{~}}
+    info:
+      path: Info.plist
+      properties:
+        NSMicrophoneUsageDescription: Audio input access needed to run the example

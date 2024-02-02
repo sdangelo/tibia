@@ -1,0 +1,11 @@
+{
+	"ios_make": {
+		"header_search_paths": [],
+		"3rdpartyfiles": [
+			"../../../miniaudio/miniaudio.h"	
+		],
+		"projectName": "tibia_test",
+		"targetName": "tibia_test",
+		"deploymentTarget": 16.6
+	}
+}
