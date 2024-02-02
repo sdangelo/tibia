@@ -11,19 +11,14 @@
 #include <mutex>
 #endif
 #include <vector>
-#if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
 #define MINIAUDIO_IMPLEMENTATION
 #define MA_NO_RUNTIME_LINKING
 #include "miniaudio.h"
-
 #define BLOCK_SIZE  32
-#endif
 
 #define NUM_BUFS    (NUM_CHANNELS_IN > NUM_CHANNELS_OUT ? NUM_CHANNELS_IN : NUM_CHANNELS_OUT)
 
-#if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
 static ma_device device;
-#endif
 static plugin instance;
 static void *mem;
 #if (NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN) || (NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT)
@@ -94,7 +89,7 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
     const float * in_buf = reinterpret_cast<const float *>(pInput);
 #endif
     float * out_buf = reinterpret_cast<float *>(pOutput);
-    
+#if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
     ma_uint32 i = 0;
     #if NUM_CHANNELS_IN > 0
         size_t ix = 0;
@@ -124,6 +119,10 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
     #endif
             i += n;
         }
+#else
+    for (ma_uint32 i = 0; i < frameCount; i++)
+        out_buf[i] = 0.f; // Unique fake channel
+#endif
 }
 
 #if (NUM_MIDI_INPUTS > 0)
@@ -171,6 +170,9 @@ char audioStart() {
 # else
     ma_device_config deviceConfig = ma_device_config_init(ma_device_type_duplex);
 # endif
+#else
+    ma_device_config deviceConfig = ma_device_config_init(ma_device_type_playback);
+#endif
 
     deviceConfig.periodSizeInFrames     = BLOCK_SIZE;
     deviceConfig.periods            = 1;
@@ -186,13 +188,15 @@ char audioStart() {
     deviceConfig.capture.shareMode      = ma_share_mode_shared;
     deviceConfig.playback.pDeviceID     = NULL;
     deviceConfig.playback.format        = ma_format_f32;
+#if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
     deviceConfig.playback.channels      = NUM_CHANNELS_OUT;
+#else
+    deviceConfig.playback.channels      = 1; // Fake & muted
+#endif
     deviceConfig.playback.shareMode     = ma_share_mode_shared;
 
     if (ma_device_init(NULL, &deviceConfig, &device) != MA_SUCCESS)
         return false;
-    
-#endif
 
 #if (NUM_MIDI_INPUTS > 0)
     if (midiClientName == NULL) {
@@ -238,9 +242,7 @@ char audioStart() {
         mem = malloc(req);
         if (mem == NULL) {
             plugin_fini(&instance);
-    #if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
             ma_device_uninit(&device);
-    #endif
             return false;
         }
         plugin_mem_set(&instance, mem);
@@ -303,23 +305,19 @@ char audioStart() {
     y = NULL;
 #endif
     
-#if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
     if (ma_device_start(&device) != MA_SUCCESS) {
         if (mem != NULL)
             free(mem);
         ma_device_uninit(&device);
         return false;
     }
-#endif
     return true;
 }
 
 extern "C"
 void audioStop() {
-#if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
     ma_device_stop(&device);
     ma_device_uninit(&device);
-#endif
     if (mem != NULL)
         free(mem);
     plugin_fini(&instance);
