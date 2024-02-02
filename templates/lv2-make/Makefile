@@ -31,9 +31,13 @@ CFLAGS_ALL = -I${DATA_DIR}/src -I${PLUGIN_DIR} -fPIC ${CFLAGS} ${CFLAGS_EXTRA}
 LDFLAGS =
 LDFLAGS_ALL = -shared ${LDFLAGS} ${LDFLAGS_EXTRA}
 
+CXXFLAGS = ${CFLAGS}
+CXXFLAGS_ALL = -I${DATA_DIR}/src -I${PLUGIN_DIR} -fPIC ${CXXFLAGS} ${CXXFLAGS_EXTRA}
+
 ifeq ($(UNAME_S), Darwin)
 CFLAGS_ALL := ${CFLAGS_ALL} -arch arm64 -arch x86_64
 LDFLAGS_ALL := ${LDFLAGS_ALL} -arch arm64 -arch x86_64
+CXXFLAGS_ALL := ${CXXFLAGS_ALL} -arch arm64 -arch x86_64
 endif
 
 BUNDLE_DIR = ${BUNDLE_NAME}.lv2
@@ -43,19 +47,21 @@ DLL_FILE = ${BUNDLE_NAME}${DLL_SUFFIX}
 C_SRCS = ${COMMON_DIR}/src/lv2.c
 C_OBJS = $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 
+CXX_SRCS = ${CXX_SRCS_EXTRA}
+CXX_OBJS = $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
+
 all: build/${BUNDLE_DIR}/manifest.ttl build/${BUNDLE_DIR}/${DLL_FILE}
 
 build/${BUNDLE_DIR}/manifest.ttl: ${DATA_DIR}/data/manifest.ttl.in | build/${BUNDLE_DIR}
 	cat $^ | sed s/@DLL_SUFFIX@/${DLL_SUFFIX}/g > $@
 
+ifeq ($(CXX_OBJS),)
 build/${BUNDLE_DIR}/${DLL_FILE}: ${C_OBJS} | build/${BUNDLE_DIR}
 	${CC} $^ -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
-
-.SECONDEXPANSION:
-
-PERCENT := %
-$(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$(C_SRCS)) | build/obj
-	${CC} $^ -o $@ -c ${CFLAGS_ALL}
+else
+build/${BUNDLE_DIR}/${DLL_FILE}: ${C_OBJS} ${CXX_OBJS} | build/${BUNDLE_DIR}
+	${CXX} $^ -o $@ ${CFLAGS_ALL} ${CXXFLAGS_ALL} ${LDFLAGS_ALL}
+endif
 
 build/${BUNDLE_DIR} build/obj:
 	mkdir -p $@
@@ -74,3 +80,12 @@ install-user: all
 	install -m 0755 build/${BUNDLE_DIR}/${DLL_FILE} "${LV2DIR_USER}/${BUNDLE_DIR}"
 
 .PHONY: all clean install install-user
+
+.SECONDEXPANSION:
+
+PERCENT := %
+$(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$(C_SRCS)) | build/obj
+	${CC} $^ -o $@ -c ${CFLAGS_ALL}
+
+$(CXX_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cpp,$$(CXX_SRCS)) | build/obj
+	${CXX} $^ -o $@ -c ${CXXFLAGS_ALL}

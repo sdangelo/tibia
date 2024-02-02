@@ -46,7 +46,7 @@ build/${PROGRAM}: ${C_OBJS} | build
 	${CC} $^ -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
 else
 build/${PROGRAM}: ${C_OBJS} ${CXX_OBJS} | build
-	${CXX} $^ -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
+	${CXX} $^ -o $@ ${CFLAGS_ALL} ${CXXFLAGS_ALL} ${LDFLAGS_ALL}
 endif
 
 build build/obj:
@@ -74,4 +74,3 @@ $(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$
 
 $(CXX_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cpp,$$(CXX_SRCS)) | build/obj
 	${CXX} $^ -o $@ -c ${CXXFLAGS_ALL}
-
