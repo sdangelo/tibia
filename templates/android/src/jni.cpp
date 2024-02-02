@@ -267,14 +267,13 @@ JNIEXPORT void JNICALL
 JNI_FUNC(nativeAudioStop)(JNIEnv* env, jobject thiz) {
 	(void)env;
 	(void)thiz;
-
-	if (mem != NULL)
-		free(mem);
-	plugin_fini(&instance);
 #if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
 	ma_device_stop(&device);
 	ma_device_uninit(&device);
 #endif
+	if (mem != NULL)
+		free(mem);
+	plugin_fini(&instance);
 }
 
 extern "C"
