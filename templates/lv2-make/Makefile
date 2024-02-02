@@ -44,7 +44,7 @@ BUNDLE_DIR = ${BUNDLE_NAME}.lv2
 
 DLL_FILE = ${BUNDLE_NAME}${DLL_SUFFIX}
 
-C_SRCS = ${COMMON_DIR}/src/lv2.c
+C_SRCS = ${COMMON_DIR}/src/lv2.c ${C_SRCS_EXTRA}
 C_OBJS = $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 
 CXX_SRCS = ${CXX_SRCS_EXTRA}
@@ -84,6 +84,7 @@ install-user: all
 .SECONDEXPANSION:
 
 PERCENT := %
+
 $(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$(C_SRCS)) | build/obj
 	${CC} $^ -o $@ -c ${CFLAGS_ALL}
 

@@ -33,9 +33,13 @@ CFLAGS_ALL = -I${DATA_DIR}/src -I${PLUGIN_DIR} -fPIC ${CFLAGS} ${CFLAGS_EXTRA}
 LDFLAGS =
 LDFLAGS_ALL = -shared -lm ${LDFLAGS} ${LDFLAGS_EXTRA}
 
+CXXFLAGS = ${CFLAGS}
+CXXFLAGS_ALL = -I${DATA_DIR}/src -I${PLUGIN_DIR} -fPIC ${CXXFLAGS} ${CXXFLAGS_EXTRA}
+
 ifeq ($(UNAME_S), Darwin)
 CFLAGS_ALL := ${CFLAGS_ALL} -arch arm64 -arch x86_64
 LDFLAGS_ALL := ${LDFLAGS_ALL} -arch arm64 -arch x86_64
+CXXFLAGS_ALL := ${CXXFLAGS_ALL} -arch arm64 -arch x86_64
 endif
 
 BUNDLE_DIR = ${BUNDLE_NAME}.vst3
@@ -43,30 +47,28 @@ BUNDLE_DIR = ${BUNDLE_NAME}.vst3
 DLL_DIR = Contents/${PLATFORM}
 DLL_FILE = ${DLL_DIR}/${BUNDLE_NAME}${DLL_SUFFIX}
 
-C_SRCS = ${COMMON_DIR}/src/vst3.c
+C_SRCS = ${COMMON_DIR}/src/vst3.c ${C_SRCS_EXTRA}
 C_OBJS = $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 
-ifeq ($(UNAME_S), Darwin)
+CXX_SRCS = ${CXX_SRCS_EXTRA}
+CXX_OBJS = $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
+ifeq ($(UNAME_S), Darwin)
 all: build/${BUNDLE_DIR}/${DLL_FILE} build/${BUNDLE_DIR}/Contents/Info.plist
 
 build/${BUNDLE_DIR}/Contents/Info.plist: ${DATA_DIR}/data/Info.plist | build/${BUNDLE_DIR}/Contents
 	cp $^ $@
-
 else
-
 all: build/${BUNDLE_DIR}/${DLL_FILE}
-
 endif
 
+ifeq ($(CXX_OBJS),)
 build/${BUNDLE_DIR}/${DLL_FILE}: ${C_OBJS} | build/${BUNDLE_DIR}/${DLL_DIR}
 	${CC} $^ -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
-
-.SECONDEXPANSION:
-
-PERCENT := %
-$(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$(C_SRCS)) | build/obj
-	${CC} $^ -o $@ -c ${CFLAGS_ALL}
+else
+build/${BUNDLE_DIR}/${DLL_FILE}: ${C_OBJS} ${CXX_OBJS} | build/${BUNDLE_DIR}/${DLL_DIR}
+	${CXX} $^ -o $@ ${CFLAGS_ALL} ${CXXFLAGS_ALL} ${LDFLAGS_ALL}
+endif
 
 build/${BUNDLE_DIR}/${DLL_DIR} build/obj:
 	mkdir -p $@
@@ -99,3 +101,13 @@ install-user: all
 endif
 
 .PHONY: all clean install install-user
+
+.SECONDEXPANSION:
+
+PERCENT := %
+
+$(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$(C_SRCS)) | build/obj
+	${CC} $^ -o $@ -c ${CFLAGS_ALL}
+
+$(CXX_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cpp,$$(CXX_SRCS)) | build/obj
+	${CXX} $^ -o $@ -c ${CXXFLAGS_ALL}
