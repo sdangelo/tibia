@@ -5,6 +5,7 @@ ifeq ($(OS), Windows_NT)
 	LV2DIR = $(shell echo '${COMMONPROGRAMFILES}' | sed 's:\\:/:g')/LV2
 	LV2DIR_USER = $(shell echo '${APPDATA}' | sed 's:\\:/:g')/LV2
 	CC = gcc
+	CXX = g++
 else
 	UNAME_S = $(shell uname -s)
 	ifeq ($(UNAME_S), Darwin)
@@ -12,12 +13,14 @@ else
 		LV2DIR = /Library/Audio/Plug-Ins/LV2
 		LV2DIR_USER = ${HOME}/Library/Audio/Plug-Ins/LV2
 		CC = clang
+		CXX = clang++
 	else
 		DLL_SUFFIX = .so
 		PREFIX = /usr/local
 		LV2DIR = ${PREFIX}/lib/lv2
 		LV2DIR_USER = ${HOME}/.lv2
 		CC = gcc
+		CXX = g++
 	endif
 endif
 

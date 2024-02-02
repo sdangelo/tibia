@@ -6,6 +6,7 @@ ifeq ($(OS), Windows_NT)
 	VST3DIR = $(shell echo '${COMMONPROGRAMFILES}' | sed 's:\\:/:g')/VST3
 	VST3DIR_USER = $(shell echo '${LOCALAPPDATA}' | sed 's:\\:/:g')/Programs/Common/VST3
 	CC = gcc
+	CXX = g++
 else
 	UNAME_S = $(shell uname -s)
 	ifeq ($(UNAME_S), Darwin)
@@ -14,12 +15,14 @@ else
 		VST3DIR = /Library/Audio/Plug-Ins/VST3
 		VST3DIR_USER = ${HOME}/Library/Audio/Plug-Ins/VST3
 		CC = clang
+		CXX = clang++
 	else
 		DLL_SUFFIX = .so
 		PLATFORM = $(shell uname -m)-linux
 		VST3DIR = /usr/local/lib/vst3
 		VST3DIR_USER = ${HOME}/.vst3
 		CC = gcc
+		CXX = g++
 	endif
 endif
 
