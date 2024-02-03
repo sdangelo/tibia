@@ -6,8 +6,9 @@ else
 MIN_API := 26
 endif
 
-JC = javac
+CC = ${ANDROID_NDK_DIR}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi${MIN_API}-clang
 CXX = ${ANDROID_NDK_DIR}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi${MIN_API}-clang++
+JC = javac
 
 APKSIGNER = ${BUILD_TOOLS_DIR}/apksigner
 ZIPALIGN = ${BUILD_TOOLS_DIR}/zipalign
@@ -37,11 +38,11 @@ COMMON_DIR := $(or $(COMMON_DIR),.)
 DATA_DIR := $(or $(DATA_DIR),.)
 PLUGIN_DIR := $(or $(PLUGIN_DIR),src)
 
-JFLAGS =
-JFLAGS_ALL = ${JFLAGS} ${JFLAGS_EXTRA}
+CFLAGS = -O3 -Wall -Wpedantic -Wextra
+CFLAGS_ALL = -I${DATA_DIR}/src -I${PLUGIN_DIR} -fPIC ${CFLAGS} ${CFLAGS_EXTRA}
 
-CXXFLAGS = -O3 -Wall -Wextra -Wpedantic
-CXXFLAGS_ALL = -I${DATA_DIR}/src -I${PLUGIN_DIR} -fPIC -std=c++11 ${CXXFLAGS} ${CFLAGS_EXTRA} ${CXXFLAGS_EXTRA}
+CXXFLAGS = ${CFLAGS}
+CXXFLAGS_ALL = -I${DATA_DIR}/src -I${PLUGIN_DIR} -fPIC -std=c++11 ${CXXFLAGS} ${CXXFLAGS_EXTRA}
 
 LDFLAGS =
 LDFLAGS_ALL = -shared -static-libstdc++ -landroid
@@ -50,7 +51,13 @@ ifeq (${HAS_MIDI_IN}, yes)
 endif
 LDFLAGS_ALL += ${LDFLAGS} ${LDFLAGS_EXTRA}
 
-CXX_SRCS = ${COMMON_DIR}/src/jni.cpp
+JFLAGS =
+JFLAGS_ALL = ${JFLAGS} ${JFLAGS_EXTRA}
+
+C_SRCS = ${C_SRCS_EXTRA}
+C_OBJS = $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
+
+CXX_SRCS = ${COMMON_DIR}/src/jni.cpp ${CXX_SRCS_EXTRA}
 CXX_OBJS = $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 all: build/${BUNDLE_NAME}.apk
@@ -74,14 +81,8 @@ build/apk/my_classes.jar: $(foreach class,$(CLASSES),build/obj/$(CLASSES_PATH)/$
 build/obj/${CLASSES_PATH}/MainActivity.class: ${DATA_DIR}/src/MainActivity.java | build/obj
 	${JC} ${JFLAGS_ALL} -classpath "$(subst $() $(),:,$(JARS))" -d build/obj $^
 
-build/apk/lib/armeabi-v7a/lib${BUNDLE_NAME}.so: ${CXX_OBJS} | build/apk/lib/armeabi-v7a
-	${CXX} $^ -o $@ ${CXXFLAGS_ALL} ${LDFLAGS_ALL}
-
-.SECONDEXPANSION:
-
-PERCENT := %
-$(CXX_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cpp,$$(CXX_SRCS)) | build/obj
-	${CXX} $^ -o $@ -c ${CXXFLAGS_ALL}
+build/apk/lib/armeabi-v7a/lib${BUNDLE_NAME}.so: ${C_OBJS} ${CXX_OBJS} | build/apk/lib/armeabi-v7a
+	${CXX} $^ -o $@ ${CFLAGS_ALL} ${CXXFLAGS_ALL} ${LDFLAGS_ALL}
 
 build/assets/index.html: ${DATA_DIR}/src/index.html | build/assets
 	cp $^ $@
@@ -97,3 +98,13 @@ install: build/${BUNDLE_NAME}.apk
 	${ADB} install $^
 
 .PHONY: all clean install
+
+.SECONDEXPANSION:
+
+PERCENT := %
+
+$(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$(C_SRCS)) | build/obj
+	${CC} $^ -o $@ -c ${CFLAGS_ALL}
+
+$(CXX_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cpp,$$(CXX_SRCS)) | build/obj
+	${CXX} $^ -o $@ -c ${CXXFLAGS_ALL}

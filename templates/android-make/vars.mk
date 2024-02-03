@@ -6,8 +6,8 @@ CXXFLAGS_EXTRA := {{=it.make && it.make.cxxflags ? it.make.cxxflags : ""}} {{=it
 JFLAGS_EXTRA := {{=it.make && it.make.jflags ? it.make.jflags : ""}} {{=it.android_make && it.android_make.jflags ? it.android_make.jflags : ""}}
 LDFLAGS_EXTRA := {{=it.make && it.make.ldflags ? it.make.ldflags : ""}} {{=it.android_make && it.android_make.ldflags ? it.android_make.ldflags : ""}}
 
-C_SRCS_EXTRA := {{=it.make && it.make.cSrcs ? it.make.cSrcs : ""}} {{=it.android_make.cSrcs ? it.android_make.cSrcs : ""}}
-CXX_SRCS_EXTRA := {{=it.make && it.make.cxxSrcs ? it.make.cxxSrcs : ""}} {{=it.android_make.cxxSrcs ? it.android_make.cxxSrcs : ""}}
+C_SRCS_EXTRA := {{=it.make && it.make.cSrcs ? it.make.cSrcs : ""}} {{=it.android_make && it.android_make.cSrcs ? it.android_make.cSrcs : ""}}
+CXX_SRCS_EXTRA := {{=it.make && it.make.cxxSrcs ? it.make.cxxSrcs : ""}} {{=it.android_make && it.android_make.cxxSrcs ? it.android_make.cxxSrcs : ""}}
 
 COMMON_DIR := {{=it.android_make && it.android_make.commonDir ? it.android_make.commonDir : (it.make && it.make.commonDir ? it.make.commonDir : "")}}
 DATA_DIR := {{=it.android_make && it.android_make.dataDir ? it.android_make.dataDir : (it.make && it.make.dataDir ? it.make.dataDir : "")}}
