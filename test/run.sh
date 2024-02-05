@@ -19,8 +19,8 @@ $dir/../tibia $dir/product.json,$dir/company.json,$dir/android.json,$dir/android
 cp $dir/keystore.jks $dir/../out/android
 cp $dir/plugin.h $dir/../out/android/src
 
-$dir/../tibia $dir/product.json,$dir/company.json,$dir/ios.json $dir/../templates/ios $dir/../out/ios
-$dir/../tibia $dir/product.json,$dir/company.json,$dir/ios.json,$dir/ios-make.json $dir/../templates/ios-make $dir/../out/ios
+$dir/../tibia $dir/product.json,$dir/company.json $dir/../templates/ios $dir/../out/ios
+$dir/../tibia $dir/product.json,$dir/company.json,$dir/ios-make.json $dir/../templates/ios-make $dir/../out/ios
 cp $dir/plugin.h $dir/../out/ios/src
 
 $dir/../tibia $dir/product.json,$dir/company.json,$dir/cmd.json $dir/../templates/cmd $dir/../out/cmd

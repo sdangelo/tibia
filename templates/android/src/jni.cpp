@@ -101,7 +101,6 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 
 	const float * in_buf = reinterpret_cast<const float *>(pInput);
 	float * out_buf = reinterpret_cast<float *>(pOutput);
-#if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
 	ma_uint32 i = 0;
 #if NUM_CHANNELS_IN > 0
 	size_t ix = 0;
@@ -128,14 +127,13 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 		for (ma_uint32 j = 0; j < n; j++)
 			for (size_t k = 0;  k < NUM_CHANNELS_OUT; k++, iy++)
 				out_buf[iy] = y_buf[BLOCK_SIZE * k + j];
+#elif NUM_CHANNELS_IN == 0
+		for (ma_uint32 j = 0; j < n; j++)
+			out_buf[j] = 0;
 #endif
 
 		i += n;
 	}
-#else
-    for (ma_uint32 i = 0; i < frameCount; i++)
-        out_buf[i] = 0.f; // Unique fake channel
-#endif
 }
 
 extern "C"
@@ -146,14 +144,14 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 
 #if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
 # if NUM_CHANNELS_IN == 0
-    ma_device_config deviceConfig = ma_device_config_init(ma_device_type_playback);
+	ma_device_config deviceConfig = ma_device_config_init(ma_device_type_playback);
 # elif NUM_CHANNELS_OUT == 0
-    ma_device_config deviceConfig = ma_device_config_init(ma_device_type_capture);
+	ma_device_config deviceConfig = ma_device_config_init(ma_device_type_capture);
 # else
-    ma_device_config deviceConfig = ma_device_config_init(ma_device_type_duplex);
+	ma_device_config deviceConfig = ma_device_config_init(ma_device_type_duplex);
 # endif
 #else
-    ma_device_config deviceConfig = ma_device_config_init(ma_device_type_playback);
+	ma_device_config deviceConfig = ma_device_config_init(ma_device_type_playback);
 #endif
 
 	deviceConfig.periodSizeInFrames		= BLOCK_SIZE;
@@ -171,9 +169,9 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 	deviceConfig.playback.pDeviceID		= NULL;
 	deviceConfig.playback.format		= ma_format_f32;
 #if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
-    deviceConfig.playback.channels      = NUM_CHANNELS_OUT;
+	 deviceConfig.playback.channels      = NUM_CHANNELS_OUT;
 #else
-    deviceConfig.playback.channels      = 1; // Fake & muted
+	 deviceConfig.playback.channels      = 1; // Fake & muted
 #endif
 	deviceConfig.playback.shareMode		= ma_share_mode_shared;
 
@@ -273,6 +271,7 @@ JNIEXPORT void JNICALL
 JNI_FUNC(nativeAudioStop)(JNIEnv* env, jobject thiz) {
 	(void)env;
 	(void)thiz;
+
 	ma_device_stop(&device);
 	ma_device_uninit(&device);
 	if (mem != NULL)

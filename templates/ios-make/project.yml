@@ -1,6 +1,6 @@
-name: {{=it.ios_make.projectName}}
+name: {{=it.product.bundleName}}
 targets:
-  {{=it.ios_make.targetName}}:
+  {{=it.product.bundleName}}:
     platform: [iOS]
     deploymentTarget:
       iOS: {{=it.ios_make.deploymentTarget}}
@@ -9,11 +9,15 @@ targets:
       - path: src
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.orastron.{{=it.product.bundleName}}
+        PRODUCT_BUNDLE_IDENTIFIER: {{=it.ios_make.productBundleIdentifier}}
         SWIFT_OBJC_BRIDGING_HEADER: src/app-Bridging-Header.h
-        HEADER_SEARCH_PATHS: {{~it.ios_make.header_search_paths:p}}
+{{?it.ios_make.headerSearchPaths}}
+        HEADER_SEARCH_PATHS: {{~it.ios_make.headerSearchPaths :p}}
           - {{=p}}{{~}}
+{{?}}
     info:
       path: Info.plist
+{{?it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length > 0}}
       properties:
-        NSMicrophoneUsageDescription: Audio input access needed to run the example
+        NSMicrophoneUsageDescription: Need audio input for processing sound
+{{?}}

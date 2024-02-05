@@ -1,8 +1,8 @@
 BUNDLE_NAME := {{=it.product.bundleName}}
 
-PROJECT_NAME := {{=it.ios_make.projectName}}
-TARGET_NAME := {{=it.ios_make.targetName}}
+C_SRCS_EXTRA := {{=it.make && it.make.cSrcs ? it.make.cSrcs : ""}} {{=it.ios_make && it.ios_make.cSrcs ? it.ios_make.cSrcs : ""}}
+CXX_SRCS_EXTRA := {{=it.make && it.make.cxxSrcs ? it.make.cxxSrcs : ""}} {{=it.ios_make && it.ios_make.cxxSrcs ? it.ios_make.cxxSrcs : ""}}
 
-3RDPARTYFILES := {{=it.ios_make["3rdpartyfiles"].join(' ')}}
-
-HAS_MIDI_IN := {{=it.product.buses.filter(x => x.type == "midi" && x.direction == "input").length > 0 ? "yes" : "no"}}
+COMMON_DIR := {{=it.ios_make && it.ios_make.commonDir ? it.ios_make.commonDir : (it.make && it.make.commonDir ? it.make.commonDir : "")}}
+DATA_DIR := {{=it.ios_make && it.ios_make.dataDir ? it.ios_make.dataDir : (it.make && it.make.dataDir ? it.make.dataDir : "")}}
+PLUGIN_DIR := {{=it.ios_make && it.ios_make.pluginDir ? it.ios_make.pluginDir : (it.make && it.make.pluginDir ? it.make.pluginDir : "")}}
