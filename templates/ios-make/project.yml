@@ -1,0 +1,23 @@
+name: {{=it.product.bundleName}}
+targets:
+  {{=it.product.bundleName}}:
+    platform: [iOS]
+    deploymentTarget:
+      iOS: {{=it.ios_make.deploymentTarget}}
+    type: application
+    sources:
+      - path: src
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: {{=it.ios_make.productBundleIdentifier}}
+        SWIFT_OBJC_BRIDGING_HEADER: src/app-Bridging-Header.h
+{{?it.ios_make.headerSearchPaths}}
+        HEADER_SEARCH_PATHS: {{~it.ios_make.headerSearchPaths :p}}
+          - {{=p}}{{~}}
+{{?}}
+    info:
+      path: Info.plist
+{{?it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length > 0}}
+      properties:
+        NSMicrophoneUsageDescription: Need audio input for processing sound
+{{?}}

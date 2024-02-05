@@ -2,75 +2,62 @@
  * Copyright (C) 2023, 2024 Orastron Srl unipersonale
  */
 
-#include <stdlib.h>
-#include <stdint.h>
-
 #include "data.h"
 #include "plugin.h"
-
-#include <string.h>
-#include <jni.h>
-#if PARAMETERS_N + NUM_MIDI_INPUTS > 0
-# include <mutex>
-#endif
 #if PARAMETERS_N > 0
-# include <algorithm>
+#include <algorithm>
 #endif
-
-# define MINIAUDIO_IMPLEMENTATION
-# define MA_ENABLE_ONLY_SPECIFIC_BACKENDS
-# define MA_ENABLE_AAUDIO
-# include <miniaudio.h>
-
-# define BLOCK_SIZE	32
-
-#if NUM_MIDI_INPUTS > 0
-# include <vector>
-
-# include <amidi/AMidi.h>
+#if PARAMETERS_N + NUM_MIDI_INPUTS > 0
+#include <mutex>
 #endif
+#include <vector>
+#define MINIAUDIO_IMPLEMENTATION
+#define MA_NO_RUNTIME_LINKING
+#include "miniaudio.h"
+#define BLOCK_SIZE  32
 
-static ma_device	device;
-static plugin		instance;
-static void *		mem;
+#define NUM_BUFS	(NUM_CHANNELS_IN > NUM_CHANNELS_OUT ? NUM_CHANNELS_IN : NUM_CHANNELS_OUT)
+
+static ma_device device;
+static plugin instance;
+static void *mem;
 #if (NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN) || (NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT)
-float			zero[BLOCK_SIZE];
+float zero[BLOCK_SIZE];
 #endif
 #if NUM_CHANNELS_IN > 0
-float			x_buf[NUM_CHANNELS_IN * BLOCK_SIZE];
+float x_buf[NUM_CHANNELS_IN * BLOCK_SIZE];
 #endif
 #if NUM_ALL_CHANNELS_IN > 0
-const float *		x[NUM_ALL_CHANNELS_IN];
+const float *x[NUM_ALL_CHANNELS_IN];
 #else
-const float **		x;
+const float **x;
 #endif
 #if NUM_CHANNELS_OUT > 0
-float			y_buf[NUM_CHANNELS_OUT * BLOCK_SIZE];
+float y_buf[NUM_CHANNELS_OUT * BLOCK_SIZE];
 #endif
 #if NUM_ALL_CHANNELS_OUT > 0
-float *			y[NUM_ALL_CHANNELS_IN];
+float *y[NUM_ALL_CHANNELS_IN];
 #else
-float **		y;
+float **y;
 #endif
 #if PARAMETERS_N > 0
-std::mutex		mutex;
-float			param_values[PARAMETERS_N];
-float			param_values_prev[PARAMETERS_N];
+std::mutex mutex;
+float param_values[PARAMETERS_N];
+float param_values_prev[PARAMETERS_N];
 #endif
 #if NUM_MIDI_INPUTS > 0
-struct PortData {
-	AMidiDevice	*device;
-	int		 portNumber;
-	AMidiOutputPort	*port;
-};
-std::vector<PortData> midiPorts;
-# define MIDI_BUFFER_SIZE 1024
-uint8_t midiBuffer[MIDI_BUFFER_SIZE];
+CFStringRef midiClientName = NULL;
+MIDIClientRef midiClient = NULL;
+CFStringRef midiInputName = NULL;
+MIDIPortRef midiPort = NULL;
+#define MIDIBUFFERLEN 1023
+uint8_t midiBuffer[MIDIBUFFERLEN];
+int midiBuffer_i = 0;
 #endif
 
 static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
 	(void)pDevice;
-
+	
 #if PARAMETERS_N + NUM_MIDI_INPUTS > 0
 	if (mutex.try_lock()) {
 # if PARAMETERS_N > 0
@@ -85,21 +72,22 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 # endif
 
 # if NUM_MIDI_INPUTS > 0
-		for (std::vector<PortData>::iterator it = midiPorts.begin(); it != midiPorts.end(); it++) {
-			int32_t opcode;
-			size_t numBytes;
-			while (AMidiOutputPort_receive(it->port, &opcode, midiBuffer, MIDI_BUFFER_SIZE, &numBytes, NULL) > 0) {
-				if (opcode != AMIDI_OPCODE_DATA || (midiBuffer[0] & 0xf0) == 0xf0)
-					continue;
-				plugin_midi_msg_in(&instance, MIDI_BUS_IN, midiBuffer);
+		if (midiBuffer_i > 0) {
+			for (int i = 0; i < midiBuffer_i; i+=3) {
+				plugin_midi_msg_in(&instance, MIDI_BUS_IN, &(midiBuffer[i]));
 			}
 		}
+		midiBuffer_i = 0;
 # endif
 		mutex.unlock();
 	}
 #endif
-
+	
+#if NUM_CHANNELS_IN == 0
+	(void)pInput;
+#else
 	const float * in_buf = reinterpret_cast<const float *>(pInput);
+#endif
 	float * out_buf = reinterpret_cast<float *>(pOutput);
 	ma_uint32 i = 0;
 #if NUM_CHANNELS_IN > 0
@@ -108,6 +96,7 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 #if NUM_CHANNELS_OUT > 0
 	size_t iy = 0;
 #endif
+	
 	while (i < frameCount) {
 		ma_uint32 n = std::min(frameCount - i, static_cast<ma_uint32>(BLOCK_SIZE));
 
@@ -129,19 +118,48 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 				out_buf[iy] = y_buf[BLOCK_SIZE * k + j];
 #elif NUM_CHANNELS_IN == 0
 		for (ma_uint32 j = 0; j < n; j++)
-			out_buf[j] = 0;
+			out_buf[j] = 0.f;
 #endif
-
-		i += n;
+			i += n;
 	}
 }
 
-extern "C"
-JNIEXPORT jboolean JNICALL
-JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
-	(void)env;
-	(void)thiz;
+#if (NUM_MIDI_INPUTS > 0)
+void (^midiNotifyBlock)(const MIDINotification *message) = ^(const MIDINotification *message) {
+	if (message->messageID != kMIDIMsgObjectAdded)
+		return;
+	const MIDIObjectAddRemoveNotification *n = reinterpret_cast<const MIDIObjectAddRemoveNotification *>(message);
+	MIDIEndpointRef endPoint = n->child;
+	MIDIPortConnectSource(midiPort, endPoint, NULL);
+};
 
+void (^midiReceiveBlock)(const MIDIEventList *evtlist, void *srcConnRefCon) = ^(const MIDIEventList *evtlist, void *srcConnRefCon) {
+	const MIDIEventPacket *p = evtlist->packet;
+	for (UInt32 i = 0; i < evtlist->numPackets; i++) {
+		for (UInt32 j = 0; j < p->wordCount; j++) {
+			const UInt32 w = p->words[j];
+			const uint8_t* t = (uint8_t*) &(w);
+			
+			if ((t[3] & 0xf0) != 32)
+				continue; // We only support MIDI 1.0
+			if ((t[2] & 0xF0) == 0xF0)
+				continue;
+			mutex.lock();
+			if (midiBuffer_i < MIDIBUFFERLEN - 3) {
+				midiBuffer[midiBuffer_i	] = t[2];
+				midiBuffer[midiBuffer_i + 1] = t[1];
+				midiBuffer[midiBuffer_i + 2] = t[0];
+				midiBuffer_i += 3;
+			}
+			mutex.unlock();
+		}
+		p = MIDIEventPacketNext(p);
+	}
+};
+#endif
+
+extern "C"
+char audioStart() {
 #if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
 # if NUM_CHANNELS_IN == 0
 	ma_device_config deviceConfig = ma_device_config_init(ma_device_type_playback);
@@ -157,7 +175,7 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 	deviceConfig.periodSizeInFrames		= BLOCK_SIZE;
 	deviceConfig.periods			= 1;
 	deviceConfig.performanceProfile		= ma_performance_profile_low_latency;
-	deviceConfig.noPreSilencedOutputBuffer	= 1;
+	deviceConfig.noPreSilencedOutputBuffer  = 1;
 	deviceConfig.noClip			= 0;
 	deviceConfig.noDisableDenormals		= 0;
 	deviceConfig.noFixedSizedCallback	= 1;
@@ -169,17 +187,44 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 	deviceConfig.playback.pDeviceID		= NULL;
 	deviceConfig.playback.format		= ma_format_f32;
 #if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
-	 deviceConfig.playback.channels      = NUM_CHANNELS_OUT;
+	deviceConfig.playback.channels		= NUM_CHANNELS_OUT;
 #else
-	 deviceConfig.playback.channels      = 1; // Fake & muted
+	deviceConfig.playback.channels		= 1; // Fake & muted
 #endif
 	deviceConfig.playback.shareMode		= ma_share_mode_shared;
 
 	if (ma_device_init(NULL, &deviceConfig, &device) != MA_SUCCESS)
 		return false;
 
-	plugin_init(&instance);
+#if (NUM_MIDI_INPUTS > 0)
+	if (midiClientName == NULL) {
+		midiClientName = CFSTR("template");
+		if (midiClientName == NULL)
+			return false; // Check unint
+	}
+	if (midiClient == (MIDIClientRef)NULL) {
+		if (MIDIClientCreateWithBlock(midiClientName, &midiClient, midiNotifyBlock) != 0)
+			return false;
+	}
+	if (midiInputName == NULL) {
+		midiInputName = CFSTR("Input");
+		if (midiInputName == NULL)
+			return false;
+	}
+	if (midiPort == (MIDIPortRef)NULL) {
+		if (MIDIInputPortCreateWithProtocol(midiClient, midiInputName, kMIDIProtocol_1_0, &midiPort, midiReceiveBlock) != 0)
+			return false;
 
+		ItemCount n = MIDIGetNumberOfSources();
+		for (ItemCount i = 0; i < n; i++) {
+			MIDIEndpointRef endPoint = MIDIGetSource(i);
+			MIDIPortConnectSource(midiPort, endPoint, NULL);
+		}
+	}
+#endif
+	
+	plugin_init(&instance);
+	
 #if PARAMETERS_N > 0
 	for (size_t i = 0; i < PARAMETERS_N; i++) {
 		if (!param_data[i].out)
@@ -187,8 +232,9 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 		param_values_prev[i] = param_values[i] = param_data[i].def;
 	}
 #endif
-
+	
 	plugin_set_sample_rate(&instance, (float)device.sampleRate);
+
 	size_t req = plugin_mem_req(&instance);
 	if (req != 0) {
 		mem = malloc(req);
@@ -202,7 +248,7 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 		mem = NULL;
 
 	plugin_reset(&instance);
-
+	
 #if NUM_ALL_CHANNELS_IN > 0
 # if AUDIO_BUS_IN >= 0
 	size_t ix = 0;
@@ -229,6 +275,7 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 #else
 	x = NULL;
 #endif
+	
 #if NUM_ALL_CHANNELS_OUT > 0
 # if AUDIO_BUS_OUT >= 0
 	size_t iy = 0;
@@ -255,52 +302,41 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 #else
 	y = NULL;
 #endif
-
+	
 	if (ma_device_start(&device) != MA_SUCCESS) {
 		if (mem != NULL)
 			free(mem);
 		ma_device_uninit(&device);
 		return false;
 	}
-
 	return true;
 }
 
 extern "C"
-JNIEXPORT void JNICALL
-JNI_FUNC(nativeAudioStop)(JNIEnv* env, jobject thiz) {
-	(void)env;
-	(void)thiz;
-
+void audioStop() {
 	ma_device_stop(&device);
 	ma_device_uninit(&device);
 	if (mem != NULL)
 		free(mem);
 	plugin_fini(&instance);
+	// No need to close MIDI connections (e.g. via MIDIClientDispose), the system terminates them when the app terminates.
 }
 
 extern "C"
-JNIEXPORT jfloat JNICALL
-JNI_FUNC(nativeGetParameter)(JNIEnv* env, jobject thiz, jint i) {
-	(void)env;
-	(void)thiz;
-
+float getParameter(int i) {
 #if PARAMETERS_N > 0
 	mutex.lock();
 	float v = param_values[i];
 	mutex.unlock();
 	return v;
 #else
+	(void)i;
 	return 0.f;
 #endif
 }
 
 extern "C"
-JNIEXPORT void JNICALL
-JNI_FUNC(nativeSetParameter)(JNIEnv* env, jobject thiz, jint i, jfloat v) {
-	(void)env;
-	(void)thiz;
-
+void setParameter(int i, float v) {
 	if (param_data[i].flags & (PARAM_BYPASS | PARAM_TOGGLED))
 		v = v > 0.5f ? 1.f : 0.f;
 	else if (param_data[i].flags & PARAM_INTEGER)
@@ -312,39 +348,3 @@ JNI_FUNC(nativeSetParameter)(JNIEnv* env, jobject thiz, jint i, jfloat v) {
 	mutex.unlock();
 #endif
 }
-
-#if NUM_MIDI_INPUTS > 0
-extern "C"
-JNIEXPORT void JNICALL
-JNI_FUNC(addMidiPort)(JNIEnv* env, jobject thiz, jobject d, jint p) {
-	(void)thiz;
-
-	PortData data;
-	AMidiDevice_fromJava(env, d, &data.device);
-	data.portNumber = p;
-	mutex.lock();
-	if (AMidiOutputPort_open(data.device, p, &data.port) == AMEDIA_OK)
-		midiPorts.push_back(data);
-	mutex.unlock();
-}
-
-extern "C"
-JNIEXPORT void JNICALL
-JNI_FUNC(removeMidiPort)(JNIEnv* env, jobject thiz, jobject d, jint p) {
-	(void)thiz;
-
-	AMidiDevice *device;
-	AMidiDevice_fromJava(env, d, &device);
-	mutex.lock();
-	for (std::vector<PortData>::iterator it = midiPorts.begin(); it != midiPorts.end(); ) {
-		PortData data = *it;
-		if (data.device != device || data.portNumber != p) {
-			it++;
-			continue;
-		}
-		AMidiOutputPort_close(data.port);
-		it = midiPorts.erase(it);
-	}
-	mutex.unlock();
-}
-#endif

@@ -1,0 +1,8 @@
+{
+	"ios_make": {
+		"headerSearchPaths": [],
+		"sourcesExtra": [],
+		"productBundleIdentifier": "com.example.tibia_test",
+		"deploymentTarget": 16.6
+	}
+}
