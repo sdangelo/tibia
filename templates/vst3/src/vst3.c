@@ -1356,7 +1356,7 @@ static Steinberg_IPluginFactory3 factory = { &factoryVtbl };
 #endif
 
 EXPORT
-Steinberg_IPluginFactory * GetPluginFactory() {
+Steinberg_IPluginFactory * GetPluginFactory(void) {
 	return (Steinberg_IPluginFactory *)&factory;
 }
 
@@ -1377,7 +1377,7 @@ char ENTRY(void *handle) {
 }
 
 EXPORT
-char EXIT() {
+char EXIT(void) {
 	return 1;
 }
 

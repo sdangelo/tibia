@@ -18,9 +18,7 @@ SOURCES_OUT = $(addprefix build/gen/src/, $(notdir $(SOURCES)))
 all: build/gen/${BUNDLE_NAME}.xcodeproj
 
 build/gen/${BUNDLE_NAME}.xcodeproj: ${SOURCES_OUT}
-	xcodegen generate --spec project.yml
-	mv ${BUNDLE_NAME}.xcodeproj build/gen/${BUNDLE_NAME}.xcodeproj
-	mv Info.plist build/gen/Info.plist
+	xcodegen generate --spec project.yml -r build/gen -p build/gen
 
 build/gen/src:
 	mkdir -p $@

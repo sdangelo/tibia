@@ -9,7 +9,7 @@ targets:
       - path: src
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: {{=it.ios_make.productBundleIdentifier}}
+        PRODUCT_BUNDLE_IDENTIFIER: {{=it.ios.productBundleIdentifier}}
         SWIFT_OBJC_BRIDGING_HEADER: src/app-Bridging-Header.h
 {{?it.ios_make.headerSearchPaths}}
         HEADER_SEARCH_PATHS: {{~it.ios_make.headerSearchPaths :p}}
