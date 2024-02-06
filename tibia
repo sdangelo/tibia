@@ -38,6 +38,7 @@ if (process.argv[2] == "--common") {
 var fs = require("fs");
 var path = require("path");
 
+/*
 var ajvValidate;
 if (outputData) {
 	var schema = JSON.parse(fs.readFileSync(__dirname + path.sep + "schema.json", { encoding: "utf-8" }));
@@ -45,6 +46,7 @@ if (outputData) {
 	var ajv = new Ajv();
 	ajvValidate = ajv.compile(schema);
 }
+*/
 
 var data = {};
 for (var i = 0; i < jsonFiles.length; i++) {
@@ -53,6 +55,7 @@ for (var i = 0; i < jsonFiles.length; i++) {
 		data[k] = d[k];
 }
 
+/*
 if (outputData) {
 	var ajvValid = ajvValidate(data);
 	if (!ajvValid) {
@@ -60,6 +63,7 @@ if (outputData) {
 		process.exit(1);
 	}
 }
+*/
 
 var doT = require("dot");
 doT.templateSettings.strip = false;

@@ -1,9 +1,9 @@
-ALL += build/index.html build/cert.pem build/key.pem
+ALL += build/web/index.html build/web/cert.pem build/web/key.pem
 
-build/index.html: ${DATA_DIR}/src/index.html | build
+build/web/index.html: ${DATA_DIR}/src/index.html | build
 	cp $^ $@
 
-build/key.pem: build/cert.pem
+build/web/key.pem: build/web/cert.pem
 
-build/cert.pem: | build
-	yes "" | openssl req -x509 -newkey rsa:2048 -keyout build/key.pem -out build/cert.pem -days 365 -nodes 2>/dev/null
+build/web/cert.pem: | build
+	yes "" | openssl req -x509 -newkey rsa:2048 -keyout build/web/key.pem -out build/web/cert.pem -days 365 -nodes 2>/dev/null

@@ -121,7 +121,7 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 		/* .title			= */ { {{~Array.from(p.name) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .shortTitle			= */ { {{~Array.from(p.shortName) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { {{~Array.from(p.unit in it.tibia.vst3.units ? it.tibia.vst3.units[p.unit] : "") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .stepCount			= */ {{?p.toggled}}1{{??p.list && p.scalePoints.length > 1}}Number(1 / (p.scalePoints.length - 1)).toExponential(){{??p.integer}}Number(p.maximum - p.minimum).toExponential(){{??}}0{{?}},
+		/* .stepCount			= */ {{=p.toggled ? 1 : (p.list && p.scalePoints.length > 1 ? p.scalePoints.length - 1 : (p.integer ? p.maximum - p.minimum : 0))}},
 		/* .defaultNormalizedValue	= */ {{?p.map == "logarithmic"}}{{=Number(Math.log(p.defaultValue / p.minimum) / (2 * Math.log(Math.sqrt(p.minimum * p.maximum) / Math.abs(p.minimum)))).toExponential()}}{{??}}{{=Number((p.defaultValue - p.minimum) / (p.maximum - p.minimum)).toExponential()}}{{?}},
 		/* .unitId			= */ 0,
 		/* .flags			= */ {{?p.direction == "input"}}Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate{{??}}Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly{{?}}

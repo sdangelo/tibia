@@ -44,7 +44,7 @@ CXX_SRCS = ${COMMON_DIR}/src/new.cpp ${CXX_SRCS_EXTRA}
 CXX_OBJS = $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 endif
 
-ALL = build/${BUNDLE_NAME}.wasm build/${BUNDLE_NAME}_processor.js build/${BUNDLE_NAME}.js
+ALL = build/web/${BUNDLE_NAME}.wasm build/web/${BUNDLE_NAME}_processor.js build/web/${BUNDLE_NAME}.js
 
 default: all
 
@@ -53,20 +53,20 @@ default: all
 all: ${ALL}
 
 ifeq ($(CXX_OBJS),)
-build/${BUNDLE_NAME}.wasm: ${C_OBJS} | build
+build/web/${BUNDLE_NAME}.wasm: ${C_OBJS} | build/web
 	${CC} $^ -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
 else
-build/${BUNDLE_NAME}.wasm: ${C_OBJS} ${CXX_OBJS} | build
+build/web/${BUNDLE_NAME}.wasm: ${C_OBJS} ${CXX_OBJS} | build/web
 	${CXX} $^ -o $@ ${CFLAGS_ALL} ${CXXFLAGS_ALL} ${LDFLAGS_ALL}
 endif
 
-build/${BUNDLE_NAME}_processor.js: ${DATA_DIR}/src/processor.js | build
+build/web/${BUNDLE_NAME}_processor.js: ${DATA_DIR}/src/processor.js | build/web
 	cp $^ $@
 
-build/${BUNDLE_NAME}.js: ${DATA_DIR}/src/module.js | build
+build/web/${BUNDLE_NAME}.js: ${DATA_DIR}/src/module.js | build/web
 	cp $^ $@
 
-build build/obj:
+build/web build/obj:
 	mkdir -p $@
 
 clean:

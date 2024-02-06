@@ -90,6 +90,16 @@ var units = {
 	"semitone12TET":	"semi"
 };
 
+function displayValue(elem, index, value) {
+	var param = demo.Module.data.product.parameters[index];
+	var unit = param.unit;
+	if (param.integer)
+		value = Math.round(value);
+	else
+		value = (0.01 * Math.round(100 * value)).toFixed(2);
+	elem.innerText = value + (unit in units ? " " + units[unit] : "");
+}
+
 var initState = 0; // 0 = not inited, 1 = in progress, 2 = inited
 
 window.addEventListener("load", function (e) {
@@ -124,8 +134,7 @@ window.addEventListener("load", function (e) {
 
 		var value = document.createElement("span");
 		value.setAttribute("id", "v" + i);
-		var u = parameters[i].unit;
-		value.innerText = parameters[i].defaultValue + (u in units ? " " + units[u] : "");
+		displayValue(value, i, parameters[i].defaultValue);
 
 		var range = document.createElement("input");
 		range.setAttribute("type", "range");
@@ -135,12 +144,21 @@ window.addEventListener("load", function (e) {
 			range.setAttribute("min", 0);
 			range.setAttribute("max", 1);
 			range.setAttribute("step", 1);
+			range.setAttribute("data-mapped", "false");
+			range.value = unmap(i, parameters[i].defaultValue);
+		} else if (parameters[i].integer) {
+			range.setAttribute("min", parameters[i].minimum);
+			range.setAttribute("max", parameters[i].maximum);
+			range.setAttribute("step", 1);
+			range.setAttribute("data-mapped", "true");
+			range.value = parameters[i].defaultValue;
 		} else {
 			range.setAttribute("min", 0);
 			range.setAttribute("max", 1);
-			range.setAttribute("step", parameters[i].integer ? 1 / (parameters[i].maximum - parameters[i].minimum) : "any");
+			range.setAttribute("step", "any");
+			range.setAttribute("data-mapped", "false");
+			range.value = unmap(i, parameters[i].defaultValue);
 		}
-		range.value = unmap(i, parameters[i].defaultValue);
 		if (parameters[i].direction == "output")
 			range.setAttribute("readonly", "true");
 		else {
@@ -148,10 +166,10 @@ window.addEventListener("load", function (e) {
 			let v = value;
 			range.addEventListener("input", function (e) {
 				var p = node.parameters.get(parameters[index].name);
-				var val = map(index, e.target.value);
+				var m = e.target.getAttribute("data-mapped") == "true";
+				var val = m ? e.target.value : map(index, e.target.value);
 				p.setValueAtTime(val, 0);
-				var u = parameters[index].unit;
-				v.innerText = val + (u in units ? " " + units[u] : "");
+				displayValue(v, index, val);
 			});
 		}
 
@@ -188,9 +206,13 @@ window.addEventListener("load", function (e) {
 			});
 
 			node.port.onmessage = function (e) {
-				if (e.data.type == "paramOutChange")
-					document.getElementById("p" + e.data.index).value = unmap(e.data.index, e.data.value);
-					document.getElementById("v" + e.data.index).innerText = e.data.value;
+				if (e.data.type == "paramOutChange") {
+					var r = document.getElementById("p" + e.data.index);
+					var v = document.getElementById("v" + e.data.index);
+					displayValue(v, e.data.index, e.data.value);
+					var m = r.getAttribute("data-mapped") == "true";
+					r.value = m ? e.data.value : unmap(e.data.index, e.data.value);
+				}
 			};
 
 			if (midi) {
