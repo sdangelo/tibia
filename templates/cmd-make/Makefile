@@ -45,7 +45,7 @@ ifeq ($(CXX_OBJS),)
 build/${PROGRAM}: ${C_OBJS} build/obj/tinywav.o | build
 	${CC} $^ -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
 else
-build/${PROGRAM}: ${C_OBJS} ${CXX_OBJS} | build
+build/${PROGRAM}: ${C_OBJS} ${CXX_OBJS} build/obj/tinywav.o | build
 	${CXX} $^ -o $@ ${CFLAGS_ALL} ${CXXFLAGS_ALL} ${LDFLAGS_ALL}
 endif
 
