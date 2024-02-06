@@ -2,7 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include "vst3_c_api.h"
+#pragma GCC diagnostic pop
 #include "data.h"
 #include "plugin.h"
 

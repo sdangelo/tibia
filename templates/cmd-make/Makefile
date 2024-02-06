@@ -33,7 +33,7 @@ endif
 
 PROGRAM = ${BUNDLE_NAME}${EXE_SUFFIX}
 
-C_SRCS = ${COMMON_DIR}/src/main.c ${TINYWAV_DIR}/tinywav.c ${MIDI_PARSER_DIR}/src/midi-parser.c ${C_SRCS_EXTRA}
+C_SRCS = ${COMMON_DIR}/src/main.c ${MIDI_PARSER_DIR}/src/midi-parser.c ${C_SRCS_EXTRA}
 C_OBJS = $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 
 CXX_SRCS = ${CXX_SRCS_EXTRA}
@@ -42,7 +42,7 @@ CXX_OBJS = $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 all: build/${PROGRAM}
 
 ifeq ($(CXX_OBJS),)
-build/${PROGRAM}: ${C_OBJS} | build
+build/${PROGRAM}: ${C_OBJS} build/obj/tinywav.o | build
 	${CC} $^ -o $@ ${CFLAGS_ALL} ${LDFLAGS_ALL}
 else
 build/${PROGRAM}: ${C_OBJS} ${CXX_OBJS} | build
@@ -68,6 +68,9 @@ endif
 .SECONDEXPANSION:
 
 PERCENT := %
+
+build/obj/tinywav.o: ${TINYWAV_DIR}/tinywav.c
+	${CC} $^ -o $@ -c ${CFLAGS_ALL} -Wno-unused-result
 
 $(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$(C_SRCS)) | build/obj
 	${CC} $^ -o $@ -c ${CFLAGS_ALL}
