@@ -58,6 +58,12 @@ int midiBuffer_i = 0;
 static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
 	(void)pDevice;
 	
+#if defined(__aarch64__)
+	uint64_t fpcr;
+	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
+	__asm__ __volatile__ ("msr fpcr, %0" :: "r"(fpcr | 0x1000000)); // enable FZ
+#endif
+
 #if PARAMETERS_N + NUM_MIDI_INPUTS > 0
 	if (mutex.try_lock()) {
 # if PARAMETERS_N > 0
@@ -122,6 +128,10 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 #endif
 			i += n;
 	}
+
+#if defined(__aarch64__)
+	__asm__ __volatile__ ("msr fpcr, %0" : : "r"(fpcr));
+#endif
 }
 
 #if (NUM_MIDI_INPUTS > 0)

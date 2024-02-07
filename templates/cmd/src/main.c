@@ -16,6 +16,11 @@
 # include <midi-parser.h>
 #endif
 
+#if defined(__i386__) || defined(__x86_64__)
+#include <xmmintrin.h>
+#include <pmmintrin.h>
+#endif
+
 plugin			instance;
 void *			mem;
 #if (NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN) || (NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT)
@@ -259,6 +264,15 @@ int main(int argc, char * argv[]) {
 		usage(argv[0]);
 		return EXIT_FAILURE;
 	}
+#endif
+
+#if defined(__aarch64__)
+	uint64_t fpcr;
+	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
+	__asm__ __volatile__ ("msr fpcr, %0" :: "r"(fpcr | 0x1000000)); // enable FZ
+#elif defined(__i386__) || defined(__x86_64__)
+	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+	_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
 #endif
 
 #if PARAMETERS_N > 0

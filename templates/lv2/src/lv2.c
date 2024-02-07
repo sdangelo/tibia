@@ -167,6 +167,18 @@ static inline float clampf(float x, float m, float M) {
 static void run(LV2_Handle instance, uint32_t sample_count) {
 	plugin_instance * i = (plugin_instance *)instance;
 
+#if defined(__aarch64__)
+	uint64_t fpcr;
+	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
+	__asm__ __volatile__ ("msr fpcr, %0" :: "r"(fpcr | 0x1000000)); // enable FZ
+#elif defined(__i386__) || defined(__x86_64__)
+	const unsigned int flush_zero_mode = _MM_GET_FLUSH_ZERO_MODE();
+	const unsigned int denormals_zero_mode = _MM_GET_DENORMALS_ZERO_MODE();
+
+	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+	_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+#endif
+
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
 		uint32_t k = param_data[j].index;
@@ -190,18 +202,6 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	}
 #endif
 
-#if defined(__aarch64__)
-	uint64_t fpcr;
-	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
-	__asm__ __volatile__ ("msr fpcr, %0" :: "r"(fpcr | 0x1000000)); // enable FZ
-#elif defined(__i386__) || defined(__x86_64__)
-	const unsigned int flush_zero_mode = _MM_GET_FLUSH_ZERO_MODE();
-	const unsigned int denormals_zero_mode = _MM_GET_DENORMALS_ZERO_MODE();
-
-	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-	_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
-#endif
-
 	// from https://lv2plug.in/book
 #if DATA_PRODUCT_MIDI_INPUTS_N > 0
 	for (size_t j = 0; j < DATA_PRODUCT_MIDI_INPUTS_N; j++) {
@@ -219,13 +219,6 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 
 	plugin_process(&i->p, i->x, i->y, sample_count);
 
-#if defined(__aarch64__)
-	__asm__ __volatile__ ("msr fpcr, %0" : : "r"(fpcr));
-#elif defined(__i386__) || defined(__x86_64__)
-	_MM_SET_FLUSH_ZERO_MODE(flush_zero_mode);
-	_MM_SET_DENORMALS_ZERO_MODE(denormals_zero_mode);
-#endif
-
 #if DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
 	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_OUTPUTS_N; j++) {
 		uint32_t k = param_out_index[j];
@@ -235,6 +228,14 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 #else
 	(void)plugin_get_parameter;
 #endif
+
+#if defined(__aarch64__)
+	__asm__ __volatile__ ("msr fpcr, %0" : : "r"(fpcr));
+#elif defined(__i386__) || defined(__x86_64__)
+	_MM_SET_FLUSH_ZERO_MODE(flush_zero_mode);
+	_MM_SET_DENORMALS_ZERO_MODE(denormals_zero_mode);
+#endif
+
 }
 
 static void cleanup(LV2_Handle instance) {

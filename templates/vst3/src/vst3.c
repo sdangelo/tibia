@@ -9,6 +9,11 @@
 #include "data.h"
 #include "plugin.h"
 
+#if defined(__i386__) || defined(__x86_64__)
+#include <xmmintrin.h>
+#include <pmmintrin.h>
+#endif
+
 // COM in C doc:
 //   https://github.com/rubberduck-vba/Rubberduck/wiki/COM-in-plain-C
 //   https://devblogs.microsoft.com/oldnewthing/20040205-00/?p=40733
@@ -576,6 +581,18 @@ static void processParams(pluginInstance *p, struct Steinberg_Vst_ProcessData *d
 static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst_ProcessData* data) {
 	TRACE("plugin IAudioProcessor process\n");
 
+#if defined(__aarch64__)
+	uint64_t fpcr;
+	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
+	__asm__ __volatile__ ("msr fpcr, %0" :: "r"(fpcr | 0x1000000)); // enable FZ
+#elif defined(__i386__) || defined(__x86_64__)
+	const unsigned int flush_zero_mode = _MM_GET_FLUSH_ZERO_MODE();
+	const unsigned int denormals_zero_mode = _MM_GET_DENORMALS_ZERO_MODE();
+
+	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+	_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+#endif
+
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIAudioProcessor));
 
 	processParams(p, data, 1); 
@@ -631,26 +648,7 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 	float **outputs = NULL;
 #endif
 
-#if defined(__aarch64__)
-	uint64_t fpcr;
-	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
-	__asm__ __volatile__ ("msr fpcr, %0" :: "r"(fpcr | 0x1000000)); // enable FZ
-#elif defined(__i386__) || defined(__x86_64__)
-	const unsigned int flush_zero_mode = _MM_GET_FLUSH_ZERO_MODE();
-	const unsigned int denormals_zero_mode = _MM_GET_DENORMALS_ZERO_MODE();
-
-	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-	_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
-#endif
-
 	plugin_process(&p->p, inputs, outputs, data->numSamples);
-
-#if defined(__aarch64__)
-	__asm__ __volatile__ ("msr fpcr, %0" : : "r"(fpcr));
-#elif defined(__i386__) || defined(__x86_64__)
-	_MM_SET_FLUSH_ZERO_MODE(flush_zero_mode);
-	_MM_SET_DENORMALS_ZERO_MODE(denormals_zero_mode);
-#endif
 
 	processParams(p, data, 0); 
 
@@ -674,6 +672,13 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 #endif
 
 	// TBD: latency + IComponentHandler::restartComponent (kLatencyChanged), see https://steinbergmedia.github.io/vst3_dev_portal/pages/Technical+Documentation/Workflow+Diagrams/Get+Latency+Call+Sequence.html
+
+#if defined(__aarch64__)
+	__asm__ __volatile__ ("msr fpcr, %0" : : "r"(fpcr));
+#elif defined(__i386__) || defined(__x86_64__)
+	_MM_SET_FLUSH_ZERO_MODE(flush_zero_mode);
+	_MM_SET_DENORMALS_ZERO_MODE(denormals_zero_mode);
+#endif
 
 	return Steinberg_kResultOk;
 }

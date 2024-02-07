@@ -30,6 +30,11 @@
 # include <amidi/AMidi.h>
 #endif
 
+#if defined(__i386__) || defined(__x86_64__)
+#include <xmmintrin.h>
+#include <pmmintrin.h>
+#endif
+
 static ma_device	device;
 static plugin		instance;
 static void *		mem;
@@ -70,6 +75,18 @@ uint8_t midiBuffer[MIDI_BUFFER_SIZE];
 
 static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
 	(void)pDevice;
+
+#if defined(__aarch64__)
+	uint64_t fpcr;
+	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
+	__asm__ __volatile__ ("msr fpcr, %0" :: "r"(fpcr | 0x1000000)); // enable FZ
+#elif defined(__i386__) || defined(__x86_64__)
+	const unsigned int flush_zero_mode = _MM_GET_FLUSH_ZERO_MODE();
+	const unsigned int denormals_zero_mode = _MM_GET_DENORMALS_ZERO_MODE();
+
+	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+	_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+#endif
 
 #if PARAMETERS_N + NUM_MIDI_INPUTS > 0
 	if (mutex.try_lock()) {
@@ -134,6 +151,14 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 
 		i += n;
 	}
+
+#if defined(__aarch64__)
+	__asm__ __volatile__ ("msr fpcr, %0" : : "r"(fpcr));
+#elif defined(__i386__) || defined(__x86_64__)
+	_MM_SET_FLUSH_ZERO_MODE(flush_zero_mode);
+	_MM_SET_DENORMALS_ZERO_MODE(denormals_zero_mode);
+#endif
+
 }
 
 extern "C"
