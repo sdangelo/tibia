@@ -17,6 +17,7 @@ typedef struct {
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
 	float		x_buf[DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N * 128];
 	const float *	x[DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N];
+	float		zero_buf[128];
 #endif
 #if DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N > 0
 	float		y_buf[DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N * 128];
@@ -55,8 +56,7 @@ instance * processor_new(float sample_rate) {
 	plugin_reset(&i->p);
 
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
-	for (size_t j = 0; j < DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N; j++)
-		i->x[j] = i->x_buf + 128 * j;
+	memset(i->zero_buf, 0, 128 * sizeof(float));
 #endif
 #if DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N > 0
 	for (size_t j = 0; j < DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N; j++)
@@ -82,8 +82,26 @@ float * processor_get_x_buf(instance * i) {
 #endif
 }
 
-float * processor_get_y_buf(instance * i) {
+const float ** processor_get_x(instance * i) {
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
+	return i->x;
+#else
+	(void)i;
+	return NULL;
+#endif
+}
+
+float * processor_get_zero_buf(instance * i) {
+#if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
+	return i->zero_buf;
+#else
+	(void)i;
+	return NULL;
+#endif
+}
+
+float * processor_get_y_buf(instance * i) {
+#if DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N > 0
 	return i->y_buf;
 #else
 	(void)i;

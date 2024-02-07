@@ -5,6 +5,12 @@
 var buses = {{=JSON.stringify(it.product.buses, null, 2)}};
 var parameters = {{=JSON.stringify(it.product.parameters, null, 2)}};
 
+var busesIn = buses.filter(x => x.type == "audio" && x.direction == "input");
+var busesOut = buses.filter(x => x.type == "audio" && x.direction == "output");
+
+var nChansIn = busesIn.reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0);
+var nChansOut = busesOut.reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0);
+
 class Processor extends AudioWorkletProcessor {
 	constructor(options) {
 		super();
@@ -17,26 +23,14 @@ class Processor extends AudioWorkletProcessor {
 		if (!this.instance)
 			throw "Could not instantiate processor module";
 
-		function getBuffers(p, output) {
-			var ret = [];
-			for (var i = 0; i < buses.length; i++) {
-				if (buses[i].type != "audio" || (output && buses[i].direction == "input") || (!output && buses[i].direction == "output"))
-					continue;
-				if (buses[i].channels == "mono") {
-					ret.push([ new Float32Array(this.module.memory.buffer, p, 128) ]);
-					p += 128 * 4;
-				} else {
-					ret.push([
-						new Float32Array(this.module.memory.buffer, p, 128),
-						new Float32Array(this.module.memory.buffer, p + 128 * 4, 128)
-					]);
-					p += 2 * 128 * 4;
-				}
-			}
-			return ret;
+		if (nChansIn > 0) {
+			this.xBufP = this.module.processor_get_x_buf(this.instance);
+			this.zeroBufP = this.module.processor_get_zero_buf(this.instance);
+			this.xBuf = new Float32Array(this.module.memory.buffer, this.xBufP, 128 * nChansIn);
+			this.x = new Uint32Array(this.module.memory.buffer, this.module.processor_get_x(this.instance), nChansIn);
 		}
-		this.x = getBuffers.call(this, this.module.processor_get_x_buf(this.instance), false);
-		this.y = getBuffers.call(this, this.module.processor_get_y_buf(this.instance), true);
+		if (nChansOut > 0)
+			this.yBuf = new Float32Array(this.module.memory.buffer, this.module.processor_get_y_buf(this.instance), 128 * nChansOut);
 
 		this.parametersIn = [];
 		for (var i = 0; i < parameters.length; i++)
@@ -84,26 +78,46 @@ class Processor extends AudioWorkletProcessor {
 		while (i < n) {
 			var s = Math.min(n - i, 128);
 
-			for (var j = 0; j < this.x.length; j++) {
-				var input = inputs[j];
-				if (!input.length) {
-					for (var k = 0; k < this.x[j].length; k++)
-						this.x[j][k].fill(0);
-				} else {
-					for (var k = 0; k < this.x[j].length; k++)
-						if (k < input.length)
-							this.x[j][k].set(input[k].subarray(i, s));
-						else
-							this.x[j][k].fill(0);
+			var j = 0;
+			var o = 0;
+			for (var k = 0; k < busesIn.length; k++) {
+				var bus = busesIn[k];
+				var input = inputs[k];
+
+				if (!input[0])
+					this.x[j] = bus.optional ? 0 : this.zeroBufP;
+				else {
+					this.xBuf.set(input[0].subarray(i, i + s), o);
+					this.x[j] = this.xBufP + 4 * o;
+					o += 128;
+				}
+				j++;
+
+				if (bus.channels == "stereo") {
+					if (!input[0])
+						this.x[j] = this.x[j - 1];
+					else if (!input[1])
+						this.x[j] = this.zeroBufP;
+					else {
+						this.xBuf.set(input[1].subarray(i, i + s), o);
+						this.x[j] = this.xBufP + 4 * o;
+						o += 128;
+					}
+					j++;
 				}
 			}
 
 			this.module.processor_process(this.instance, s);
 
-			for (var j = 0; j < this.y.length; j++) {
-				var output = outputs[j];
-				for (var k = 0; k < this.y[j].length; k++)
-					output[k].set(this.y[j][k].subarray(i, s));
+			var j = 0;
+			for (var k = 0; k < outputs.length; k++) {
+				var output = outputs[k];
+				output[0].set(this.yBuf.subarray(128 * j, 128 * j + s), i);
+				j++;
+				if (output[1]) {
+					output[1].set(this.yBuf.subarray(128 * j, 128 * j + s), i);
+					j++;
+				}
 			}
 
 			i += s;
