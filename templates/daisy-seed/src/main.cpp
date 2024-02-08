@@ -1,10 +1,10 @@
 #include <stdlib.h>
 #include <stdint.h>
-#include <string.h>
 
 #include "data.h"
 #include "plugin.h"
 
+#include <string.h>
 #include <math.h>
 
 #include "daisy_seed.h"
@@ -35,14 +35,14 @@ const float *		x[NUM_ALL_CHANNELS_IN];
 #else
 const float **		x;
 #endif
-#if NUM_CHANNELS_IN > 0
-float *			y_out[NUM_CHANNELS_OUT];
-#endif
 #if NUM_NON_OPT_CHANNELS_OUT > 0
 float			y_buf[NUM_NON_OPT_CHANNELS_OUT * BLOCK_SIZE];
 #endif
+#if NUM_CHANNELS_OUT > 0
+float *			y_out[NUM_CHANNELS_OUT];
+#endif
 #if NUM_ALL_CHANNELS_OUT > 0
-float *			y[NUM_ALL_CHANNELS_IN];
+float *			y[NUM_ALL_CHANNELS_OUT];
 #else
 float **		y;
 #endif
@@ -169,20 +169,21 @@ int main() {
 	plugin_reset(&instance);
 
 #if NUM_ALL_CHANNELS_IN > 0
-	for (size_t i = 0, j = 0, k = 0; i < NUM_ALL_CHANNELS_IN + NUM_ALL_CHANNELS_OUT; i++) {
+	for (size_t i = 0, j = 0, k = 0; i < NUM_AUDIO_BUSES_IN + NUM_AUDIO_BUSES_OUT; i++) {
 		if (audio_bus_data[i].out)
 			continue;
-		for (int l = 0; l < audio_bus_data[i].channels; l++) {
-			if (audio_bus_data[i].optional)
-				x[j] = NULL;
-			else {
+		for (int l = 0; l < audio_bus_data[i].channels; l++, j++) {
+			if (AUDIO_BUS_IN == i) {
 				float * b = x_buf + BLOCK_SIZE * k;
 				x[j] = b;
-				if (AUDIO_BUS_IN == i)
-					x_in[l] = b;
+				x_in[l] = b;
 				k++;
-			}
-			j++;
+			} else
+#if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
+				x[j] = audio_bus_data[i].optional ? NULL : zero;
+#else
+				x[j] = NULL;
+#endif
 		}
 	}
 #else
@@ -190,14 +191,19 @@ int main() {
 #endif
 
 #if NUM_ALL_CHANNELS_OUT > 0
-	for (size_t i = 0, j = 0; i < NUM_ALL_CHANNELS_IN + NUM_ALL_CHANNELS_OUT; i++) {
+	for (size_t i = 0, j = 0, k = 0; i < NUM_AUDIO_BUSES_IN + NUM_AUDIO_BUSES_OUT; i++) {
 		if (!audio_bus_data[i].out)
 			continue;
-		for (int k = 0; k < audio_bus_data[i].channels; k++) {
-			y[j] = y_buf + BLOCK_SIZE * j;
-			if (AUDIO_BUS_OUT == i)
-				y_out[k] = y[j];
-			j++;
+		for (int l = 0; l < audio_bus_data[i].channels; l++, j++) {
+			if (AUDIO_BUS_OUT == i) {
+				y[j] = y_buf + BLOCK_SIZE * k;
+				y_out[l] = y[j];
+				k++;
+			} else if (!audio_bus_data[i].optional) {
+				y[j] = y_buf + BLOCK_SIZE * k;
+				k++;
+			} else
+				y[j] = NULL; 
 		}
 	}
 #else

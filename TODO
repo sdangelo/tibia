@@ -28,3 +28,4 @@
 * plugin_init and plugin_set_sample_rate to return char (can fail)
 * daisy-seed and android: isolate C part from C++
 * cmd help and version
+* common code... (eg buffer handling android ios cmd daisy-seed)?

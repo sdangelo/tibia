@@ -2,6 +2,9 @@
  * Copyright (C) 2023, 2024 Orastron Srl unipersonale
  */
 
+#include <stdlib.h>
+#include <stdint.h>
+
 #include "data.h"
 #include "plugin.h"
 #if PARAMETERS_N > 0
@@ -16,43 +19,45 @@
 #include "miniaudio.h"
 #define BLOCK_SIZE  32
 
-#define NUM_BUFS	(NUM_CHANNELS_IN > NUM_CHANNELS_OUT ? NUM_CHANNELS_IN : NUM_CHANNELS_OUT)
-
-static ma_device device;
-static plugin instance;
-static void *mem;
-#if (NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN) || (NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT)
-float zero[BLOCK_SIZE];
+static ma_device	device;
+static plugin		instance;
+static void *		mem;
+#if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
+float			zero[BLOCK_SIZE];
 #endif
 #if NUM_CHANNELS_IN > 0
-float x_buf[NUM_CHANNELS_IN * BLOCK_SIZE];
+float			x_buf[NUM_CHANNELS_IN * BLOCK_SIZE];
+float *			x_in[NUM_CHANNELS_IN];
 #endif
 #if NUM_ALL_CHANNELS_IN > 0
-const float *x[NUM_ALL_CHANNELS_IN];
+const float *		x[NUM_ALL_CHANNELS_IN];
 #else
-const float **x;
+const float **		x;
+#endif
+#if NUM_NON_OPT_CHANNELS_OUT > 0
+float			y_buf[NUM_NON_OPT_CHANNELS_OUT * BLOCK_SIZE];
 #endif
 #if NUM_CHANNELS_OUT > 0
-float y_buf[NUM_CHANNELS_OUT * BLOCK_SIZE];
+float *			y_out[NUM_CHANNELS_OUT];
 #endif
 #if NUM_ALL_CHANNELS_OUT > 0
-float *y[NUM_ALL_CHANNELS_IN];
+float *			y[NUM_ALL_CHANNELS_OUT];
 #else
-float **y;
+float **		y;
 #endif
 #if PARAMETERS_N > 0
-std::mutex mutex;
-float param_values[PARAMETERS_N];
-float param_values_prev[PARAMETERS_N];
+std::mutex		mutex;
+float			param_values[PARAMETERS_N];
+float			param_values_prev[PARAMETERS_N];
 #endif
 #if NUM_MIDI_INPUTS > 0
-CFStringRef midiClientName = NULL;
-MIDIClientRef midiClient = NULL;
-CFStringRef midiInputName = NULL;
-MIDIPortRef midiPort = NULL;
+CFStringRef		midiClientName = NULL;
+MIDIClientRef		midiClient = NULL;
+CFStringRef		midiInputName = NULL;
+MIDIPortRef		midiPort = NULL;
 #define MIDIBUFFERLEN 1023
-uint8_t midiBuffer[MIDIBUFFERLEN];
-int midiBuffer_i = 0;
+uint8_t			midiBuffer[MIDIBUFFERLEN];
+int			midiBuffer_i = 0;
 #endif
 
 static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
@@ -89,31 +94,26 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 	}
 #endif
 	
-#if NUM_CHANNELS_IN == 0
-	(void)pInput;
-#else
-	const float * in_buf = reinterpret_cast<const float *>(pInput);
-#endif
-	float * out_buf = reinterpret_cast<float *>(pOutput);
-	ma_uint32 i = 0;
 #if NUM_CHANNELS_IN > 0
+	const float * in_buf = reinterpret_cast<const float *>(pInput);
 	size_t ix = 0;
+#else
+	(void)pInput;
 #endif
 #if NUM_CHANNELS_OUT > 0
+	float * out_buf = reinterpret_cast<float *>(pOutput);
 	size_t iy = 0;
+#else
+	(void)pOutput;
 #endif
-	
+	ma_uint32 i = 0;
 	while (i < frameCount) {
 		ma_uint32 n = std::min(frameCount - i, static_cast<ma_uint32>(BLOCK_SIZE));
 
 #if NUM_CHANNELS_IN > 0
 		for (ma_uint32 j = 0; j < n; j++)
 			for (size_t k = 0;  k < NUM_CHANNELS_IN; k++, ix++)
-				x_buf[BLOCK_SIZE * k + j] = in_buf[ix];
-#endif
-
-#if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
-		memset(zero, 0, BLOCK_SIZE * sizeof(float));
+				x_in[k][j] = in_buf[ix];
 #endif
 
 		plugin_process(&instance, x, y, n);
@@ -121,12 +121,13 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 #if NUM_CHANNELS_OUT > 0
 		for (ma_uint32 j = 0; j < n; j++)
 			for (size_t k = 0;  k < NUM_CHANNELS_OUT; k++, iy++)
-				out_buf[iy] = y_buf[BLOCK_SIZE * k + j];
+				out_buf[iy] = y_out[k][j];
 #elif NUM_CHANNELS_IN == 0
 		for (ma_uint32 j = 0; j < n; j++)
 			out_buf[j] = 0.f;
 #endif
-			i += n;
+
+		i += n;
 	}
 
 #if defined(__aarch64__)
@@ -258,61 +259,53 @@ char audioStart() {
 		mem = NULL;
 
 	plugin_reset(&instance);
-	
+
 #if NUM_ALL_CHANNELS_IN > 0
-# if AUDIO_BUS_IN >= 0
-	size_t ix = 0;
-	size_t ixb = 0;
-	for (size_t j = 0; j < NUM_AUDIO_BUSES_IN + NUM_AUDIO_BUSES_OUT; j++) {
-		if (audio_bus_data[j].out)
+	for (size_t i = 0, j = 0, k = 0; i < NUM_AUDIO_BUSES_IN + NUM_AUDIO_BUSES_OUT; i++) {
+		if (audio_bus_data[i].out)
 			continue;
-		if (audio_bus_data[j].index == AUDIO_BUS_IN)
-			for (char k = 0; k < audio_bus_data[j].channels; k++, ix++, ixb++)
-				x[ix] = x_buf + BLOCK_SIZE * ixb;
-#  if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
-		else if (!audio_bus_data[j].optional)
-			for (char k = 0; k < audio_bus_data[j].channels; k++, ix++)
-				x[ix] = zero;
-#  endif
-		else
-			for (char k = 0; k < audio_bus_data[j].channels; k++, ix++)
-				x[ix] = NULL;
+		for (int l = 0; l < audio_bus_data[i].channels; l++, j++) {
+			if (AUDIO_BUS_IN == i) {
+				float * b = x_buf + BLOCK_SIZE * k;
+				x[j] = b;
+				x_in[l] = b;
+				k++;
+			} else
+#if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
+				x[j] = audio_bus_data[i].optional ? NULL : zero;
+#else
+				x[j] = NULL;
+#endif
+		}
 	}
-# else
-	for (size_t i = 0; i < NUM_ALL_CHANNELS_IN; i++)
-		x[i] = NULL;
-# endif
 #else
 	x = NULL;
 #endif
-	
+
 #if NUM_ALL_CHANNELS_OUT > 0
-# if AUDIO_BUS_OUT >= 0
-	size_t iy = 0;
-	size_t iyb = 0;
-	for (size_t j = 0; j < NUM_AUDIO_BUSES_IN + NUM_AUDIO_BUSES_OUT; j++) {
-		if (!audio_bus_data[j].out)
+	for (size_t i = 0, j = 0, k = 0; i < NUM_AUDIO_BUSES_IN + NUM_AUDIO_BUSES_OUT; i++) {
+		if (!audio_bus_data[i].out)
 			continue;
-		if (audio_bus_data[j].index == AUDIO_BUS_OUT)
-			for (char k = 0; k < audio_bus_data[j].channels; k++, iy++, iyb++)
-				y[iy] = y_buf + BLOCK_SIZE * iyb;
-#  if NUM_NON_OPT_CHANNELS_OUT > NUM_CHANNELS_OUT
-		else if (!audio_bus_data[j].optional)
-			for (char k = 0; k < audio_bus_data[j].channels; k++, iy++)
-				y[iy] = zero;
-#  endif
-		else
-			for (char k = 0; k < audio_bus_data[j].channels; k++, iy++)
-				y[iy] = NULL;
+		for (int l = 0; l < audio_bus_data[i].channels; l++, j++) {
+			if (AUDIO_BUS_OUT == i) {
+				y[j] = y_buf + BLOCK_SIZE * k;
+				y_out[l] = y[j];
+				k++;
+			} else if (!audio_bus_data[i].optional) {
+				y[j] = y_buf + BLOCK_SIZE * k;
+				k++;
+			} else
+				y[j] = NULL; 
+		}
 	}
-# else
-	for (size_t i = 0; i < NUM_ALL_CHANNELS_OUT; i++)
-		y[i] = NULL;
-# endif
 #else
 	y = NULL;
 #endif
-	
+
+#if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
+	memset(zero, 0, BLOCK_SIZE * sizeof(float));
+#endif
+
 	if (ma_device_start(&device) != MA_SUCCESS) {
 		if (mem != NULL)
 			free(mem);
