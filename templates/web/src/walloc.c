@@ -5,6 +5,7 @@
 #include "walloc.h"
 
 #include <stdint.h>
+#include "memset.h"
 
 extern unsigned char __heap_base;
 
@@ -107,6 +108,17 @@ void *realloc(void *ptr, size_t size) {
 	free(ptr);
 
 	return p;
+}
+
+void *calloc(size_t nmemb, size_t size) {
+	if (nmemb == 0 || SIZE_MAX / nmemb > size || (SIZE_MAX / nmemb == size && SIZE_MAX % nmemb != 0))
+		return NULL;
+	size_t s = nmemb * size;
+	void *m = malloc(s);
+	if (m == NULL)
+		return NULL;
+	memset(m, 0, s);
+	return m;
 }
 
 void free(void *ptr) {

@@ -16,6 +16,11 @@ LDFLAGS_ALL = \
 	-Wl,--lto-O3 \
 	-Wl,-strip-all \
 	-Wl,--export-table \
+	-Wl,--export=malloc \
+	-Wl,--export=realloc \
+	-Wl,--export=calloc \
+	-Wl,--export=free \
+	-Wl,--export=memset \
 	-Wl,--export=processor_new \
 	-Wl,--export=processor_free \
 	-Wl,--export=processor_get_x_buf \

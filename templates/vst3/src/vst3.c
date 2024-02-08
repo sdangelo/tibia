@@ -613,7 +613,7 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 				break;
 			case Steinberg_Vst_Event_EventTypes_kNoteOffEvent:
 			{
-				const uint8_t data[3] = { 0x90 | ev.Steinberg_Vst_Event_noteOff.channel, ev.Steinberg_Vst_Event_noteOff.pitch, (uint8_t)(127.f * ev.Steinberg_Vst_Event_noteOff.velocity) };
+				const uint8_t data[3] = { 0x80 | ev.Steinberg_Vst_Event_noteOff.channel, ev.Steinberg_Vst_Event_noteOff.pitch, (uint8_t)(127.f * ev.Steinberg_Vst_Event_noteOff.velocity) };
 				plugin_midi_msg_in(&p->p, midiInIndex[ev.busIndex], data);
 			}
 				break;
