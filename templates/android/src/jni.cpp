@@ -20,7 +20,10 @@
 # define MINIAUDIO_IMPLEMENTATION
 # define MA_ENABLE_ONLY_SPECIFIC_BACKENDS
 # define MA_ENABLE_AAUDIO
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wunused-function"
 # include <miniaudio.h>
+# pragma GCC diagnostic pop
 
 # define BLOCK_SIZE	32
 
