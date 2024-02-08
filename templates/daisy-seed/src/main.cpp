@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "data.h"
 #include "plugin.h"
@@ -22,8 +23,29 @@ CpuLoadMeter loadMeter;
 
 plugin instance;
 
-float buf[2][BLOCK_SIZE];
-float *bufs[2] = { buf[0], buf[1] };
+#if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
+float			zero[BLOCK_SIZE];
+#endif
+#if NUM_CHANNELS_IN > 0
+float			x_buf[NUM_CHANNELS_IN * BLOCK_SIZE];
+float *			x_in[NUM_CHANNELS_IN];
+#endif
+#if NUM_ALL_CHANNELS_IN > 0
+const float *		x[NUM_ALL_CHANNELS_IN];
+#else
+const float **		x;
+#endif
+#if NUM_CHANNELS_IN > 0
+float *			y_out[NUM_CHANNELS_OUT];
+#endif
+#if NUM_NON_OPT_CHANNELS_OUT > 0
+float			y_buf[NUM_NON_OPT_CHANNELS_OUT * BLOCK_SIZE];
+#endif
+#if NUM_ALL_CHANNELS_OUT > 0
+float *			y[NUM_ALL_CHANNELS_IN];
+#else
+float **		y;
+#endif
 
 #if NUM_ADC >= 0
 static float clampf(float x, float m, float M) {
@@ -74,24 +96,24 @@ static void AudioCallback(
 #if NUM_CHANNELS_IN > 0
 	for (size_t i = 0; i < n; i++) {
 		const size_t j = i << 1;
-		buf[0][i] = in[j];
+		x_in[0][i] = in[j];
 # if NUM_CHANNELS_IN > 1
-		buf[1][i] = in[j + 1];
+		x_in[1][i] = in[j + 1];
 # endif
 	}
 #endif
 
-	plugin_process(&instance, (const float **)bufs, bufs, n);
+	plugin_process(&instance, x, y, n);
 
 	for (size_t i = 0; i < n; i++) {
 		const size_t j = i << 1;
 #if NUM_CHANNELS_OUT > 0
-		out[j] = buf[0][i];
+		out[j] = y_out[0][i];
 #else
 		out[j] = 0.f;
 #endif
 #if NUM_CHANNELS_OUT > 1
-		out[j + 1] = buf[1][i];
+		out[j + 1] = y_out[1][i];
 #else
 		out[j + 1] = 0.f;
 #endif
@@ -145,6 +167,46 @@ int main() {
 	readADCs();
 #endif
 	plugin_reset(&instance);
+
+#if NUM_ALL_CHANNELS_IN > 0
+	for (size_t i = 0, j = 0, k = 0; i < NUM_ALL_CHANNELS_IN + NUM_ALL_CHANNELS_OUT; i++) {
+		if (audio_bus_data[i].out)
+			continue;
+		for (int l = 0; l < audio_bus_data[i].channels; l++) {
+			if (audio_bus_data[i].optional)
+				x[j] = NULL;
+			else {
+				float * b = x_buf + BLOCK_SIZE * k;
+				x[j] = b;
+				if (AUDIO_BUS_IN == i)
+					x_in[l] = b;
+				k++;
+			}
+			j++;
+		}
+	}
+#else
+	x = NULL;
+#endif
+
+#if NUM_ALL_CHANNELS_OUT > 0
+	for (size_t i = 0, j = 0; i < NUM_ALL_CHANNELS_IN + NUM_ALL_CHANNELS_OUT; i++) {
+		if (!audio_bus_data[i].out)
+			continue;
+		for (int k = 0; k < audio_bus_data[i].channels; k++) {
+			y[j] = y_buf + BLOCK_SIZE * j;
+			if (AUDIO_BUS_OUT == i)
+				y_out[k] = y[j];
+			j++;
+		}
+	}
+#else
+	y = NULL;
+#endif
+
+#if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
+	memset(zero, 0, BLOCK_SIZE * sizeof(float));
+#endif
 
 	hardware.StartAudio(AudioCallback);
 

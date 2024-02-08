@@ -1,10 +1,35 @@
+#define NUM_AUDIO_BUSES_IN		{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length}}
+#define NUM_AUDIO_BUSES_OUT		{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "output").length}}
+
 #define AUDIO_BUS_IN			{{=it.product.buses.findIndex(x => x.type == "audio" && x.direction == "input" && !x.cv && !x.sidechain)}}
 #define AUDIO_BUS_OUT			{{=it.product.buses.findIndex(x => x.type == "audio" && x.direction == "output" && !x.cv && !x.sidechain)}}
 
 #define NUM_CHANNELS_IN			{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "input" && !x.cv && !x.sidechain) ? (it.product.buses.filter(x => x.type == "audio" && x.direction == "input" && !x.cv && !x.sidechain)[0].channels == "mono" ? 1 : 2) : 0}}
 #define NUM_CHANNELS_OUT		{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "output" && !x.cv && !x.sidechain) ? (it.product.buses.filter(x => x.type == "audio" && x.direction == "output" && !x.cv && !x.sidechain)[0].channels == "mono" ? 1 : 2) : 0}}
+#define NUM_NON_OPT_CHANNELS_IN		{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "input" && !x.optional).reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0)}}
+#define NUM_NON_OPT_CHANNELS_OUT	{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "output" && !x.optional).reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0)}}
+#define NUM_ALL_CHANNELS_IN		{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "input").reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0)}}
+#define NUM_ALL_CHANNELS_OUT		{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "output").reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0)}}
 
 #define MIDI_BUS_IN			{{=it.product.buses.findIndex(x => x.type == "midi" && x.direction == "input")}}
+
+#if NUM_AUDIO_BUSES_IN + NUM_AUDIO_BUSES_OUT > 0
+static struct {
+	char	out;
+	char	optional;
+	char	channels;
+} audio_bus_data[NUM_AUDIO_BUSES_IN + NUM_AUDIO_BUSES_OUT] = {
+{{~it.product.buses :b:i}}
+{{?b.type == "audio"}}
+	{
+		/* .out		= */ {{=b.direction == "output" ? 1 : 0}},
+		/* .optional	= */ {{=b.optional ? 1 : 0}},
+		/* .channels	= */ {{=b.channels == "mono" ? 1 : 2}}
+	},
+{{?}}
+{{~}}
+};
+#endif
 
 #define NUM_PARAMETERS			{{=it.product.parameters.length}}
 
