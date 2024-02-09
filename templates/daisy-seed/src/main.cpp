@@ -47,7 +47,7 @@ float *			y[NUM_ALL_CHANNELS_OUT];
 float **		y;
 #endif
 
-#if NUM_ADC >= 0
+#if NUM_PARAMETERS > 0
 static float clampf(float x, float m, float M) {
 	return x < m ? m : (x > M ? M : x);
 }
@@ -71,7 +71,9 @@ static float parameterAdjust(int i, float v) {
 static void setParameter(int i, float v) {
 	plugin_set_parameter(&instance, i, parameterAdjust(i, v));
 }
+#endif
 
+#if NUM_ADC > 0
 static void readADCs() {
 	for (int i = 0, j = 0; i < NUM_PARAMETERS; i++) {
 		if (param_data[i].out || param_data[i].pin < 0)
@@ -90,7 +92,9 @@ static void AudioCallback(
 	loadMeter.OnBlockStart();
 #endif
 
+#if NUM_ADC > 0
 	readADCs();
+#endif
 
 	const size_t n = size >> 1;
 #if NUM_CHANNELS_IN > 0
@@ -128,7 +132,7 @@ int main() {
 	hardware.Configure();
 	hardware.Init();
 
-#if NUM_ADC >= 0
+#if NUM_ADC > 0
 	AdcChannelConfig adcConfig[NUM_ADC];
 	for (int i = 0, j = 0; i < NUM_PARAMETERS; i++) {
 		if (param_data[i].out || param_data[i].pin < 0)
@@ -163,7 +167,7 @@ int main() {
 	loadMeter.Init(sample_rate, BLOCK_SIZE);
 #endif
 
-#if NUM_ADC >= 0
+#if NUM_ADC > 0
 	readADCs();
 #endif
 	plugin_reset(&instance);
@@ -173,7 +177,7 @@ int main() {
 		if (audio_bus_data[i].out)
 			continue;
 		for (int l = 0; l < audio_bus_data[i].channels; l++, j++) {
-			if (AUDIO_BUS_IN == i) {
+			if (AUDIO_BUS_IN == audio_bus_data[i].index) {
 				float * b = x_buf + BLOCK_SIZE * k;
 				x[j] = b;
 				x_in[l] = b;
@@ -195,7 +199,7 @@ int main() {
 		if (!audio_bus_data[i].out)
 			continue;
 		for (int l = 0; l < audio_bus_data[i].channels; l++, j++) {
-			if (AUDIO_BUS_OUT == i) {
+			if (AUDIO_BUS_OUT == audio_bus_data[i].index) {
 				y[j] = y_buf + BLOCK_SIZE * k;
 				y_out[l] = y[j];
 				k++;
@@ -236,8 +240,8 @@ int main() {
 			case ControlChange:
 # if NUM_PARAMETERS > 0 && HAS_MIDI_CC_MAPS
 				for (int i = 0; i < NUM_PARAMETERS; i++)
-					if (midi_cc_maps[i] == data[1]) {
-						setParameter(i, (1.f / 127.f) * data[2]);
+					if (midi_cc_maps[i] == ev.data[0]) {
+						setParameter(i, parameterMap(i, (1.f / 127.f) * ev.data[1]));
 						goto loopNext;
 					}
 # endif

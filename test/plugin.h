@@ -91,7 +91,7 @@ static void plugin_process(plugin *instance, const float **inputs, float **outpu
 
 static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * data) {
 	(void)index;
-	if ((data[0] & 0xf0) && (data[2] != 0))
+	if ((data[0] & 0xf0 == 0x90) && (data[2] != 0))
 		//approx instance->cutoff_k = powf(2.f, (1.f / 12.f) * (note - 60));
 		instance->cutoff_k = data[1] < 64 ? (-0.19558034980097166f * data[1] - 2.361735109225749f) / (data[1] - 75.57552349522389f) : (393.95397927344214f - 7.660826245588588f * data[1]) / (data[1] - 139.0755234952239f);
 }

@@ -217,7 +217,17 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	}
 #endif
 
-	plugin_process(&i->p, i->x, i->y, sample_count);
+#if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
+	const float ** x = i->x;
+#else
+	const float ** x = NULL;
+#endif
+#if DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N > 0
+	float ** y = i-> y;
+#else
+	float ** y = NULL;
+#endif
+	plugin_process(&i->p, x, y, sample_count);
 
 #if DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
 	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_OUTPUTS_N; j++) {

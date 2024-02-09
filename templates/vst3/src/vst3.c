@@ -63,7 +63,7 @@ typedef struct pluginInstance {
 	const float *					inputs[DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N];
 #endif
 #if DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N > 0
-	float *						outputs[DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N];
+	float *						outputs[DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N];
 #endif
 #if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
 	char						inputsActive[DATA_PRODUCT_BUSES_AUDIO_INPUT_N];
@@ -452,6 +452,8 @@ static Steinberg_tresult pluginSetBusArrangements(void* thisInterface, Steinberg
 		if ((busInfoAudioInput[i].channelCount == 1 && inputs[i] != Steinberg_Vst_SpeakerArr_kMono)
 		    || (busInfoAudioInput[i].channelCount == 2 && inputs[i] != Steinberg_Vst_SpeakerArr_kStereo))
 			return Steinberg_kResultFalse;
+#else
+	(void)inputs;
 #endif
 
 #if DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N > 0
@@ -459,6 +461,8 @@ static Steinberg_tresult pluginSetBusArrangements(void* thisInterface, Steinberg
 		if ((busInfoAudioOutput[i].channelCount == 1 && outputs[i] != Steinberg_Vst_SpeakerArr_kMono)
 		    || (busInfoAudioOutput[i].channelCount == 2 && outputs[i] != Steinberg_Vst_SpeakerArr_kStereo))
 			return Steinberg_kResultFalse;
+#else
+	(void)outputs;
 #endif
 
 	return Steinberg_kResultTrue;

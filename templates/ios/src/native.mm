@@ -265,7 +265,7 @@ char audioStart() {
 		if (audio_bus_data[i].out)
 			continue;
 		for (int l = 0; l < audio_bus_data[i].channels; l++, j++) {
-			if (AUDIO_BUS_IN == i) {
+			if (AUDIO_BUS_IN == audio_bus_data[i].index) {
 				float * b = x_buf + BLOCK_SIZE * k;
 				x[j] = b;
 				x_in[l] = b;
@@ -287,7 +287,7 @@ char audioStart() {
 		if (!audio_bus_data[i].out)
 			continue;
 		for (int l = 0; l < audio_bus_data[i].channels; l++, j++) {
-			if (AUDIO_BUS_OUT == i) {
+			if (AUDIO_BUS_OUT == audio_bus_data[i].index) {
 				y[j] = y_buf + BLOCK_SIZE * k;
 				y_out[l] = y[j];
 				k++;

@@ -29,3 +29,4 @@
 * daisy-seed and android: isolate C part from C++
 * cmd help and version
 * common code... (eg buffer handling android ios cmd daisy-seed)?
+* cmd use midi to determine length in synths

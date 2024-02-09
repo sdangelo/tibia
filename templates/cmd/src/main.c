@@ -315,7 +315,7 @@ int main(int argc, char * argv[]) {
 	printf(" fs: %g\n", fs);
 	printf(" bufsize: %zu\n", bufsize);
 #if NUM_CHANNELS_IN > 0
-	printf(" length: %g\n", (double)tw_in.numFramesInHeader / (double)tw_in.h.SampleRate);
+	printf(" length: %g\n", (double)tw_in.numFramesInHeader / (double)fs);
 	printf(" infile: %s\n", infile);
 #else
 	printf(" length: %g\n", length);
@@ -375,7 +375,7 @@ int main(int argc, char * argv[]) {
 		if (audio_bus_data[i].out)
 			continue;
 		for (int l = 0; l < audio_bus_data[i].channels; l++, j++) {
-			if (AUDIO_BUS_IN == i) {
+			if (AUDIO_BUS_IN == audio_bus_data[i].index) {
 				float * b = x_buf + bufsize * k;
 				x[j] = b;
 				x_in[l] = b;
@@ -404,7 +404,7 @@ int main(int argc, char * argv[]) {
 		if (!audio_bus_data[i].out)
 			continue;
 		for (int l = 0; l < audio_bus_data[i].channels; l++, j++) {
-			if (AUDIO_BUS_OUT == i) {
+			if (AUDIO_BUS_OUT == audio_bus_data[i].index) {
 				y[j] = y_buf + bufsize * k;
 				y_out[l] = y[j];
 				k++;
@@ -468,7 +468,7 @@ int main(int argc, char * argv[]) {
 #if NUM_CHANNELS_IN > 0
 	size_t len = tw_in.numFramesInHeader;
 #else
-	size_t len = (size_t)(tw_in.h.SampleRate * length + 0.5f);
+	size_t len = (size_t)(fs * length + 0.5f);
 #endif
 	while (i < len) {
 		size_t left = len - i;
@@ -512,7 +512,7 @@ int main(int argc, char * argv[]) {
 				break;
 			}
 		}
-		midi_next -= 1e6 * ((double)n / (double)tw_in.h.SampleRate);
+		midi_next -= 1e6 * ((double)n / (double)fs);
 #endif
 
 		plugin_process(&instance, x, y, n);

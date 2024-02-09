@@ -15,6 +15,7 @@
 
 #if NUM_AUDIO_BUSES_IN + NUM_AUDIO_BUSES_OUT > 0
 static struct {
+	size_t	index;
 	char	out;
 	char	optional;
 	char	channels;
@@ -22,6 +23,7 @@ static struct {
 {{~it.product.buses :b:i}}
 {{?b.type == "audio"}}
 	{
+		/* .index	= */ {{=i}},
 		/* .out		= */ {{=b.direction == "output" ? 1 : 0}},
 		/* .optional	= */ {{=b.optional ? 1 : 0}},
 		/* .channels	= */ {{=b.channels == "mono" ? 1 : 2}}
