@@ -218,7 +218,20 @@ int main() {
 	memset(zero, 0, BLOCK_SIZE * sizeof(float));
 #endif
 
+#if MIDI_BUS_IN >= 0
+	MidiUsbHandler::Config midi_usb_cfg;
+	midi_usb_cfg.transport_config.periph = MidiUsbTransport::Config::INTERNAL;
+	midi_usb.Init(midi_usb_cfg);
+
+	MidiUartHandler::Config midi_uart_cfg;
+	midi_uart.Init(midi_uart_cfg);
+#endif
+
 	hardware.StartAudio(AudioCallback);
+
+#if MIDI_BUS_IN >= 0
+	midi_uart.StartReceive();
+#endif
 
 	while (1) {
 #if MIDI_BUS_IN >= 0
