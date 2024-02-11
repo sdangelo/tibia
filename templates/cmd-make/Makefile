@@ -33,7 +33,10 @@ endif
 
 PROGRAM = ${BUNDLE_NAME}${EXE_SUFFIX}
 
-C_SRCS = ${COMMON_DIR}/src/main.c ${MIDI_PARSER_DIR}/src/midi-parser.c ${C_SRCS_EXTRA}
+C_SRCS = ${COMMON_DIR}/src/main.c ${C_SRCS_EXTRA}
+ifeq ($(HAS_MIDI_IN), yes)
+	C_SRCS += ${MIDI_PARSER_DIR}/src/midi-parser.c
+endif
 C_OBJS = $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 
 CXX_SRCS = ${CXX_SRCS_EXTRA}

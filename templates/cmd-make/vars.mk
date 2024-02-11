@@ -13,3 +13,5 @@ PLUGIN_DIR := {{=it.cmd_make && it.cmd_make.pluginDir ? it.cmd_make.pluginDir : 
 
 TINYWAV_DIR := {{=it.cmd_make.tinywavDir}}
 MIDI_PARSER_DIR := {{=it.cmd_make.midiParserDir}}
+
+HAS_MIDI_IN := {{=it.product.buses.filter(x => x.type == "midi" && x.direction == "input").length > 0 ? "yes" : "no"}}
