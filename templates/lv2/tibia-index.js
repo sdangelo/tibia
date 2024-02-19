@@ -91,12 +91,18 @@ module.exports = function (data, api, outputCommon, outputData) {
 		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, midiPorts);
 
 		var ports = [];
+		var j = 0;
 		for (var i = 0; i < data.product.parameters.length; i++) {
 			var p = data.product.parameters[i];
 			var e = Object.create(p);
 			e.type = "control";
 			e.symbol = data.lv2.parameterSymbols[i];
 			e.paramIndex = i;
+			if (p.direction == "input") {
+				e.inDataIndex = j;
+				j++;
+			} else
+				e.inDataIndex = -1;
 			ports.push(e);
 		}
 		ports.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);

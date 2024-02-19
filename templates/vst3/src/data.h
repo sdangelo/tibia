@@ -190,6 +190,10 @@ static struct {
 {{~}}
 };
 
+static size_t paramDataIndex[DATA_PRODUCT_PARAMETERS_N] = {
+	{{~it.product.parameters.filter(x => !x.isLatency) :p}}{{=p.dataIndex >= 0 ? p.dataIndex : "(size_t)-1"}}, {{~}}
+};
+
 # endif
 
 #endif

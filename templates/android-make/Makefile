@@ -45,7 +45,7 @@ CXXFLAGS = ${CFLAGS}
 CXXFLAGS_ALL = -I${DATA_DIR}/src -I${PLUGIN_DIR} -fPIC -std=c++11 ${CXXFLAGS} ${CXXFLAGS_EXTRA}
 
 LDFLAGS =
-LDFLAGS_ALL = -shared -static-libstdc++ -landroid
+LDFLAGS_ALL = -shared -static-libstdc++ -lm -landroid
 ifeq (${HAS_MIDI_IN}, yes)
 	LDFLAGS += -lamidi
 endif

@@ -1,7 +1,19 @@
 #include <stdlib.h>
 #include <stdint.h>
+#include <math.h>
 
 #include "data.h"
+
+#if PARAMETERS_N > 0
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wunused-function"
+static float parameter_unmap(size_t index, float value) {
+	const float v = param_data[index].flags & PARAM_MAP_LOG ? logf(value / param_data[index].min) / param_data[index].mapK : (value - param_data[index].min) / (param_data[index].max - param_data[index].min);
+	return v < 0.f ? 0.f : (v > 1.f ? 1.f : v);
+}
+# pragma GCC diagnostic pop
+#endif
+
 #include "plugin.h"
 
 #include <stdio.h>

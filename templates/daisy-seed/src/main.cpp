@@ -2,6 +2,11 @@
 #include <stdint.h>
 
 #include "data.h"
+
+#if NUM_PARAMETERS > 0
+float parameter_unmap(size_t index, float value);
+#endif
+
 #include "plugin.h"
 
 #include <string.h>
@@ -56,11 +61,9 @@ static float parameterMap(int i, float v) {
 	return param_data[i].flags & PARAM_MAP_LOG ? param_data[i].min * expf(param_data[i].mapK * v) : param_data[i].min + (param_data[i].max - param_data[i].min) * v;
 }
 
-/*
 static float parameterUnmap(int i, float v) {
 	return param_data[i].flags & PARAM_MAP_LOG ? logf(v / param_data[i].min) / param_data[i].mapK : (v - param_data[i].min) / (param_data[i].max - param_data[i].min);
 }
-*/
 
 static float parameterAdjust(int i, float v) {
 	v = param_data[i].flags & (PARAM_BYPASS | PARAM_TOGGLED) ? (v >= 0.5f ? 1.f : 0.f)
@@ -71,6 +74,13 @@ static float parameterAdjust(int i, float v) {
 static void setParameter(int i, float v) {
 	plugin_set_parameter(&instance, i, parameterAdjust(i, v));
 }
+
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wunused-function"
+float parameter_unmap(size_t index, float value) {
+	return clampf(parameterUnmap(index, value), 0.f, 1.f);
+}
+# pragma GCC diagnostic pop
 #endif
 
 #if NUM_ADC > 0

@@ -32,8 +32,17 @@ module.exports = function (data, api, outputCommon, outputData) {
 			}
 		};
 
-		for (var i = 0; i < data.product.parameters.length; i++)
-			data.product.parameters[i].paramIndex = i;
+		var j = 0;
+		for (var i = 0; i < data.product.parameters.length; i++) {
+			var p = data.product.parameters[i]
+			p.paramIndex = i;
+			if (p.isLatency)
+				p.dataIndex = -1;
+			else {
+				p.dataIndex = j;
+				j++;
+			}
+		}
 	}
 
 	api.generateFileFromTemplateFile(`data${sep}Info.plist`, `data${sep}Info.plist`, data);

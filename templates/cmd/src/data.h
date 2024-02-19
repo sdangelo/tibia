@@ -42,6 +42,7 @@ static struct {
 # define PARAM_BYPASS	1
 # define PARAM_TOGGLED	(1<<1)
 # define PARAM_INTEGER	(1<<2)
+# define PARAM_MAP_LOG	(1<<3)
 
 static struct {
 	const char *	id;
@@ -50,6 +51,7 @@ static struct {
 	float		min;
 	float		max;
 	uint32_t	flags;
+	float		mapK;
 } param_data[PARAMETERS_N] = {
 {{~it.product.parameters :p:i}}
 	{
@@ -58,7 +60,8 @@ static struct {
 		/* .def		= */ {{=p.defaultValue.toExponential()}}f,
 		/* .min		= */ {{=p.minimum.toExponential()}}f,
 		/* .max		= */ {{=p.maximum.toExponential()}}f,
-		/* .flags	= */ {{?p.isBypass}}PARAM_BYPASS{{??}}0{{?p.toggled}} | PARAM_TOGGLED{{?}}{{?p.integer}} | PARAM_INTEGER{{?}}{{?}}
+		/* .flags	= */ {{?p.isBypass}}PARAM_BYPASS{{??}}0{{?p.toggled}} | PARAM_TOGGLED{{?}}{{?p.integer}} | PARAM_INTEGER{{?}}{{?p.map == "logarithmic"}} | PARAM_MAP_LOG{{?}}{{?}},
+		/* .mapK	= */ {{?p.map == "logarithmic"}}{{=Number(2.0 * Math.log(Math.sqrt(p.maximum * p.minimum) / Math.abs(p.minimum))).toExponential()}}f{{??}}0.f{{?}}
 	},
 {{~}}
 };
