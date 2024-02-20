@@ -44,7 +44,7 @@ static double parameterUnmap(Steinberg_Vst_ParamID id, double v) {
 
 static double parameterAdjust(Steinberg_Vst_ParamID id, double v) {
 	v = parameterData[id].flags & (DATA_PARAM_BYPASS | DATA_PARAM_TOGGLED) ? (v >= 0.5 ? 1.0 : 0.0)
-		: (parameterData[id].flags & DATA_PARAM_INTEGER ? (int32_t)(v + 0.5) : v);
+		: (parameterData[id].flags & DATA_PARAM_INTEGER ? (int32_t)(v + (v >= 0.0 ? 0.5 : -0.5)) : v);
 	return clamp(v, parameterData[id].min, parameterData[id].max);
 }
 

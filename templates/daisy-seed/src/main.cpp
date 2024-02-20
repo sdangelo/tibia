@@ -64,7 +64,7 @@ static float parameterUnmap(int i, float v) {
 
 static float parameterAdjust(int i, float v) {
 	v = param_data[i].flags & (PARAM_BYPASS | PARAM_TOGGLED) ? (v >= 0.5f ? 1.f : 0.f)
-		: (param_data[i].flags & PARAM_INTEGER ? (int32_t)(v + 0.5f) : v);
+		: (param_data[i].flags & PARAM_INTEGER ? (int32_t)(v + (v >= 0.f ? 0.5f : -0.5f)) : v);
 	return clampf(v, param_data[i].min, param_data[i].max);
 }
 

@@ -190,7 +190,7 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 		else if (param_data[j].flags & DATA_PARAM_TOGGLED)
 			v = *i->c[k] > 0.f ? 1.f : 0.f;
 		else if (param_data[j].flags & DATA_PARAM_INTEGER)
-			v = (int32_t)(*i->c[k] + 0.5f);
+			v = (int32_t)(*i->c[k] + (*i->c[k] >= 0.f ? 0.5f : -0.5f));
 		else
 			v = *i->c[k];
 

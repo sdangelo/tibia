@@ -293,7 +293,7 @@ int main(int argc, char * argv[]) {
 		if (param_data[i].flags & (PARAM_BYPASS | PARAM_TOGGLED))
 			v = v > 0.5f ? 1.f : 0.f;
 		else if (param_data[i].flags & PARAM_INTEGER)
-			v = (int32_t)(v + 0.5f);
+			v = (int32_t)(v + (v >= 0.f ? 0.5f : -0.5f));
 
 		param_values[i] = clampf(v, param_data[i].min, param_data[i].max);
 	}
