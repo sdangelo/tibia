@@ -7,11 +7,6 @@
 #include "vst3_c_api.h"
 #pragma GCC diagnostic pop
 #include "data.h"
-
-#if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-static float parameter_unmap(size_t index, float value);
-#endif
-
 #include "plugin.h"
 
 #if defined(__i386__) || defined(__x86_64__)
@@ -52,15 +47,6 @@ static double parameterAdjust(Steinberg_Vst_ParamID id, double v) {
 		: (parameterData[id].flags & DATA_PARAM_INTEGER ? (int32_t)(v + 0.5) : v);
 	return clamp(v, parameterData[id].min, parameterData[id].max);
 }
-
-#if DATA_PRODUCT_PARAMETERS_N > 0
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wunused-function"
-static float parameter_unmap(size_t index, float value) {
-	return clamp(parameterUnmap(paramDataIndex[index], value), 0.0, 1.0);
-}
-# pragma GCC diagnostic pop
-#endif
 
 typedef struct pluginInstance {
 	Steinberg_Vst_IComponentVtbl *			vtblIComponent;

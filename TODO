@@ -12,7 +12,7 @@
 * #if > 0 -> dotjs
 * more mappings, lv2 port props
 * latency mechanism, see https://steinbergmedia.github.io/vst3_dev_portal/pages/Technical+Documentation/Workflow+Diagrams/Get+Latency+Call+Sequence.html, https://steinbergmedia.github.io/vst3_doc/vstinterfaces/classSteinberg_1_1Vst_1_1IAudioProcessor.html#af8884671ccefe68e0a86e72413a0fcf8, https://steinbergmedia.github.io/vst3_dev_portal/pages/Technical+Documentation/Workflow+Diagrams/Audio+Processor+Call+Sequence.html
-* don't include/link libm if not needed, etc. (reduce to minimum reqs)
+* vst3 don't include/link libm if not needed, etc. (reduce to minimum reqs)
 * proper parameter automation
 * proper sample accurate midi (see https://lv2plug.in/book/#_midi_gate)
 * whole midi properly (see https://github.com/harryhaaren/lv2/blob/master/lv2/lv2plug.in/ns/ext/midi/midi.h, https://www.midi.org/specifications-old/item/table-1-summary-of-midi-message, http://midi.teragonaudio.com/tech/midispec.htm)

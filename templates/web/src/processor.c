@@ -6,26 +6,6 @@
 #include <stdint.h>
 
 #include "data.h"
-
-#if DATA_PRODUCT_PARAMETERS_INPUT_N > 0
-static float logf(float x) {
-	union { float f; int32_t i; } v;
-	v.f = x;
-	int e = v.i >> 23;
-	v.i = (v.i & 0x007fffff) | 0x3f800000;
-	const float y = (float)e - 129.213475204444817f + v.f * (3.148297929334117f + v.f * (-1.098865286222744f + v.f * 0.1640425613334452f));
-	return 0.693147180559945f * y;
-}
-
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wunused-function"
-static float parameter_unmap(size_t index, float value) {
-	const float v = param_data[index].mapK != 0 ? logf(value / param_data[index].min) / param_data[index].mapK : (value - param_data[index].min) / (param_data[index].max - param_data[index].min);
-	return v < 0.f ? 0.f : (v > 1.f ? 1.f : v);
-}
-# pragma GCC diagnostic pop
-#endif
-
 #include "plugin.h"
 
 #include "memset.h"

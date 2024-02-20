@@ -1,20 +1,7 @@
 #include <stdlib.h>
 #include <stdint.h>
-#include <math.h>
 
 #include "data.h"
-
-#if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wunused-function"
-static float parameter_unmap(size_t index, float value) {
-	const uint32_t i = param_in_data_index[index];
-	const float v = param_data[i].flags & DATA_PARAM_MAP_LOG ? logf(value / param_data[i].min) / param_data[i].mapK : (value - param_data[i].min) / (param_data[i].max - param_data[i].min);
-	return v < 0.f ? 0.f : (v > 1.f ? 1.f : v);
-}
-# pragma GCC diagnostic pop
-#endif
-
 #include "plugin.h"
 
 #include "lv2/core/lv2.h"
