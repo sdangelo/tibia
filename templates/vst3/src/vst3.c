@@ -1016,9 +1016,9 @@ static Steinberg_Vst_ParamValue controllerGetParamNormalized(void* thisInterface
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
 	int pi = parameterGetIndexById(id);
 # if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-	return pi >= DATA_PRODUCT_PARAMETERS_N ? c->parameters[pi] : parameterUnmap(pi, c->parameters[id]);
+	return pi >= DATA_PRODUCT_PARAMETERS_N ? c->parameters[pi] : parameterUnmap(pi, c->parameters[pi]);
 # else
-	return parameterUnmap(pi, c->parameters[id]);
+	return parameterUnmap(pi, c->parameters[pi]);
 # endif
 #else
 	(void)thisInterface;
