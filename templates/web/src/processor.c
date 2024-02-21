@@ -8,7 +8,7 @@
 #include "data.h"
 #include "plugin.h"
 
-#include "memset.h"
+#include "string.h"
 #include "walloc.h"
 
 typedef struct {

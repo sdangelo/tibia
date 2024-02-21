@@ -5,7 +5,7 @@
 #include "walloc.h"
 
 #include <stdint.h>
-#include "memset.h"
+#include "string.h"
 
 extern unsigned char __heap_base;
 

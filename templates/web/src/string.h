@@ -2,8 +2,8 @@
  * Copyright (C) 2023 Orastron Srl unipersonale
  */
 
-#ifndef MEMSET_H
-#define MEMSET_H
+#ifndef STRING_H
+#define STRING_H
 
 #include <stddef.h>
 
@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 void *memset(void *ptr, int value, size_t num);
+void *memcpy(void *dest, const void *src, size_t num);
 
 #ifdef __cplusplus
 }

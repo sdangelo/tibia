@@ -21,6 +21,7 @@ LDFLAGS_ALL = \
 	-Wl,--export=calloc \
 	-Wl,--export=free \
 	-Wl,--export=memset \
+	-Wl,--export=memcpy \
 	-Wl,--export=processor_new \
 	-Wl,--export=processor_free \
 	-Wl,--export=processor_get_x_buf \
@@ -40,7 +41,7 @@ LDFLAGS_ALL += ${LDFLAGS} ${LDFLAGS_EXTRA}
 CXXFLAGS = ${CFLAGS}
 CXXFLAGS_ALL = -I${COMMON_DIR}/src -I${DATA_DIR}/src -I${PLUGIN_DIR} --target=wasm32 -flto -fvisibility=hidden ${CXXFLAGS} ${CXXFLAGS_EXTRA}
 
-C_SRCS = ${COMMON_DIR}/src/processor.c ${COMMON_DIR}/src/walloc.c ${COMMON_DIR}/src/memset.c
+C_SRCS = ${COMMON_DIR}/src/processor.c ${COMMON_DIR}/src/walloc.c ${COMMON_DIR}/src/string.c
 C_OBJS = $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 
 ifeq ($(CXX_SRCS_EXTRA),)
