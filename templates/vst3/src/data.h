@@ -108,8 +108,8 @@ static uint32_t midiInIndex[DATA_PRODUCT_BUSES_MIDI_INPUT_N] = {
 static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N] = {
 {{~it.product.parameters.filter(x => !x.isLatency) :p:i}}
 	{
-		/* .id				= */ {{=i}},
 {{?p.isBypass}}
+		/* .id				= */ {{=(it.tibia.vst3.sdbm("Bypass") & 0x7fffffff) >>> 0}},
 		/* .title			= */ { {{~Array.from("Bypass") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .shortTitle			= */ { {{~Array.from("Bypass") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { 0 },
@@ -118,6 +118,7 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 		/* .unitId			= */ 0,
 		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsBypass | Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate
 {{??}}
+		/* .id				= */ {{=(it.tibia.vst3.sdbm(p.name) & 0x7fffffff) >>> 0}},
 		/* .title			= */ { {{~Array.from(p.name) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .shortTitle			= */ { {{~Array.from(p.shortName) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { {{~Array.from(p.unit in it.tibia.vst3.units ? it.tibia.vst3.units[p.unit] : "") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
@@ -130,7 +131,7 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 {{~}}
 {{~it.product.buses.filter(x => x.type == "midi" && x.direction == "input") :b:i}}
 	{
-		/* .id				= */ {{=it.product.parameters.filter(x => !x.isLatency).length + 3 * i}},
+		/* .id				= */ {{=(it.tibia.vst3.sdbm(b.name + " Channel Pressure") & 0x7fffffff) >>> 0}},
 		/* .title			= */ { {{~Array.from(b.name + " Channel Pressure") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .shortTitle			= */ { {{~Array.from(b.shortName + " Chan Pres") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { 0 },
@@ -140,7 +141,7 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate
 	},
 	{
-		/* .id				= */ {{=it.product.parameters.filter(x => !x.isLatency).length + 3 * i + 1}},
+		/* .id				= */ {{=(it.tibia.vst3.sdbm(b.name + " Pitch Bend") & 0x7fffffff) >>> 0}},
 		/* .title			= */ { {{~Array.from(b.name + " Pitch Bend") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .shortTitle			= */ { {{~Array.from(b.shortName + " Pitch Bend") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { 0 },
@@ -150,7 +151,7 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate
 	},
 	{
-		/* .id				= */ {{=it.product.parameters.filter(x => !x.isLatency).length + 3 * i + 2}},
+		/* .id				= */ {{=(it.tibia.vst3.sdbm(b.name + " Mod Wheel") & 0x7fffffff) >>> 0}},
 		/* .title			= */ { {{~Array.from(b.name + " Mod Wheel") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .shortTitle			= */ { {{~Array.from(b.shortName + " Mod Wheel") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { 0 },
