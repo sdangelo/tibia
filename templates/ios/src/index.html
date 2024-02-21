@@ -57,7 +57,7 @@ window.onload = async function () {
     var paramsElem = document.getElementById("params");
 
     for (var i = 0; i < data.buses.length; i++)
-        if (!data.buses[i].output) {
+        if (data.buses[i].type == "audio" && data.buses[i].direction == "input") {
             hasAudioPermission = !await needAudioPermission();
             break;
         }
