@@ -34,18 +34,25 @@ static double clamp(double x, double m, double M) {
 	return x < m ? m : (x > M ? M : x);
 }
 
-static double parameterMap(Steinberg_Vst_ParamID id, double v) {
-	return parameterData[id].flags & DATA_PARAM_MAP_LOG ? parameterData[id].min * exp(parameterData[id].mapK * v) : parameterData[id].min + (parameterData[id].max - parameterData[id].min) * v;
+static int parameterGetIndexById(Steinberg_Vst_ParamID id) {
+	for (int i = 0; i < DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N; i++)
+		if (parameterInfo[i].id == id)
+			return i;
+	return -1;
 }
 
-static double parameterUnmap(Steinberg_Vst_ParamID id, double v) {
-	return parameterData[id].flags & DATA_PARAM_MAP_LOG ? log(v / parameterData[id].min) / parameterData[id].mapK : (v - parameterData[id].min) / (parameterData[id].max - parameterData[id].min);
+static double parameterMap(int i, double v) {
+	return parameterData[i].flags & DATA_PARAM_MAP_LOG ? parameterData[i].min * exp(parameterData[i].mapK * v) : parameterData[i].min + (parameterData[i].max - parameterData[i].min) * v;
 }
 
-static double parameterAdjust(Steinberg_Vst_ParamID id, double v) {
-	v = parameterData[id].flags & (DATA_PARAM_BYPASS | DATA_PARAM_TOGGLED) ? (v >= 0.5 ? 1.0 : 0.0)
-		: (parameterData[id].flags & DATA_PARAM_INTEGER ? (int32_t)(v + (v >= 0.0 ? 0.5 : -0.5)) : v);
-	return clamp(v, parameterData[id].min, parameterData[id].max);
+static double parameterUnmap(int i, double v) {
+	return parameterData[i].flags & DATA_PARAM_MAP_LOG ? log(v / parameterData[i].min) / parameterData[i].mapK : (v - parameterData[i].min) / (parameterData[i].max - parameterData[i].min);
+}
+
+static double parameterAdjust(int i, double v) {
+	v = parameterData[i].flags & (DATA_PARAM_BYPASS | DATA_PARAM_TOGGLED) ? (v >= 0.5 ? 1.0 : 0.0)
+		: (parameterData[i].flags & DATA_PARAM_INTEGER ? (int32_t)(v + (v >= 0.0 ? 0.5 : -0.5)) : v);
+	return clamp(v, parameterData[i].min, parameterData[i].max);
 }
 
 typedef struct pluginInstance {
@@ -539,9 +546,10 @@ static void processParams(pluginInstance *p, struct Steinberg_Vst_ProcessData *d
 		if (before ? o != 0 : o <= 0)
 			continue;
 		Steinberg_Vst_ParamID id = q->lpVtbl->getParameterId(q);
+		int pi = parameterGetIndexById(id);
 # if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-		if (id >= DATA_PRODUCT_PARAMETERS_N) {
-			size_t j = id - DATA_PRODUCT_PARAMETERS_N;
+		if (pi >= DATA_PRODUCT_PARAMETERS_N) {
+			size_t j = pi - DATA_PRODUCT_PARAMETERS_N;
 			size_t index = j / 3;
 			uint8_t data[3];
 			switch (j & 0x3) {
@@ -573,10 +581,10 @@ static void processParams(pluginInstance *p, struct Steinberg_Vst_ProcessData *d
 			continue;
 		}
 # endif
-		v = parameterAdjust(id, parameterMap(id, v));
-		if (v != p->parameters[id]) {
-			p->parameters[id] = v;
-			plugin_set_parameter(&p->p, parameterData[id].index, p->parameters[id]);
+		v = parameterAdjust(pi, parameterMap(pi, v));
+		if (v != p->parameters[pi]) {
+			p->parameters[pi] = v;
+			plugin_set_parameter(&p->p, parameterData[pi].index, p->parameters[pi]);
 		}
 	}
 #endif
@@ -666,12 +674,12 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 		p->parameters[i] = v;
 		if (data->outputParameterChanges == NULL)
 			continue;
-		Steinberg_Vst_ParamID id = i;
+		Steinberg_Vst_ParamID id = parameterInfo[i].id;
 		Steinberg_int32 index;
 		struct Steinberg_Vst_IParamValueQueue *q = data->outputParameterChanges->lpVtbl->addParameterData(data->outputParameterChanges, &id, &index);
 		if (q == NULL)
 			continue;
-		q->lpVtbl->addPoint(q, data->numSamples - 1, parameterUnmap(id, v), &index);
+		q->lpVtbl->addPoint(q, data->numSamples - 1, parameterUnmap(i, v), &index);
 	}
 #endif
 
@@ -938,9 +946,10 @@ static Steinberg_tresult controllerGetParamStringByValue(void* thisInterface, St
 	(void)thisInterface;
 
 	TRACE("controller get param string by value\n");
-	if (id >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N)
+	int pi = parameterGetIndexById(id);
+	if (pi >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N || pi < 0)
 		return Steinberg_kResultFalse;
-	dToStr(id >= DATA_PRODUCT_PARAMETERS_N ? valueNormalized : parameterMap(id, valueNormalized), string, 2);
+	dToStr(pi >= DATA_PRODUCT_PARAMETERS_N ? valueNormalized : parameterMap(pi, valueNormalized), string, 2);
 	return Steinberg_kResultTrue;
 }
 
@@ -976,11 +985,12 @@ static Steinberg_tresult controllerGetParamValueByString(void* thisInterface, St
 	(void)thisInterface;
 
 	TRACE("controller get param value by string\n");
-	if (id >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N)
+	int pi = parameterGetIndexById(id);
+	if (pi >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N || pi < 0)
 		return Steinberg_kResultFalse;
 	double v;
 	TCharToD(string, &v);
-	*valueNormalized = id >= DATA_PRODUCT_PARAMETERS_N ? v : parameterUnmap(id, v);
+	*valueNormalized = pi >= DATA_PRODUCT_PARAMETERS_N ? v : parameterUnmap(pi, v);
 	return Steinberg_kResultTrue;
 }
 
@@ -988,24 +998,27 @@ static Steinberg_Vst_ParamValue controllerNormalizedParamToPlain(void* thisInter
 	(void)thisInterface;
 
 	TRACE("controller normalized param to plain\n");
-	return id >= DATA_PRODUCT_PARAMETERS_N ? valueNormalized : parameterMap(id, valueNormalized);
+	int pi = parameterGetIndexById(id);
+	return pi >= DATA_PRODUCT_PARAMETERS_N ? valueNormalized : parameterMap(pi, valueNormalized);
 }
 
 static Steinberg_Vst_ParamValue controllerPlainParamToNormalized(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue plainValue) {
 	(void)thisInterface;
 
 	TRACE("controller plain param to normalized\n");
-	return id >= DATA_PRODUCT_PARAMETERS_N ? plainValue : parameterUnmap(id, plainValue);
+	int pi = parameterGetIndexById(id);
+	return pi >= DATA_PRODUCT_PARAMETERS_N ? plainValue : parameterUnmap(pi, plainValue);
 }
 
 static Steinberg_Vst_ParamValue controllerGetParamNormalized(void* thisInterface, Steinberg_Vst_ParamID id) {
 	TRACE("controller get param normalized\n");
 #if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
+	int pi = parameterGetIndexById(id);
 # if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-	return id >= DATA_PRODUCT_PARAMETERS_N ? c->parameters[id] : parameterUnmap(id, c->parameters[id]);
+	return pi >= DATA_PRODUCT_PARAMETERS_N ? c->parameters[pi] : parameterUnmap(pi, c->parameters[id]);
 # else
-	return parameterUnmap(id, c->parameters[id]);
+	return parameterUnmap(pi, c->parameters[id]);
 # endif
 #else
 	(void)thisInterface;
@@ -1017,10 +1030,11 @@ static Steinberg_Vst_ParamValue controllerGetParamNormalized(void* thisInterface
 static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue value) {
 	TRACE("controller set param normalized\n");
 #if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-	if (id >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N)
+	int pi = parameterGetIndexById(id);
+	if (pi >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N || pi < 0)
 		return Steinberg_kResultFalse;
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
-	c->parameters[id] = id >= DATA_PRODUCT_PARAMETERS_N ? value : parameterAdjust(id, parameterMap(id, value));
+	c->parameters[pi] = pi >= DATA_PRODUCT_PARAMETERS_N ? value : parameterAdjust(pi, parameterMap(pi, value));
 	return Steinberg_kResultTrue;
 #else
 	(void)thisInterface;
@@ -1102,15 +1116,15 @@ static Steinberg_tresult controllerGetMidiControllerAssignment(void* thisInterfa
 		return Steinberg_kInvalidArgument;
 	switch (midiControllerNumber) {
 	case Steinberg_Vst_ControllerNumbers_kAfterTouch:
-		*id = DATA_PRODUCT_PARAMETERS_N + 3 * busIndex;
+		*id = parameterInfo[DATA_PRODUCT_PARAMETERS_N + 3 * busIndex].id;
 		return Steinberg_kResultTrue;
 		break;
 	case Steinberg_Vst_ControllerNumbers_kPitchBend:
-		*id = DATA_PRODUCT_PARAMETERS_N + 3 * busIndex + 1;
+		*id = parameterInfo[DATA_PRODUCT_PARAMETERS_N + 3 * busIndex + 1].id;
 		return Steinberg_kResultTrue;
 		break;
 	case Steinberg_Vst_ControllerNumbers_kCtrlModWheel:
-		*id = DATA_PRODUCT_PARAMETERS_N + 3 * busIndex + 2;
+		*id = parameterInfo[DATA_PRODUCT_PARAMETERS_N + 3 * busIndex + 2].id;
 		return Steinberg_kResultTrue;
 		break;
 	default:
