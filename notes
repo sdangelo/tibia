@@ -145,9 +145,9 @@ product {
 				parameter is latency output? boolean - lots of implications, default false
 				VST3: TBD
 				LV2: manifest.ttl lv2:port, TBD round output value
-				web: not used
-				cmd: not used
-				android: not used
+				web: not (yet) used
+				cmd: not (yet) used
+				android: not (yet) used
 			defaultValue:
 				default value, number, mapped, required for non-bypass
 				VST3: ParameterInfo defaultNormalizedValue, controller initialize
@@ -195,9 +195,9 @@ product {
 				labeled values, default none
 				VST3: TBD
 				LV2: manifest.ttl lv2:port lv2:scalePoint
-				web: not used
-				cmd: not used
-				android: not used
+				web: not (yet) used
+				cmd: not (yet) used
+				android: not (yet) used
 			list:
 				parameter is a list (using scalePoints values)? default false
 				VST3: TBD (+approx to closest?)
@@ -210,8 +210,8 @@ product {
 				VST3: ParameterInfo units
 				LV2: manifest.ttl lv2:port units:unit
 				web: web-demo value <span> innerText
-				cmd: not used
-				android: not used
+				cmd: not (yet) used
+				android: not (yet) used
 			map:
 				"linear" vs "logarithmic"
 				VST3: many places (requires libm)
