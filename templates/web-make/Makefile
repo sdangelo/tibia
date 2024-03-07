@@ -76,7 +76,7 @@ ALL = build/web/${BUNDLE_NAME}.wasm build/web/${BUNDLE_NAME}_processor.js build/
 
 default: all
 
--include ${COMMON_DIR}/demo.mk
+-include ${COMMON_DIR}/web-extra.mk
 
 all: ${ALL}
 
