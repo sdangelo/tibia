@@ -172,9 +172,8 @@ static void activate(LV2_Handle instance) {
 	plugin_instance * i = (plugin_instance *)instance;
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
-		uint32_t k = param_data[j].index;
-		i->params[j] = i->c[k] != NULL ? *i->c[k] : param_data[j].def;
-		plugin_set_parameter(&i->p, k, i->params[j]);
+		i->params[j] = i->c[j] != NULL ? *i->c[j] : param_data[j].def;
+		plugin_set_parameter(&i->p, param_data[j].index, i->params[j]);
 	}
 #endif
 	plugin_reset(&i->p);
@@ -201,23 +200,22 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
-		uint32_t k = param_data[j].index;
-		if (i->c[k] == NULL)
+		if (i->c[j] == NULL)
 			continue;
 		float v;
 		if (param_data[j].flags & DATA_PARAM_BYPASS)
-			v = *i->c[k] > 0.f ? 0.f : 1.f;
+			v = *i->c[j] > 0.f ? 0.f : 1.f;
 		else if (param_data[j].flags & DATA_PARAM_TOGGLED)
-			v = *i->c[k] > 0.f ? 1.f : 0.f;
+			v = *i->c[j] > 0.f ? 1.f : 0.f;
 		else if (param_data[j].flags & DATA_PARAM_INTEGER)
-			v = (int32_t)(*i->c[k] + (*i->c[k] >= 0.f ? 0.5f : -0.5f));
+			v = (int32_t)(*i->c[j] + (*i->c[j] >= 0.f ? 0.5f : -0.5f));
 		else
-			v = *i->c[k];
+			v = *i->c[j];
 
 		v = clampf(v, param_data[j].min, param_data[j].max);
 		if (v != i->params[j]) {
 			i->params[j] = v;
-			plugin_set_parameter(&i->p, k, v);
+			plugin_set_parameter(&i->p, param_data[j].index, v);
 		}
 	}
 #endif
