@@ -32,7 +32,8 @@ SOURCES := \
 	${COMMON_DIR}/src/app-Bridging-Header.h \
 	${PLUGIN_DIR}/plugin.h \
 	${C_SRCS_EXTRA} \
-	${CXX_SRCS_EXTRA}
+	${CXX_SRCS_EXTRA} \
+	${SRCS_EXTRA}
 SOURCES_OUT = $(addprefix build/gen/src/, $(notdir $(SOURCES)))
 
 all: build/gen/${BUNDLE_NAME}.xcodeproj
