@@ -37,7 +37,14 @@ targets:
 {{?}}
     info:
       path: Info.plist
-{{?it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length > 0}}
+{{?(it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length > 0) || (it.ios_make && it.ios_make.infoProperties)}}
       properties:
+{{?it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length > 0}}
         NSMicrophoneUsageDescription: Need audio input for processing sound
+{{?}}
+{{?it.ios_make && it.ios_make.infoProperties}}
+{{~it.ios_make.infoProperties :p}}
+        {{=p.key}}: {{=p.value.toString()}}
+{{~}}
+{{?}}
 {{?}}

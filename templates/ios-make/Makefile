@@ -54,4 +54,4 @@ clean:
 PERCENT := %
 
 $(SOURCES_OUT): build/gen/src/%: $$(filter $$(PERCENT)/%,$$(SOURCES)) | build/gen/src
-	cp $^ $@
+	cp -R $^ $@
