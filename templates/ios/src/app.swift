@@ -69,7 +69,7 @@ struct WebView: UIViewRepresentable {
 		let configuration = WKWebViewConfiguration()
 		configuration.userContentController.addScriptMessageHandler(Coordinator(), contentWorld: .page, name: "listener")
 		let webView = WKWebView(frame: .zero, configuration: configuration)
-		webView.isInspectable = true
+		//webView.isInspectable = true
 		return webView
 	}
 

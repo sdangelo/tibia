@@ -21,9 +21,12 @@
 name: {{=it.product.bundleName}}
 targets:
   {{=it.product.bundleName}}:
+{{?it.ios_make.supportedDestinations}}
+    supportedDestinations: {{=Array.isArray(it.ios_make.supportedDestinations) ? "[" + it.ios_make.supportedDestinations.toString() + "]" : it.ios_make.supportedDestinations}}
+{{??}}
     platform: [iOS]
-    deploymentTarget:
-      iOS: {{=it.ios_make.deploymentTarget}}
+{{?}}
+    deploymentTarget: "{{=it.ios_make.deploymentTarget}}"
     type: application
     sources:
       - path: src
@@ -37,14 +40,19 @@ targets:
 {{?}}
     info:
       path: Info.plist
-{{?(it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length > 0) || (it.ios_make && it.ios_make.infoProperties)}}
+{{?(it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length > 0) || it.ios_make.infoProperties || it.ios_make.uiLaunchScreen}}
       properties:
 {{?it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length > 0}}
         NSMicrophoneUsageDescription: Need audio input for processing sound
 {{?}}
-{{?it.ios_make && it.ios_make.infoProperties}}
+{{?it.ios_make.infoProperties}}
 {{~it.ios_make.infoProperties :p}}
-        {{=p.key}}: {{=p.value.toString()}}
+        {{=p.key}}: {{=Array.isArray(p.value) ? "[" + p.value.toString() + "]" : p.value}}
 {{~}}
+{{?}}
+{{?it.ios_make.launchScreen}}
+        UILaunchScreen:
+          UIColorName: {{=it.ios_make.launchScreen.colorName}}
+          UIImageName: {{=it.ios_make.launchScreen.imageName}}
 {{?}}
 {{?}}
