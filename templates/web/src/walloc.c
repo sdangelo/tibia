@@ -127,7 +127,7 @@ void *realloc(void *ptr, size_t size) {
 }
 
 void *calloc(size_t nmemb, size_t size) {
-	if (nmemb == 0 || SIZE_MAX / nmemb > size || (SIZE_MAX / nmemb == size && SIZE_MAX % nmemb != 0))
+	if (nmemb == 0 || SIZE_MAX / nmemb < size || (SIZE_MAX / nmemb == size && SIZE_MAX % nmemb != 0))
 		return NULL;
 	size_t s = nmemb * size;
 	void *m = malloc(s);
