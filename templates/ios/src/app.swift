@@ -97,6 +97,12 @@ struct templateApp: App {
 	var body: some Scene {
 		WindowGroup {
 			ContentView()
+                        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+                            audioPause()
+                        }
+                        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                            audioResume()
+                        }
 		}
 	}
 }

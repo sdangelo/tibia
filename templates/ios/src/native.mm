@@ -36,6 +36,8 @@
 #define BLOCK_SIZE  32
 
 static ma_device	device;
+static ma_device_config	deviceConfig;
+char			device_inited = 0;
 static plugin		instance;
 static void *		mem;
 #if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
@@ -189,14 +191,14 @@ extern "C"
 char audioStart() {
 #if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
 # if NUM_CHANNELS_IN == 0
-	ma_device_config deviceConfig = ma_device_config_init(ma_device_type_playback);
+	deviceConfig = ma_device_config_init(ma_device_type_playback);
 # elif NUM_CHANNELS_OUT == 0
-	ma_device_config deviceConfig = ma_device_config_init(ma_device_type_capture);
+	deviceConfig = ma_device_config_init(ma_device_type_capture);
 # else
-	ma_device_config deviceConfig = ma_device_config_init(ma_device_type_duplex);
+	deviceConfig = ma_device_config_init(ma_device_type_duplex);
 # endif
 #else
-	ma_device_config deviceConfig = ma_device_config_init(ma_device_type_playback);
+	deviceConfig = ma_device_config_init(ma_device_type_playback);
 #endif
 
 	deviceConfig.periodSizeInFrames		= BLOCK_SIZE;
@@ -328,6 +330,9 @@ char audioStart() {
 		ma_device_uninit(&device);
 		return false;
 	}
+
+	device_inited = 1;
+
 	return true;
 }
 
@@ -339,6 +344,23 @@ void audioStop() {
 		free(mem);
 	plugin_fini(&instance);
 	// No need to close MIDI connections (e.g. via MIDIClientDispose), the system terminates them when the app terminates.
+}
+
+extern "C"
+void audioPause() {
+	if (device_inited) {
+		ma_device_stop(&device);
+		ma_device_uninit(&device);
+	}
+}
+
+extern "C"
+void audioResume() {
+	// TODO: couldn't this could fail?...
+	if (device_inited) {
+		ma_device_init(NULL, &deviceConfig, &device);
+		ma_device_start(&device);
+	}
 }
 
 extern "C"

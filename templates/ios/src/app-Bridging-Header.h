@@ -20,5 +20,7 @@
 
 char audioStart();
 void audioStop();
+void audioPause();
+void audioResume();
 void setParameter(int i, float v);
 float getParameter(int i);
