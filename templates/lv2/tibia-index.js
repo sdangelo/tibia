@@ -34,6 +34,7 @@ module.exports = function (data, api, outputCommon, outputData) {
 				{ id: "pprops",	uri: "http://lv2plug.in/ns/ext/port-props#" },
 				{ id: "rdf",	uri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#" },
 				{ id: "rdfs",	uri: "http://www.w3.org/2000/01/rdf-schema#" },
+				{ id: "ui",	uri: "http://lv2plug.in/ns/extensions/ui#" },
 				{ id: "units",	uri: "http://lv2plug.in/ns/extensions/units#" },
 				{ id: "urid",	uri: "http://lv2plug.in/ns/ext/urid#" }
 			],

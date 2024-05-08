@@ -64,3 +64,7 @@ static uint32_t param_out_index[DATA_PRODUCT_CONTROL_OUTPUTS_N] = {
 	{{~it.tibia.lv2.ports.filter(x => x.type == "control" && x.direction == "output") :p}}{{=p.paramIndex}}, {{~}}
 };
 #endif
+
+{{?it.lv2.ui}}
+#define DATA_LV2_UI_URI				"{{=it.tibia.CGetUTF8StringLiteral(it.tibia.lv2.expandURI(it.lv2.ui.uri))}}"
+{{?}}

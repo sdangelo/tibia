@@ -8,6 +8,9 @@
 		"types": [ "@lv2:AmplifierPlugin" ],
 		"version": "1.0",
 		"busSymbols": [ "input", "output", "midi_in", "midi_out" ],
-		"parameterSymbols": [ "gain", "delay", "cutoff", "enabled", "yz1" ]
+		"parameterSymbols": [ "gain", "delay", "cutoff", "enabled", "yz1" ],
+		"ui": {
+			"uri": "@example:tibia_test_ui"
+		}
 	}
 }

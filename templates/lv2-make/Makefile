@@ -22,6 +22,7 @@ include vars.mk
 
 ifeq ($(OS), Windows_NT)
 	DLL_SUFFIX = .dll
+	UI_TYPE = WindowsUI
 	LV2DIR = $(shell echo '${COMMONPROGRAMFILES}' | sed 's:\\:/:g')/LV2
 	LV2DIR_USER = $(shell echo '${APPDATA}' | sed 's:\\:/:g')/LV2
 	CC = gcc
@@ -30,12 +31,14 @@ else
 	UNAME_S = $(shell uname -s)
 	ifeq ($(UNAME_S), Darwin)
 		DLL_SUFFIX = .dylib
+		UI_TYPE = CocoaUI
 		LV2DIR = /Library/Audio/Plug-Ins/LV2
 		LV2DIR_USER = ${HOME}/Library/Audio/Plug-Ins/LV2
 		CC = clang
 		CXX = clang++
 	else
 		DLL_SUFFIX = .so
+		UI_TYPE = X11UI
 		PREFIX = /usr/local
 		LV2DIR = ${PREFIX}/lib/lv2
 		LV2DIR_USER = ${HOME}/.lv2
@@ -76,7 +79,7 @@ CXX_OBJS = $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 all: build/${BUNDLE_DIR}/manifest.ttl build/${BUNDLE_DIR}/${DLL_FILE}
 
 build/${BUNDLE_DIR}/manifest.ttl: ${DATA_DIR}/data/manifest.ttl.in | build/${BUNDLE_DIR}
-	cat $^ | sed s/@DLL_SUFFIX@/${DLL_SUFFIX}/g > $@
+	cat $^ | sed s/@DLL_SUFFIX@/${DLL_SUFFIX}/g | sed s/@UI_TYPE@/${UI_TYPE}/g > $@
 
 ifeq ($(CXX_OBJS),)
 build/${BUNDLE_DIR}/${DLL_FILE}: ${C_OBJS} | build/${BUNDLE_DIR}

@@ -50,6 +50,69 @@
 #include <pmmintrin.h>
 #endif
 
+#ifdef PLUGIN_UI
+# ifdef __linux__
+// Why generate the C interface when you can just not give a fuck? Thank you Steinberg!
+
+typedef struct Steinberg_ITimerHandlerVtbl
+{
+	/* methods derived from "Steinberg_FUnknown": */
+	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* queryInterface) (void* thisInterface, const Steinberg_TUID iid, void** obj);
+	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* addRef) (void* thisInterface);
+	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
+
+	/* methods derived from "Steinberg_ITimerHandler": */
+	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* onTimer) (void* thisInterface);
+} Steinberg_ITimerHandlerVtbl;
+
+typedef struct Steinberg_ITimerHandler
+{
+    struct Steinberg_ITimerHandlerVtbl* lpVtbl;
+} Steinberg_ITimerHandler;
+
+static const Steinberg_TUID Steinberg_ITimerHandler_iid = SMTG_INLINE_UID (0x10BDD94F, 0x41424774, 0x821FAD8F, 0xECA72CA9);
+
+typedef struct Steinberg_IEventHandlerVtbl
+{
+	/* methods derived from "Steinberg_FUnknown": */
+	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* queryInterface) (void* thisInterface, const Steinberg_TUID iid, void** obj);
+	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* addRef) (void* thisInterface);
+	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
+
+	/* methods derived from "Steinberg_IEventHandler": */
+	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* onFDIsSet) (void* thisInterface, int fd);
+} Steinberg_IEventHandlerVtbl;
+
+typedef struct Steinberg_IEventHandler
+{
+    struct Steinberg_IEventHandlerVtbl* lpVtbl;
+} Steinberg_IEventHandler;
+
+static const Steinberg_TUID Steinberg_IEventHandler_iid = SMTG_INLINE_UID (0x561E65C9, 0x13A0496F, 0x813A2C35, 0x654D7983);
+
+typedef struct Steinberg_IRunLoopVtbl
+{
+	/* methods derived from "Steinberg_FUnknown": */
+	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* queryInterface) (void* thisInterface, const Steinberg_TUID iid, void** obj);
+	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* addRef) (void* thisInterface);
+	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
+
+	/* methods derived from "Steinberg_IRunLoop": */
+	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* registerEventHandler) (void* thisInterface, struct Steinberg_IEventHandler* handler, int fd);
+	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* unregisterEventHandler) (void* thisInterface, struct Steinberg_IEventHandler* handler);
+	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* registerTimer) (void* thisInterface, struct Steinberg_ITimerHandler* handler, uint64_t milliseconds);
+	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* unregisterTimer) (void* thisInterface, struct Steinberg_ITimerHandler* handler);
+} Steinberg_IRunLoopVtbl;
+
+typedef struct Steinberg_IRunLoop
+{
+    struct Steinberg_IRunLoopVtbl* lpVtbl;
+} Steinberg_IRunLoop;
+
+static const Steinberg_TUID Steinberg_IRunLoop_iid = SMTG_INLINE_UID (0x18C35366, 0x97764F1A, 0x9C5B8385, 0x7A871389);
+# endif
+#endif
+
 static double clamp(double x, double m, double M) {
 	return x < m ? m : (x > M ? M : x);
 }
@@ -771,12 +834,12 @@ static Steinberg_Vst_IProcessContextRequirementsVtbl pluginVtblIProcessContextRe
 	/* .getProcessContextRequirements	= */ pluginGetProcessContextRequirements
 };
 
+#ifdef PLUGIN_UI
 typedef struct plugView {
 	Steinberg_IPlugViewVtbl *	vtblIPlugView;
 	Steinberg_uint32		refs;
 	Steinberg_IPlugFrame *		frame;
 } plugView;
-//static Steinberg_IPlugViewVtbl plugViewVtblIPlugView;
 
 static Steinberg_tresult plugViewQueryInterface(void *thisInterface, const Steinberg_TUID iid, void ** obj) {
 	TRACE("plugView IEditController queryInterface %p\n", thisInterface);
@@ -906,29 +969,32 @@ static Steinberg_tresult plugViewCheckSizeConstraint(void* thisInterface, struct
 
 static Steinberg_IPlugViewVtbl plugViewVtblIPlugView = {
 	/* FUnknown */
-	/* .queryInterface			= */ plugViewQueryInterface,
-	/* .addRef				= */ plugViewAddRef,
-	/* .release				= */ plugViewRelease,
+	/* .queryInterface		= */ plugViewQueryInterface,
+	/* .addRef			= */ plugViewAddRef,
+	/* .release			= */ plugViewRelease,
 
 	/* IPlugView */
-	/* .isPlatformTypeSupported		= */ plugViewIsPlatformTypeSupported,
-	/* .attached				= */ plugViewAttached,
-	/* .removed				= */ plugViewRemoved,
-	/* .onWheel				= */ plugViewOnWheel,
-	/* .onKeyDown				= */ plugViewOnKeyDown,
-	/* .onKeyUp				= */ plugViewOnKeyUp,
-	/* .getSize				= */ plugViewGetSize,
-	/* .onSize				= */ plugViewOnSize,
-	/* .onFocus				= */ plugViewOnFocus,
-	/* .setFrame				= */ plugViewSetFrame,
-	/* .canResize				= */ plugViewCanResize,
-	/* .checkSizeConstraint			= */ plugViewCheckSizeConstraint
+	/* .isPlatformTypeSupported	= */ plugViewIsPlatformTypeSupported,
+	/* .attached			= */ plugViewAttached,
+	/* .removed			= */ plugViewRemoved,
+	/* .onWheel			= */ plugViewOnWheel,
+	/* .onKeyDown			= */ plugViewOnKeyDown,
+	/* .onKeyUp			= */ plugViewOnKeyUp,
+	/* .getSize			= */ plugViewGetSize,
+	/* .onSize			= */ plugViewOnSize,
+	/* .onFocus			= */ plugViewOnFocus,
+	/* .setFrame			= */ plugViewSetFrame,
+	/* .canResize			= */ plugViewCanResize,
+	/* .checkSizeConstraint		= */ plugViewCheckSizeConstraint
 };
+#endif
 
 typedef struct controller {
 	Steinberg_Vst_IEditControllerVtbl *	vtblIEditController;
 	Steinberg_Vst_IMidiMappingVtbl *	vtblIMidiMapping;
+#ifdef PLUGIN_UI
 	//Steinberg_Vst_IConnectionPointVtbl *	vtblIConnectionPoint;
+#endif
 	Steinberg_uint32			refs;
 	Steinberg_FUnknown *			context;
 #if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
@@ -939,7 +1005,9 @@ typedef struct controller {
 
 static Steinberg_Vst_IEditControllerVtbl controllerVtblIEditController;
 static Steinberg_Vst_IMidiMappingVtbl controllerVtblIMidiMapping;
+#ifdef PLUGIN_UI
 //static Steinberg_Vst_IConnectionPointVtbl controllerVtblIConnectionPoint;
+#endif
 
 static Steinberg_tresult controllerQueryInterface(controller *c, const Steinberg_TUID iid, void ** obj) {
 	// Same as above (pluginQueryInterface)
@@ -950,8 +1018,10 @@ static Steinberg_tresult controllerQueryInterface(controller *c, const Steinberg
 		offset = offsetof(controller, vtblIEditController);
 	else if (memcmp(iid, Steinberg_Vst_IMidiMapping_iid, sizeof(Steinberg_TUID)) == 0)
 		offset = offsetof(controller, vtblIMidiMapping);
+#ifdef PLUGIN_UI
 	/*else if (memcmp(iid, Steinberg_Vst_IConnectionPoint_iid, sizeof(Steinberg_TUID)) == 0)
 		offset = offsetof(controller, vtblIConnectionPoint);*/
+#endif
 	else {
 		TRACE(" not supported\n");
 		for (int i = 0; i < 16; i++)
@@ -1240,6 +1310,7 @@ static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Ste
 
 	TRACE("controller create view %s\n", name);
 
+#ifdef PLUGIN_UI
 	if (strcmp(name, "editor"))
 		return NULL;
 
@@ -1252,6 +1323,11 @@ static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Ste
 	view->frame = NULL;
 
 	return (struct Steinberg_IPlugView *)view;
+#else
+	(void)name;
+
+	return NULL;
+#endif
 }
 
 static Steinberg_Vst_IEditControllerVtbl controllerVtblIEditController = {
@@ -1331,7 +1407,8 @@ static Steinberg_Vst_IMidiMappingVtbl controllerVtblIMidiMapping = {
 	/* .getMidiControllerAssignment	= */ controllerGetMidiControllerAssignment
 };
 
-#if 0
+#ifdef PLUGIN_UI
+# if 0
 static Steinberg_tresult controllerIConnectionPointQueryInterface(void* thisInterface, const Steinberg_TUID iid, void** obj) {
 	TRACE("controller IConnectionPoint queryInterface %p\n", thisInterface);
 	return controllerQueryInterface((controller *)((char *)thisInterface - offsetof(controller, vtblIConnectionPoint)), iid, obj);
@@ -1378,6 +1455,7 @@ static Steinberg_Vst_IConnectionPointVtbl controllerVtblIConnectionPoint = {
 	/* .disconnect			= */ controllerIConnectionPointDisconnect,
 	/* .notify			= */ controllerIConnectionPointNotify
 };
+# endif
 #endif
 
 static Steinberg_tresult factoryQueryInterface(void *thisInterface, const Steinberg_TUID iid, void ** obj) {
@@ -1498,7 +1576,9 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 			return Steinberg_kOutOfMemory;
 		c->vtblIEditController = &controllerVtblIEditController;
 		c->vtblIMidiMapping = &controllerVtblIMidiMapping;
+#ifdef PLUGIN_UI
 		//c->vtblIConnectionPoint = &controllerVtblIConnectionPoint;
+#endif
 		c->refs = 1;
 		c->context = NULL;
 		c->componentHandler = NULL;
@@ -1583,85 +1663,13 @@ static Steinberg_tresult factoryGetClassInfoUnicode(void* thisInterface, Steinbe
 	return Steinberg_kResultOk;
 }
 
-#ifdef __linux__
-// Why generate the C interface when you can just not give a fuck? Thank you Steinberg!
-
-typedef struct Steinberg_ITimerHandlerVtbl
-{
-	/* methods derived from "Steinberg_FUnknown": */
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* queryInterface) (void* thisInterface, const Steinberg_TUID iid, void** obj);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* addRef) (void* thisInterface);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
-
-	/* methods derived from "Steinberg_ITimerHandler": */
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* onTimer) (void* thisInterface);
-} Steinberg_ITimerHandlerVtbl;
-
-typedef struct Steinberg_ITimerHandler
-{
-    struct Steinberg_ITimerHandlerVtbl* lpVtbl;
-} Steinberg_ITimerHandler;
-
-static const Steinberg_TUID Steinberg_ITimerHandler_iid = SMTG_INLINE_UID (0x10BDD94F, 0x41424774, 0x821FAD8F, 0xECA72CA9);
-
-typedef struct Steinberg_IEventHandlerVtbl
-{
-	/* methods derived from "Steinberg_FUnknown": */
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* queryInterface) (void* thisInterface, const Steinberg_TUID iid, void** obj);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* addRef) (void* thisInterface);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
-
-	/* methods derived from "Steinberg_IEventHandler": */
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* onFDIsSet) (void* thisInterface, int fd);
-} Steinberg_IEventHandlerVtbl;
-
-typedef struct Steinberg_IEventHandler
-{
-    struct Steinberg_IEventHandlerVtbl* lpVtbl;
-} Steinberg_IEventHandler;
-
-static const Steinberg_TUID Steinberg_IEventHandler_iid = SMTG_INLINE_UID (0x561E65C9, 0x13A0496F, 0x813A2C35, 0x654D7983);
-
-typedef struct Steinberg_IRunLoopVtbl
-{
-	/* methods derived from "Steinberg_FUnknown": */
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* queryInterface) (void* thisInterface, const Steinberg_TUID iid, void** obj);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* addRef) (void* thisInterface);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
-
-	/* methods derived from "Steinberg_IRunLoop": */
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* registerEventHandler) (void* thisInterface, struct Steinberg_IEventHandler* handler, int fd);
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* unregisterEventHandler) (void* thisInterface, struct Steinberg_IEventHandler* handler);
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* registerTimer) (void* thisInterface, struct Steinberg_ITimerHandler* handler, uint64_t milliseconds);
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* unregisterTimer) (void* thisInterface, struct Steinberg_ITimerHandler* handler);
-} Steinberg_IRunLoopVtbl;
-
-typedef struct Steinberg_IRunLoop
-{
-    struct Steinberg_IRunLoopVtbl* lpVtbl;
-} Steinberg_IRunLoop;
-
-static const Steinberg_TUID Steinberg_IRunLoop_iid = SMTG_INLINE_UID (0x18C35366, 0x97764F1A, 0x9C5B8385, 0x7A871389);
-
-struct Steinberg_IRunLoop* IRunLoop = NULL;
-#endif
-
 static Steinberg_tresult factorySetHostContext(void* thisInterface, struct Steinberg_FUnknown* context) {
 	(void)thisInterface;
 	(void)context;
 
 	TRACE("factory set host context %p %p\n", thisInterface, context);
 
-#ifdef __linux__
-	if (context->lpVtbl->queryInterface(context, Steinberg_IRunLoop_iid, (void **)&IRunLoop) == Steinberg_kResultOk) {
-		TRACE(" IRunLoop %p\n", IRunLoop);
-		context->lpVtbl->release(context);
-	} else
-		IRunLoop = NULL;
-	return Steinberg_kResultTrue;
-#else
 	return Steinberg_kNotImplemented;
-#endif
 }
 
 static Steinberg_IPluginFactory3Vtbl factoryVtbl = {

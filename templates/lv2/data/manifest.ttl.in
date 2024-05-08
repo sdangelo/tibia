@@ -25,6 +25,9 @@
 	lv2:optionalFeature log:log ;
 {{?}}
 	lv2:optionalFeature lv2:hardRTCapable ;
+{{?it.lv2.ui}}
+	ui:ui {{=it.tibia.lv2.ttlURI(it.lv2.ui.uri)}} ;
+{{?}}
 	lv2:port [
 {{~it.tibia.lv2.ports :p:i}}
 {{?p.isBypass}}
@@ -117,3 +120,9 @@
 	] .
 {{?}}
 {{~}}
+
+{{?it.lv2.ui}}
+{{=it.tibia.lv2.ttlURI(it.lv2.ui.uri)}}
+	a ui:@UI_TYPE@ ;
+	ui:binary <{{=it.product.bundleName}}@DLL_SUFFIX@> .
+{{?}}

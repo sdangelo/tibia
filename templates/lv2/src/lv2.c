@@ -34,6 +34,9 @@
 #include "lv2/midi/midi.h"
 #include "lv2/urid/urid.h"
 #endif
+#ifdef PLUGIN_UI
+#include "lv2/ui/ui.h"
+#endif
 
 #if defined(__i386__) || defined(__x86_64__)
 #include <xmmintrin.h>
@@ -288,3 +291,35 @@ static const LV2_Descriptor descriptor = {
 LV2_SYMBOL_EXPORT const LV2_Descriptor * lv2_descriptor(uint32_t index) {
 	return index == 0 ? &descriptor : NULL;
 }
+
+#ifdef PLUGIN_UI
+static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const char * plugin_uri, const char * bundle_path, LV2UI_Write_Function write_function, LV2UI_Controller controller, LV2UI_Widget * widget, const LV2_Feature * const * features) {
+	//TODO
+	*widget = NULL;
+	return NULL;
+}
+
+static void ui_cleanup(LV2UI_Handle handle) {
+	//TODO
+}
+
+static void ui_port_event(LV2UI_Handle handle, uint32_t port_index, uint32_t buffer_size, uint32_t format, const void * buffer) {
+	//TODO
+}
+
+static const void * extension_data(const char * uri) {
+	//TODO
+}
+
+static const LV2UI_Descriptor ui_descriptor = {
+	/* .URI			= */ DATA_LV2_UI_URI,
+	/* .instantiate		= */ ui_instantiate,
+	/* .cleanup		= */ ui_cleanup,
+	/* .port_event		= */ ui_port_event,
+	/* .extension_data	= */ ui_extension_data
+};
+
+LV2_SYMBOL_EXPORT const LV2UI_Descriptor * lv2ui_descriptor(uint32_t index) {
+	return index == 0 ? &ui_descriptor : NULL;
+}
+#endif
