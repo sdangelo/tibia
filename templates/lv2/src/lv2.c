@@ -293,22 +293,57 @@ LV2_SYMBOL_EXPORT const LV2_Descriptor * lv2_descriptor(uint32_t index) {
 }
 
 #ifdef PLUGIN_UI
+#include <X11/Xlib.h>
+
+typedef struct {
+	Display *	display;
+	Window		window;
+} ui_instance;
+
 static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const char * plugin_uri, const char * bundle_path, LV2UI_Write_Function write_function, LV2UI_Controller controller, LV2UI_Widget * widget, const LV2_Feature * const * features) {
-	//TODO
 	*widget = NULL;
-	return NULL;
+
+	ui_instance *instance = malloc(sizeof(ui_instance));
+	if (instance == NULL)
+		return NULL;
+
+	instance->display = XOpenDisplay(NULL);
+	if (instance->display == NULL) {
+		free(instance);
+		return NULL;
+	}
+
+	Window parent;
+	const char* missing = lv2_features_query(features,
+		LV2_UI__parent, &parent, false,
+		NULL);
+
+	int screen = DefaultScreen(instance->display);
+	instance->window = XCreateSimpleWindow(instance->display, missing ? RootWindow(instance->display, screen) : parent, 0, 0, 400, 200, 5, BlackPixel(instance->display, screen), WhitePixel(instance->display, screen));
+	//XSelectInput(instance->display, instance->window, ExposureMask | KeyPressMask);
+	XMapWindow(instance->display, instance->window);
+	XEvent ev;
+	while (XPending(instance->display))
+		XNextEvent(instance->display, &ev);
+	*widget = instance->window;
+
+	return instance;
 }
 
 static void ui_cleanup(LV2UI_Handle handle) {
-	//TODO
+	ui_instance *instance = (ui_instance *)handle;
+	XDestroyWindow(instance->display, instance->window);
+	XCloseDisplay(instance->display);
+	free(instance);
 }
 
 static void ui_port_event(LV2UI_Handle handle, uint32_t port_index, uint32_t buffer_size, uint32_t format, const void * buffer) {
 	//TODO
 }
 
-static const void * extension_data(const char * uri) {
+static const void * ui_extension_data(const char * uri) {
 	//TODO
+	return NULL;
 }
 
 static const LV2UI_Descriptor ui_descriptor = {
