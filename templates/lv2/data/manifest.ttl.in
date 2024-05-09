@@ -124,5 +124,6 @@
 {{?it.lv2.ui}}
 {{=it.tibia.lv2.ttlURI(it.lv2.ui.uri)}}
 	a ui:@UI_TYPE@ ;
-	ui:binary <{{=it.product.bundleName}}@DLL_SUFFIX@> .
+	ui:binary <{{=it.product.bundleName}}@DLL_SUFFIX@> ;
+	lv2:requiredFeature ui:idleInterface .
 {{?}}

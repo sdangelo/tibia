@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#define TEMPLATE_HAS_UI
 #include "data.h"
 #include "plugin.h"
 
@@ -301,48 +302,40 @@ typedef struct {
 } ui_instance;
 
 static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const char * plugin_uri, const char * bundle_path, LV2UI_Write_Function write_function, LV2UI_Controller controller, LV2UI_Widget * widget, const LV2_Feature * const * features) {
-	*widget = NULL;
+	char has_parent = 0;
+	void *parent = NULL;
+	for (size_t i = 0; features[i] != NULL; i++)
+		if (!strcmp(features[i]->URI, LV2_UI__parent)) {
+			has_parent = 1;
+			parent = features[i]->data;
+		}
 
-	ui_instance *instance = malloc(sizeof(ui_instance));
-	if (instance == NULL)
-		return NULL;
-
-	instance->display = XOpenDisplay(NULL);
-	if (instance->display == NULL) {
-		free(instance);
+	plugin_ui *instance = plugin_ui_create(has_parent, parent);
+	if (instance == NULL) {
+		*widget = NULL;
 		return NULL;
 	}
-
-	Window parent;
-	const char* missing = lv2_features_query(features,
-		LV2_UI__parent, &parent, false,
-		NULL);
-
-	int screen = DefaultScreen(instance->display);
-	instance->window = XCreateSimpleWindow(instance->display, missing ? RootWindow(instance->display, screen) : parent, 0, 0, 400, 200, 5, BlackPixel(instance->display, screen), WhitePixel(instance->display, screen));
-	//XSelectInput(instance->display, instance->window, ExposureMask | KeyPressMask);
-	XMapWindow(instance->display, instance->window);
-	XEvent ev;
-	while (XPending(instance->display))
-		XNextEvent(instance->display, &ev);
-	*widget = instance->window;
-
+	*widget = instance->widget;
 	return instance;
 }
 
 static void ui_cleanup(LV2UI_Handle handle) {
-	ui_instance *instance = (ui_instance *)handle;
-	XDestroyWindow(instance->display, instance->window);
-	XCloseDisplay(instance->display);
-	free(instance);
+	plugin_ui_free((plugin_ui *)handle);
 }
 
 static void ui_port_event(LV2UI_Handle handle, uint32_t port_index, uint32_t buffer_size, uint32_t format, const void * buffer) {
 	//TODO
 }
 
+static int ui_idle(LV2UI_Handle handle) {
+	plugin_ui_idle((plugin_ui *)handle);
+	return 0;
+}
+
 static const void * ui_extension_data(const char * uri) {
-	//TODO
+	static const LV2UI_Idle_Interface idle = { ui_idle };
+	if (!strcmp(uri, LV2_UI__idleInterface))
+		return &idle;
 	return NULL;
 }
 

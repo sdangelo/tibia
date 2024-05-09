@@ -26,7 +26,9 @@
 #pragma GCC diagnostic ignored "-Wpedantic"
 #include "vst3_c_api.h"
 #pragma GCC diagnostic pop
+
 #include "data.h"
+#define TEMPLATE_HAS_UI
 #include "plugin.h"
 
 #if defined(__i386__) || defined(__x86_64__)
@@ -931,8 +933,8 @@ static Steinberg_tresult plugViewGetSize(void* thisInterface, struct Steinberg_V
 	//TODO
 	size->left = 0;
 	size->top = 0;
-	size->right = 0;
-	size->bottom = 0;
+	size->right = 600;
+	size->bottom = 400;
 	return Steinberg_kResultTrue;
 }
 

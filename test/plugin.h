@@ -116,4 +116,67 @@ static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * d
 		instance->cutoff_k = data[1] < 64 ? (-0.19558034980097166f * data[1] - 2.361735109225749f) / (data[1] - 75.57552349522389f) : (393.95397927344214f - 7.660826245588588f * data[1]) / (data[1] - 139.0755234952239f);
 }
 
-#define PLUGIN_UI
+#ifdef TEMPLATE_HAS_UI
+# define PLUGIN_UI
+
+# include <pugl/pugl.h>
+# include <pugl/cairo.h>
+# include <cairo.h>
+
+typedef struct {
+	void *		widget;
+	PuglWorld *	world;
+	PuglView *	view;
+} plugin_ui;
+
+static PuglStatus onEvent(PuglView *view, const PuglEvent *event) {
+	switch (event->type) {
+		case PUGL_EXPOSE:
+		{
+			cairo_t *cr = (cairo_t *)puglGetContext(view);
+			cairo_set_source_rgb(cr, 1, 0.5, 0);
+			cairo_paint(cr);
+		}
+			break;
+		default:
+			break;
+	}
+	return PUGL_SUCCESS;
+}
+
+static plugin_ui *plugin_ui_create(char has_parent, void *parent) {
+	plugin_ui *instance = malloc(sizeof(plugin_ui));
+	if (instance == NULL)
+		return NULL;
+	instance->world = puglNewWorld(PUGL_MODULE, 0);
+	instance->view = puglNewView(instance->world);
+	puglSetSizeHint(instance->view, PUGL_DEFAULT_SIZE, 600, 400);
+	puglSetViewHint(instance->view, PUGL_RESIZABLE, 0);
+	puglSetBackend(instance->view, puglCairoBackend());
+	PuglRect frame = { 0, 0, 600, 400 };
+	puglSetFrame(instance->view, frame);
+	puglSetEventFunc(instance->view, onEvent);
+	if (has_parent) {
+		puglSetParentWindow(instance->view, (PuglNativeView)parent);
+	}
+	if (puglRealize(instance->view)) {
+		puglFreeView(instance->view);
+		puglFreeWorld(instance->world);
+		return NULL;
+	}
+	puglShow(instance->view, PUGL_SHOW_RAISE);
+	instance->widget = (void *)puglGetNativeView(instance->view);
+	return instance;
+}
+
+static void plugin_ui_free(plugin_ui *instance) {
+	puglFreeView(instance->view);
+	puglFreeWorld(instance->world);
+	free(instance);
+}
+
+static void plugin_ui_idle(plugin_ui *instance) {
+	puglUpdate(instance->world, 0);
+}
+
+#endif

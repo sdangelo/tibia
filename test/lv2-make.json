@@ -1,0 +1,6 @@
+{
+	"lv2_make": {
+		"cflags": "$(shell pkg-config --cflags pugl-cairo-0)",
+		"ldflags": "$(shell pkg-config --libs pugl-cairo-0)"
+	}
+}
