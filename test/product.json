@@ -125,6 +125,10 @@
 				"unit": "",
 				"map": "linear"
 			}
-		]
+		],
+		"ui": {
+			"userResizable": true,
+			"selfResizable": false
+		}
 	}
 }

@@ -308,6 +308,8 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 		if (!strcmp(features[i]->URI, LV2_UI__parent)) {
 			has_parent = 1;
 			parent = features[i]->data;
+		} else if (!strcmp(features[i]->URI, LV2_UI__resize)) {
+			// TODO...
 		}
 
 	plugin_ui *instance = plugin_ui_create(has_parent, parent);
@@ -332,10 +334,23 @@ static int ui_idle(LV2UI_Handle handle) {
 	return 0;
 }
 
+static int ui_resize(LV2UI_Feature_Handle handle, int width, int height) {
+#if DATA_UI_USER_RESIZABLE
+	//TODO
+	//return plugin_ui_resize((plugin_ui *)handle, width, height);
+	return 0;
+#else
+	return -1;
+#endif
+}
+
 static const void * ui_extension_data(const char * uri) {
 	static const LV2UI_Idle_Interface idle = { ui_idle };
+	static const LV2UI_Resize resize = { NULL, ui_resize };
 	if (!strcmp(uri, LV2_UI__idleInterface))
 		return &idle;
+	else if (!strcmp(uri, LV2_UI__resize))
+		return &resize;
 	return NULL;
 }
 

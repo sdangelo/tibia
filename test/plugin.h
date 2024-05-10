@@ -151,14 +151,13 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent) {
 	instance->world = puglNewWorld(PUGL_MODULE, 0);
 	instance->view = puglNewView(instance->world);
 	puglSetSizeHint(instance->view, PUGL_DEFAULT_SIZE, 600, 400);
-	puglSetViewHint(instance->view, PUGL_RESIZABLE, 0);
+	puglSetViewHint(instance->view, PUGL_RESIZABLE, PUGL_TRUE);
 	puglSetBackend(instance->view, puglCairoBackend());
 	PuglRect frame = { 0, 0, 600, 400 };
 	puglSetFrame(instance->view, frame);
 	puglSetEventFunc(instance->view, plugin_ui_on_event);
-	if (has_parent) {
+	if (has_parent)
 		puglSetParentWindow(instance->view, (PuglNativeView)parent);
-	}
 	if (puglRealize(instance->view)) {
 		puglFreeView(instance->view);
 		puglFreeWorld(instance->world);
