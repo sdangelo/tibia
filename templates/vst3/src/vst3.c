@@ -1046,8 +1046,14 @@ static Steinberg_tresult plugViewGetSize(void* thisInterface, struct Steinberg_V
 
 static Steinberg_tresult plugViewOnSize(void* thisInterface, struct Steinberg_ViewRect* newSize) {
 	TRACE("plugView onSize %p\n", thisInterface);
-	//TODO
-	return Steinberg_kResultFalse;
+	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
+	if (!v->ui)
+		return Steinberg_kResultFalse;
+# ifdef __linux__
+	TRACE(" window %u\n", (Window)(*((char **)v->ui)));
+	XResizeWindow(v->display, (Window)(*((char **)v->ui)), newSize->right - newSize->left, newSize->bottom - newSize->top);
+# endif
+	return Steinberg_kResultTrue;
 }
 
 static Steinberg_tresult plugViewOnFocus(void* thisInterface, Steinberg_TBool state) {
