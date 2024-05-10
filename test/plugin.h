@@ -129,7 +129,7 @@ typedef struct {
 	PuglView *	view;
 } plugin_ui;
 
-static PuglStatus onEvent(PuglView *view, const PuglEvent *event) {
+static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 	switch (event->type) {
 		case PUGL_EXPOSE:
 		{
@@ -155,7 +155,7 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent) {
 	puglSetBackend(instance->view, puglCairoBackend());
 	PuglRect frame = { 0, 0, 600, 400 };
 	puglSetFrame(instance->view, frame);
-	puglSetEventFunc(instance->view, onEvent);
+	puglSetEventFunc(instance->view, plugin_ui_on_event);
 	if (has_parent) {
 		puglSetParentWindow(instance->view, (PuglNativeView)parent);
 	}

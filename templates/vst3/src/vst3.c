@@ -64,7 +64,7 @@ typedef struct Steinberg_ITimerHandlerVtbl
 	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
 
 	/* methods derived from "Steinberg_ITimerHandler": */
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* onTimer) (void* thisInterface);
+	void (SMTG_STDMETHODCALLTYPE* onTimer) (void* thisInterface);
 } Steinberg_ITimerHandlerVtbl;
 
 typedef struct Steinberg_ITimerHandler
@@ -82,7 +82,7 @@ typedef struct Steinberg_IEventHandlerVtbl
 	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
 
 	/* methods derived from "Steinberg_IEventHandler": */
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* onFDIsSet) (void* thisInterface, int fd);
+	void (SMTG_STDMETHODCALLTYPE* onFDIsSet) (void* thisInterface, int fd);
 } Steinberg_IEventHandlerVtbl;
 
 typedef struct Steinberg_IEventHandler
@@ -819,6 +819,7 @@ static Steinberg_uint32 pluginIProcessContextRequirementsRelease(void *thisInter
 	TRACE("plugin IComponent release %p\n", thisInterface);
 	return pluginRelease((pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIProcessContextRequirements)));
 }
+
 static Steinberg_uint32 pluginGetProcessContextRequirements(void* thisInterface) {
 	(void)thisInterface;
 
@@ -837,10 +838,80 @@ static Steinberg_Vst_IProcessContextRequirementsVtbl pluginVtblIProcessContextRe
 };
 
 #ifdef PLUGIN_UI
+# ifdef __linux__
+typedef struct {
+	Steinberg_ITimerHandlerVtbl *	vtblITimerHandler;
+	Steinberg_uint32		refs;
+	void *				data;
+	void				(*cb)(void *data);
+} timerHandler;
+
+static Steinberg_tresult timerHandlerQueryInterface(void *thisInterface, const Steinberg_TUID iid, void ** obj) {
+	TRACE("timerHandler queryInterface %p\n", thisInterface);
+	// Same as above (pluginQueryInterface)
+	size_t offset;
+	if (memcmp(iid, Steinberg_FUnknown_iid, sizeof(Steinberg_TUID)) == 0
+	    || memcmp(iid, Steinberg_ITimerHandler_iid, sizeof(Steinberg_TUID)) == 0)
+		offset = offsetof(timerHandler, vtblITimerHandler);
+	else {
+		TRACE(" not supported\n");
+		for (int i = 0; i < 16; i++)
+			TRACE(" %x", iid[i]);
+		TRACE("\n");
+		*obj = NULL;
+		return Steinberg_kNoInterface;
+	}
+	timerHandler *t = (timerHandler *)((char *)thisInterface - offsetof(timerHandler, vtblITimerHandler));
+	*obj = (void *)((char *)t + offset);
+	t->refs++;
+	return Steinberg_kResultOk;
+}
+
+static Steinberg_uint32 timerHandlerAddRef(void *thisInterface) {
+	TRACE("timerHandler addRef %p\n", thisInterface);
+	timerHandler *t = (timerHandler *)((char *)thisInterface - offsetof(timerHandler, vtblITimerHandler));
+	t->refs++;
+	return t->refs;
+}
+
+static Steinberg_uint32 timerHandlerRelease(void *thisInterface) {
+	TRACE("timerHandler release %p\n", thisInterface);
+	timerHandler *t = (timerHandler *)((char *)thisInterface - offsetof(timerHandler, vtblITimerHandler));
+	t->refs--;
+	if (t->refs == 0) {
+		TRACE(" free %p\n", (void *)t);
+		free(t);
+		return 0;
+	}
+	return t->refs;
+}
+
+static void timerHandlerOnTimer(void* thisInterface) {
+	TRACE("timerHandler onTimer %p\n", thisInterface);
+	timerHandler *t = (timerHandler *)((char *)thisInterface - offsetof(timerHandler, vtblITimerHandler));
+	t->cb(t->data);
+}
+
+static Steinberg_ITimerHandlerVtbl timerHandlerVtblITimerHandler = {
+	/* FUnknown */
+	/* .queryInterface	= */ timerHandlerQueryInterface,
+	/* .addRef		= */ timerHandlerAddRef,
+	/* .release		= */ timerHandlerRelease,
+
+	/* ITimerHandler */
+	/* .onTimer		= */ timerHandlerOnTimer
+};
+# endif
+
 typedef struct plugView {
 	Steinberg_IPlugViewVtbl *	vtblIPlugView;
 	Steinberg_uint32		refs;
 	Steinberg_IPlugFrame *		frame;
+# ifdef __linux__
+	Steinberg_IRunLoop *		runLoop;
+	timerHandler			timer;
+# endif
+	plugin_ui *			ui;
 } plugView;
 
 static Steinberg_tresult plugViewQueryInterface(void *thisInterface, const Steinberg_TUID iid, void ** obj) {
@@ -884,28 +955,43 @@ static Steinberg_uint32 plugViewRelease(void *thisInterface) {
 }
 
 static Steinberg_tresult plugViewIsPlatformTypeSupported(void* thisInterface, Steinberg_FIDString type) {
+	(void)thisInterface;
+
 	TRACE("plugView isPlatformTypeSupported %p %s\n", thisInterface, type);
-#if defined(_WIN32)
+# if defined(_WIN32)
 	return strcmp(type, "HWND") ? Steinberg_kResultFalse : Steinberg_kResultTrue;
-#elif defined(__APPLE__) && defined(__MACH__)
+# elif defined(__APPLE__) && defined(__MACH__)
 	return strcmp(type, "NSView") ? Steinberg_kResultFalse : Steinberg_kResultTrue;
-#elif defined(__linux__)
+# elif defined(__linux__)
 	return strcmp(type, "X11EmbedWindowID") ? Steinberg_kResultFalse : Steinberg_kResultTrue;
-#else
+# else
+	(void)type;
+
 	return Steinberg_kResultFalse;
-#endif
+# endif
 }
 
 static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Steinberg_FIDString type) {
 	TRACE("plugView attached %p\n", thisInterface);
-	//TODO
-	return Steinberg_kResultFalse;
+	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
+	v->ui = plugin_ui_create(1, parent);
+	if (!v->ui)
+		return Steinberg_kResultFalse;
+# ifdef __linux
+	if (v->runLoop->lpVtbl->registerTimer(v->runLoop, &v->timer, 20) != Steinberg_kResultOk) {
+		plugin_ui_free(v->ui);
+		return Steinberg_kResultFalse;
+	}
+# endif
+	return Steinberg_kResultTrue;
 }
 
 static Steinberg_tresult plugViewRemoved(void* thisInterface) {
 	TRACE("plugView removed %p\n", thisInterface);
-	//TODO
-	return Steinberg_kResultFalse;
+	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
+	v->runLoop->lpVtbl->unregisterTimer(v->runLoop, &v->timer);
+	plugin_ui_free(v->ui);
+	return Steinberg_kResultTrue;
 }
 
 static Steinberg_tresult plugViewOnWheel(void* thisInterface, float distance) {
@@ -954,6 +1040,11 @@ static Steinberg_tresult plugViewSetFrame(void* thisInterface, struct Steinberg_
 	TRACE("plugView setFrame %p\n", thisInterface);
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
 	v->frame = frame;
+# ifdef __linux__
+	if (v->frame->lpVtbl->queryInterface(v->frame, Steinberg_IRunLoop_iid, (void **)&v->runLoop) != Steinberg_kResultOk)
+		return Steinberg_kResultFalse;
+	v->frame->lpVtbl->release(v->frame);
+# endif
 	return Steinberg_kResultTrue;
 }
 
@@ -968,6 +1059,14 @@ static Steinberg_tresult plugViewCheckSizeConstraint(void* thisInterface, struct
 	//TODO
 	return Steinberg_kResultFalse;
 }
+
+# ifdef __linux__
+static void plugViewOnTimer(void *thisInterface) {
+	TRACE("plugView onTimer %p\n", thisInterface);
+	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
+	plugin_ui_idle(v->ui);
+}
+# endif
 
 static Steinberg_IPlugViewVtbl plugViewVtblIPlugView = {
 	/* FUnknown */
@@ -1323,6 +1422,12 @@ static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Ste
 	view->vtblIPlugView = &plugViewVtblIPlugView;
 	view->refs = 1;
 	view->frame = NULL;
+# ifdef __linux__
+	view->timer.vtblITimerHandler = &timerHandlerVtblITimerHandler;
+	view->timer.refs = 1;
+	view->timer.cb = plugViewOnTimer;
+	view->timer.data = view;
+# endif
 
 	return (struct Steinberg_IPlugView *)view;
 #else

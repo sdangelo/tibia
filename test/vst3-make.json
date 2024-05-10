@@ -1,5 +1,6 @@
 {
 	"vst3_make": {
-		"cflags": "-I../../../vst3_c_api"
+		"cflags": "-I../../../vst3_c_api $(shell pkg-config --cflags pugl-cairo-0)",
+		"ldflags": "$(shell pkg-config --libs pugl-cairo-0)"
 	}
 }
