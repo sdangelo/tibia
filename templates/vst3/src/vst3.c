@@ -42,7 +42,7 @@
 
 #ifdef TIBIA_TRACE
 # include <stdio.h>
-# define TRACE(...)	printf(__VA_ARGS__)
+# define TRACE(...)	printf(__VA_ARGS__); fflush(stdout);
 #else
 # define TRACE(...)	/* do nothing */
 #endif
@@ -839,6 +839,8 @@ static Steinberg_Vst_IProcessContextRequirementsVtbl pluginVtblIProcessContextRe
 
 #ifdef PLUGIN_UI
 # ifdef __linux__
+#  include <X11/Xlib.h>
+
 typedef struct {
 	Steinberg_ITimerHandlerVtbl *	vtblITimerHandler;
 	Steinberg_uint32		refs;
@@ -907,15 +909,16 @@ typedef struct plugView {
 	Steinberg_IPlugViewVtbl *	vtblIPlugView;
 	Steinberg_uint32		refs;
 	Steinberg_IPlugFrame *		frame;
+	plugin_ui *			ui;
 # ifdef __linux__
 	Steinberg_IRunLoop *		runLoop;
 	timerHandler			timer;
+	Display *			display;
 # endif
-	plugin_ui *			ui;
 } plugView;
 
 static Steinberg_tresult plugViewQueryInterface(void *thisInterface, const Steinberg_TUID iid, void ** obj) {
-	TRACE("plugView IEditController queryInterface %p\n", thisInterface);
+	TRACE("plugView queryInterface %p\n", thisInterface);
 	// Same as above (pluginQueryInterface)
 	size_t offset;
 	if (memcmp(iid, Steinberg_FUnknown_iid, sizeof(Steinberg_TUID)) == 0
@@ -936,7 +939,7 @@ static Steinberg_tresult plugViewQueryInterface(void *thisInterface, const Stein
 }
 
 static Steinberg_uint32 plugViewAddRef(void *thisInterface) {
-	TRACE("plugView IEditController addRef %p\n", thisInterface);
+	TRACE("plugView addRef %p\n", thisInterface);
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
 	v->refs++;
 	return v->refs;
@@ -948,6 +951,9 @@ static Steinberg_uint32 plugViewRelease(void *thisInterface) {
 	v->refs--;
 	if (v->refs == 0) {
 		TRACE(" free %p\n", (void *)v);
+# ifdef __linux__
+		XCloseDisplay(v->display);
+# endif
 		free(v);
 		return 0;
 	}
@@ -978,7 +984,7 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 	if (!v->ui)
 		return Steinberg_kResultFalse;
 # ifdef __linux
-	if (v->runLoop->lpVtbl->registerTimer(v->runLoop, &v->timer, 20) != Steinberg_kResultOk) {
+	if (v->runLoop->lpVtbl->registerTimer(v->runLoop, (struct Steinberg_ITimerHandler *)&v->timer, 20) != Steinberg_kResultOk) {
 		plugin_ui_free(v->ui);
 		return Steinberg_kResultFalse;
 	}
@@ -989,8 +995,9 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 static Steinberg_tresult plugViewRemoved(void* thisInterface) {
 	TRACE("plugView removed %p\n", thisInterface);
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
-	v->runLoop->lpVtbl->unregisterTimer(v->runLoop, &v->timer);
+	v->runLoop->lpVtbl->unregisterTimer(v->runLoop, (struct Steinberg_ITimerHandler *)&v->timer);
 	plugin_ui_free(v->ui);
+	v->ui = NULL;
 	return Steinberg_kResultTrue;
 }
 
@@ -1016,11 +1023,24 @@ static Steinberg_tresult plugViewGetSize(void* thisInterface, struct Steinberg_V
 	TRACE("plugView getSize %p %p\n", thisInterface, size);
 	if (!size)
 		return Steinberg_kInvalidArgument;
-	//TODO
+	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
 	size->left = 0;
 	size->top = 0;
-	size->right = 600;
-	size->bottom = 400;
+	if (!v->ui) {
+		uint32_t width, height;
+		plugin_ui_get_default_size(&width, &height);
+		size->right = width;
+		size->bottom = height;
+	} else {
+# ifdef __linux__
+		XWindowAttributes attr;
+		TRACE(" window %u\n", (Window)(*((char **)v->ui)));
+		XGetWindowAttributes(v->display, (Window)(*((char **)v->ui)), &attr);
+		size->right = attr.width;
+		size->bottom = attr.height;
+# endif
+	}
+	TRACE(" %u x %u\n", size->right, size->bottom);
 	return Steinberg_kResultTrue;
 }
 
@@ -1041,17 +1061,22 @@ static Steinberg_tresult plugViewSetFrame(void* thisInterface, struct Steinberg_
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
 	v->frame = frame;
 # ifdef __linux__
-	if (v->frame->lpVtbl->queryInterface(v->frame, Steinberg_IRunLoop_iid, (void **)&v->runLoop) != Steinberg_kResultOk)
-		return Steinberg_kResultFalse;
-	v->frame->lpVtbl->release(v->frame);
+	if (v->frame) {
+		if (v->frame->lpVtbl->queryInterface(v->frame, Steinberg_IRunLoop_iid, (void **)&v->runLoop) != Steinberg_kResultOk)
+			return Steinberg_kResultFalse;
+		v->frame->lpVtbl->release(v->frame);
+	}
 # endif
 	return Steinberg_kResultTrue;
 }
 
 static Steinberg_tresult plugViewCanResize(void* thisInterface) {
 	TRACE("plugView canResize %p\n", thisInterface);
-	//TODO
+# if DATA_UI_USER_RESIZABLE
+	return Steinberg_kResultTrue;
+# else
 	return Steinberg_kResultFalse;
+# endif
 }
 
 static Steinberg_tresult plugViewCheckSizeConstraint(void* thisInterface, struct Steinberg_ViewRect* rect) {
@@ -1422,11 +1447,17 @@ static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Ste
 	view->vtblIPlugView = &plugViewVtblIPlugView;
 	view->refs = 1;
 	view->frame = NULL;
+	view->ui = NULL;
 # ifdef __linux__
 	view->timer.vtblITimerHandler = &timerHandlerVtblITimerHandler;
 	view->timer.refs = 1;
 	view->timer.cb = plugViewOnTimer;
 	view->timer.data = view;
+	view->display = XOpenDisplay(NULL);
+	if (view->display == NULL) {
+		free(view);
+		return NULL;
+	}
 # endif
 
 	return (struct Steinberg_IPlugView *)view;

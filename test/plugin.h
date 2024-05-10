@@ -129,6 +129,11 @@ typedef struct {
 	PuglView *	view;
 } plugin_ui;
 
+static void plugin_ui_get_default_size(uint32_t *width, uint32_t *height) {
+	*width = 600;
+	*height = 400;
+}
+
 static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 	switch (event->type) {
 		case PUGL_EXPOSE:

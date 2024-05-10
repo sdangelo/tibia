@@ -218,3 +218,7 @@ static struct {
 {{?it.product.parameters.find(x => x.isLatency)}}
 #define DATA_PARAM_LATENCY_INDEX	{{=it.product.parameters.find(x => x.isLatency).paramIndex}}
 {{?}}
+
+{{?it.product.ui}}
+#define DATA_UI_USER_RESIZABLE			{{=it.product.ui.userResizable ? 1 : 0}}
+{{?}}

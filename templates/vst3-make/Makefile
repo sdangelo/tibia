@@ -65,6 +65,14 @@ LDFLAGS_ALL := ${LDFLAGS_ALL} -arch arm64 -arch x86_64
 CXXFLAGS_ALL := ${CXXFLAGS_ALL} -arch arm64 -arch x86_64
 endif
 
+ifeq ($(UNAME_S), Linux)
+ ifeq (${HAS_UI}, yes)
+CFLAGS_ALL := ${CFLAGS_ALL} $(shell pkg-config --cflags x11)
+LDFLAGS_ALL := ${LDFLAGS_ALL} $(shell pkg-config --libs x11)
+CXXFLAGS_ALL := ${CXXFLAGS_ALL} $(shell pkg-config --cflags x11)
+ endif
+endif
+
 BUNDLE_DIR = ${BUNDLE_NAME}.vst3
 
 DLL_DIR = Contents/${PLATFORM}

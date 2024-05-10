@@ -30,3 +30,5 @@ CXX_SRCS_EXTRA := {{=it.make && it.make.cxxSrcs ? it.make.cxxSrcs : ""}} {{=it.v
 COMMON_DIR := {{=it.vst3_make && it.vst3_make.commonDir ? it.vst3_make.commonDir : (it.make && it.make.commonDir ? it.make.commonDir : "")}}
 DATA_DIR := {{=it.vst3_make && it.vst3_make.dataDir ? it.vst3_make.dataDir : (it.make && it.make.dataDir ? it.make.dataDir : "")}}
 PLUGIN_DIR := {{=it.vst3_make && it.vst3_make.pluginDir ? it.vst3_make.pluginDir : (it.make && it.make.pluginDir ? it.make.pluginDir : "")}}
+
+HAS_UI := {{=it.product.ui ? "yes" : "no"}}
