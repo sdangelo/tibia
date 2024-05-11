@@ -127,21 +127,107 @@ typedef struct {
 	void *		widget;
 	PuglWorld *	world;
 	PuglView *	view;
+
+	float		gain;
+	float		delay;
+	float		cutoff;
+	char		bypass;
+	float		y_z1;
 } plugin_ui;
 
+#define WIDTH		600.0
+#define HEIGHT		400.0
+#define RATIO		(WIDTH / HEIGHT)
+#define INV_RATIO	(HEIGHT / WIDTH)
+
 static void plugin_ui_get_default_size(uint32_t *width, uint32_t *height) {
-	*width = 600;
-	*height = 400;
+	*width = WIDTH;
+	*height = HEIGHT;
+}
+
+static void plugin_ui_draw(plugin_ui *instance) {
+	PuglRect frame = puglGetFrame(instance->view);
+	if (frame.width == 0 || frame.height == 0)
+		return;
+
+	double x, y, w, h;
+	double fw = frame.width;
+	double fh = frame.height;
+	if (fw / fh > RATIO) {
+		w = RATIO * fh;
+		h = fh;
+		x = (fw - w) / 2;
+		y = 0.0;
+	} else {
+		w = fw;
+		h = INV_RATIO * fw;
+		x = 0.0;
+		y = (fh - h) / 2;
+	}
+
+	cairo_t *cr = (cairo_t *)puglGetContext(instance->view);
+
+	cairo_set_line_width(cr, 0.005 * h);
+
+	cairo_set_source_rgb(cr, 0, 0, 0);
+	cairo_paint(cr);
+
+	cairo_set_source_rgb(cr, 0.2, 0.2, 0.2);
+	cairo_rectangle(cr, x, y, w, h);
+	cairo_fill(cr);
+
+	cairo_set_source_rgb(cr, 0.1, 0.1, 0.1);
+	cairo_rectangle(cr, x + 0.1 * w, y + 0.15 * h, 0.8 * w, 0.1 * h);
+	cairo_fill(cr);
+	cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
+	cairo_rectangle(cr, x + 0.1 * w, y + 0.15 * h, 0.8 * w * instance->gain, 0.1 * h);
+	cairo_fill(cr);
+	cairo_set_source_rgb(cr, 0.7, 0.7, 0.7);
+	cairo_rectangle(cr, x + 0.1 * w, y + 0.15 * h, 0.8 * w, 0.1 * h);
+	cairo_stroke(cr);
+
+	cairo_set_source_rgb(cr, 0.1, 0.1, 0.1);
+	cairo_rectangle(cr, x + 0.1 * w, y + 0.3 * h, 0.8 * w, 0.1 * h);
+	cairo_fill(cr);
+	cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
+	cairo_rectangle(cr, x + 0.1 * w, y + 0.3 * h, 0.8 * w * instance->delay, 0.1 * h);
+	cairo_fill(cr);
+	cairo_set_source_rgb(cr, 0.7, 0.7, 0.7);
+	cairo_rectangle(cr, x + 0.1 * w, y + 0.3 * h, 0.8 * w, 0.1 * h);
+	cairo_stroke(cr);
+
+	cairo_set_source_rgb(cr, 0.1, 0.1, 0.1);
+	cairo_rectangle(cr, x + 0.1 * w, y + 0.45 * h, 0.8 * w, 0.1 * h);
+	cairo_fill(cr);
+	cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
+	cairo_rectangle(cr, x + 0.1 * w, y + 0.45 * h, 0.8 * w * instance->cutoff, 0.1 * h);
+	cairo_fill(cr);
+	cairo_set_source_rgb(cr, 0.7, 0.7, 0.7);
+	cairo_rectangle(cr, x + 0.1 * w, y + 0.45 * h, 0.8 * w, 0.1 * h);
+	cairo_stroke(cr);
+
+	if (instance->bypass)
+		cairo_set_source_rgb(cr, 1.0, 0, 0);
+	else
+		cairo_set_source_rgb(cr, 0.7, 0.7, 0.7);
+	cairo_rectangle(cr, x + 0.4 * w, y + 0.6 * h, 0.2 * w, 0.1 * h);
+	cairo_fill(cr);
+
+	cairo_set_source_rgb(cr, 0.1, 0.1, 0.1);
+	cairo_rectangle(cr, x + 0.1 * w, y + 0.75 * h, 0.8 * w, 0.1 * h);
+	cairo_fill(cr);
+
+	cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
+	cairo_rectangle(cr, x + 0.1 * w, y + 0.75 * h, 0.8 * w * instance->y_z1, 0.1 * h);
+	cairo_fill(cr);
+
+	return 0;
 }
 
 static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 	switch (event->type) {
 		case PUGL_EXPOSE:
-		{
-			cairo_t *cr = (cairo_t *)puglGetContext(view);
-			cairo_set_source_rgb(cr, 1, 0.5, 0);
-			cairo_paint(cr);
-		}
+			plugin_ui_draw((plugin_ui *)puglGetHandle(view));
 			break;
 		default:
 			break;
@@ -155,10 +241,10 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent) {
 		return NULL;
 	instance->world = puglNewWorld(PUGL_MODULE, 0);
 	instance->view = puglNewView(instance->world);
-	puglSetSizeHint(instance->view, PUGL_DEFAULT_SIZE, 600, 400);
+	puglSetSizeHint(instance->view, PUGL_DEFAULT_SIZE, WIDTH, HEIGHT);
 	puglSetViewHint(instance->view, PUGL_RESIZABLE, PUGL_TRUE);
 	puglSetBackend(instance->view, puglCairoBackend());
-	PuglRect frame = { 0, 0, 600, 400 };
+	PuglRect frame = { 0, 0, WIDTH, HEIGHT };
 	puglSetFrame(instance->view, frame);
 	puglSetEventFunc(instance->view, plugin_ui_on_event);
 	if (has_parent)
@@ -169,6 +255,7 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent) {
 		return NULL;
 	}
 	puglShow(instance->view, PUGL_SHOW_RAISE);
+	puglSetHandle(instance->view, instance);
 	instance->widget = (void *)puglGetNativeView(instance->view);
 	return instance;
 }
@@ -181,6 +268,28 @@ static void plugin_ui_free(plugin_ui *instance) {
 
 static void plugin_ui_idle(plugin_ui *instance) {
 	puglUpdate(instance->world, 0);
+}
+
+static void plugin_ui_set_parameter(plugin_ui *instance, size_t index, float value) {
+	switch (index) {
+	case 0:
+		instance->gain = 0.0125f * value + 0.75f;
+		break;
+	case 1:
+		instance->delay = 0.001f * value;
+		break;
+	case 2:
+		// (bad) approx log unmap
+		instance->cutoff = (1.0326554320337176f * value - 20.65310864067435f) / (value + 632.4555320336754f);
+		break;
+	case 3:
+		instance->bypass = value >= 0.5f;
+		break;
+	case 4:
+		instance->y_z1 = 0.5f * value + 0.5f;
+		break;
+	}
+	puglPostRedisplay(instance->view);
 }
 
 #endif

@@ -325,8 +325,18 @@ static void ui_cleanup(LV2UI_Handle handle) {
 	plugin_ui_free((plugin_ui *)handle);
 }
 
+#define CONTROL_INPUT_INDEX_OFFSET ( \
+		DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N \
+		+ DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N \
+		+ DATA_PRODUCT_MIDI_INPUTS_N \
+		+ DATA_PRODUCT_MIDI_OUTPUTS_N )
+#define CONTROL_OUTPUT_INDEX_OFFSET	(CONTROL_INPUT_INDEX_OFFSET + DATA_PRODUCT_CONTROL_INPUTS_N)
+
 static void ui_port_event(LV2UI_Handle handle, uint32_t port_index, uint32_t buffer_size, uint32_t format, const void * buffer) {
-	//TODO
+	if (port_index < CONTROL_OUTPUT_INDEX_OFFSET)
+		plugin_ui_set_parameter((plugin_ui *)handle, param_data[port_index - CONTROL_INPUT_INDEX_OFFSET].index, *((float *)buffer));
+	else
+		plugin_ui_set_parameter((plugin_ui *)handle, param_out_index[port_index - CONTROL_OUTPUT_INDEX_OFFSET], *((float *)buffer));
 }
 
 static int ui_idle(LV2UI_Handle handle) {
