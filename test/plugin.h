@@ -124,15 +124,24 @@ static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * d
 # include <cairo.h>
 
 typedef struct {
-	void *		widget;
-	PuglWorld *	world;
-	PuglView *	view;
+	void *			widget;
+	PuglWorld *		world;
+	PuglView *		view;
 
-	float		gain;
-	float		delay;
-	float		cutoff;
-	char		bypass;
-	float		y_z1;
+	double			fw;
+	double			fh;
+	double			x;
+	double			y;
+	double			w;
+	double			h;
+
+	float			gain;
+	float			delay;
+	float			cutoff;
+	char			bypass;
+	float			y_z1;
+
+	plugin_ui_callbacks	cbs;
 } plugin_ui;
 
 #define WIDTH		600.0
@@ -145,27 +154,32 @@ static void plugin_ui_get_default_size(uint32_t *width, uint32_t *height) {
 	*height = HEIGHT;
 }
 
-static void plugin_ui_draw(plugin_ui *instance) {
+static void plugin_ui_update_geometry(plugin_ui *instance) {
 	PuglRect frame = puglGetFrame(instance->view);
+	instance->fw = frame.width;
+	instance->fh = frame.height;
 	if (frame.width == 0 || frame.height == 0)
 		return;
 
-	double x, y, w, h;
-	double fw = frame.width;
-	double fh = frame.height;
-	if (fw / fh > RATIO) {
-		w = RATIO * fh;
-		h = fh;
-		x = (fw - w) / 2;
-		y = 0.0;
+	if (instance->fw / instance->fh > RATIO) {
+		instance->w = RATIO * instance->fh;
+		instance->h = instance->fh;
+		instance->x = 0.5 * (instance->fw - instance->w);
+		instance->y = 0.0;
 	} else {
-		w = fw;
-		h = INV_RATIO * fw;
-		x = 0.0;
-		y = (fh - h) / 2;
+		instance->w = instance->fw;
+		instance->h = INV_RATIO * instance->fw;
+		instance->x = 0.0;
+		instance->y = 0.5 * (instance->fh - instance->h);
 	}
+}
 
+static void plugin_ui_draw(plugin_ui *instance) {
 	cairo_t *cr = (cairo_t *)puglGetContext(instance->view);
+	double x = instance->x;
+	double y = instance->y;
+	double w = instance->w;
+	double h = instance->h;
 
 	cairo_set_line_width(cr, 0.005 * h);
 
@@ -220,14 +234,39 @@ static void plugin_ui_draw(plugin_ui *instance) {
 	cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
 	cairo_rectangle(cr, x + 0.1 * w, y + 0.75 * h, 0.8 * w * instance->y_z1, 0.1 * h);
 	cairo_fill(cr);
-
-	return 0;
 }
 
 static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 	switch (event->type) {
+		case PUGL_CONFIGURE:
+		{
+			plugin_ui *instance = (plugin_ui *)puglGetHandle(view);
+			plugin_ui_update_geometry(instance);
+		}
+			break;
+		case PUGL_BUTTON_RELEASE:
+		{
+			plugin_ui *instance = (plugin_ui *)puglGetHandle(view);
+			PuglRect frame = puglGetFrame(view);
+			const PuglButtonEvent *ev = (const PuglButtonEvent *)event;
+			double x = instance->x;
+			double y = instance->y;
+			double w = instance->w;
+			double h = instance->h;
+
+			if (ev->x >= x + 0.1 * w && ev->x <= x + 0.9 * w
+			    && ev->y >= y + 0.15 * h && ev->y <= y + 0.25 * h) {
+				instance->gain = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
+				instance->cbs.set_parameter(instance->cbs.handle, 0, -60.f + 80.f * instance->gain);
+				puglPostRedisplay(instance->view);
+			}
+		}
+			break;
 		case PUGL_EXPOSE:
-			plugin_ui_draw((plugin_ui *)puglGetHandle(view));
+		{
+			plugin_ui *instance = (plugin_ui *)puglGetHandle(view);
+			plugin_ui_draw(instance);
+		}
 			break;
 		default:
 			break;
@@ -235,7 +274,7 @@ static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 	return PUGL_SUCCESS;
 }
 
-static plugin_ui *plugin_ui_create(char has_parent, void *parent) {
+static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_callbacks *cbs) {
 	plugin_ui *instance = malloc(sizeof(plugin_ui));
 	if (instance == NULL)
 		return NULL;
@@ -257,6 +296,7 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent) {
 	puglShow(instance->view, PUGL_SHOW_RAISE);
 	puglSetHandle(instance->view, instance);
 	instance->widget = (void *)puglGetNativeView(instance->view);
+	instance->cbs = *cbs;
 	return instance;
 }
 

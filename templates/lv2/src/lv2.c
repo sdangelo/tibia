@@ -21,6 +21,11 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+typedef struct {
+	void *	handle;
+	void (*set_parameter)(void *handle, size_t index, float value);
+} plugin_ui_callbacks;
+
 #define TEMPLATE_HAS_UI
 #include "data.h"
 #include "plugin.h"
@@ -267,7 +272,6 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	_MM_SET_FLUSH_ZERO_MODE(flush_zero_mode);
 	_MM_SET_DENORMALS_ZERO_MODE(denormals_zero_mode);
 #endif
-
 }
 
 static void cleanup(LV2_Handle instance) {
@@ -294,12 +298,16 @@ LV2_SYMBOL_EXPORT const LV2_Descriptor * lv2_descriptor(uint32_t index) {
 }
 
 #ifdef PLUGIN_UI
-#include <X11/Xlib.h>
-
 typedef struct {
-	Display *	display;
-	Window		window;
+	plugin_ui *		ui;
+	LV2UI_Write_Function	write;
+	LV2UI_Controller	controller;
 } ui_instance;
+
+static void ui_set_parameter_cb(void *handle, size_t index, float value) {
+	ui_instance *instance = (ui_instance *)handle;
+	instance->write(instance->controller, index_to_param[index], sizeof(float), 0, &value);
+}
 
 static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const char * plugin_uri, const char * bundle_path, LV2UI_Write_Function write_function, LV2UI_Controller controller, LV2UI_Widget * widget, const LV2_Feature * const * features) {
 	char has_parent = 0;
@@ -312,17 +320,33 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 			// TODO...
 		}
 
-	plugin_ui *instance = plugin_ui_create(has_parent, parent);
+	ui_instance *instance = malloc(sizeof(ui_instance));
 	if (instance == NULL) {
 		*widget = NULL;
 		return NULL;
 	}
-	*widget = instance->widget;
+
+	plugin_ui_callbacks cbs = {
+		/* .handle		= */ (void *)instance,
+		/* .set_parameter	= */ ui_set_parameter_cb
+	};
+	instance->write = write_function;
+	instance->controller = controller;
+	instance->ui = plugin_ui_create(has_parent, parent, &cbs);
+	if (instance->ui == NULL) {
+		free(instance);
+		*widget = NULL;
+		return NULL;
+	}
+
+	*widget = instance->ui->widget;
 	return instance;
 }
 
 static void ui_cleanup(LV2UI_Handle handle) {
-	plugin_ui_free((plugin_ui *)handle);
+	ui_instance *instance = (ui_instance *)handle;
+	plugin_ui_free(instance->ui);
+	free(instance);
 }
 
 #define CONTROL_INPUT_INDEX_OFFSET ( \
@@ -333,14 +357,16 @@ static void ui_cleanup(LV2UI_Handle handle) {
 #define CONTROL_OUTPUT_INDEX_OFFSET	(CONTROL_INPUT_INDEX_OFFSET + DATA_PRODUCT_CONTROL_INPUTS_N)
 
 static void ui_port_event(LV2UI_Handle handle, uint32_t port_index, uint32_t buffer_size, uint32_t format, const void * buffer) {
+	ui_instance *instance = (ui_instance *)handle;
 	if (port_index < CONTROL_OUTPUT_INDEX_OFFSET)
-		plugin_ui_set_parameter((plugin_ui *)handle, param_data[port_index - CONTROL_INPUT_INDEX_OFFSET].index, *((float *)buffer));
+		plugin_ui_set_parameter(instance->ui, param_data[port_index - CONTROL_INPUT_INDEX_OFFSET].index, *((float *)buffer));
 	else
-		plugin_ui_set_parameter((plugin_ui *)handle, param_out_index[port_index - CONTROL_OUTPUT_INDEX_OFFSET], *((float *)buffer));
+		plugin_ui_set_parameter(instance->ui, param_out_index[port_index - CONTROL_OUTPUT_INDEX_OFFSET], *((float *)buffer));
 }
 
 static int ui_idle(LV2UI_Handle handle) {
-	plugin_ui_idle((plugin_ui *)handle);
+	ui_instance *instance = (ui_instance *)handle;
+	plugin_ui_idle(instance->ui);
 	return 0;
 }
 

@@ -68,4 +68,10 @@ static uint32_t param_out_index[DATA_PRODUCT_CONTROL_OUTPUTS_N] = {
 {{?it.lv2.ui}}
 #define DATA_LV2_UI_URI				"{{=it.tibia.CGetUTF8StringLiteral(it.tibia.lv2.expandURI(it.lv2.ui.uri))}}"
 #define DATA_UI_USER_RESIZABLE			{{=it.product.ui.userResizable ? 1 : 0}}
+
+#if DATA_PRODUCT_CONTROL_INPUTS_N > 0
+static uint32_t index_to_param[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N] = {
+	{{~it.tibia.lv2.ports.filter(x => x.type == "control").map((e, i) => ({ i: i, pi: e.paramIndex })).sort((a, b) => a.pi - b.pi) :p}}{{=p.i + it.tibia.lv2.ports.filter(x => x.type != "control").length}}, {{~}}
+};
+#endif
 {{?}}
