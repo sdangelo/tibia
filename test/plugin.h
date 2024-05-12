@@ -259,7 +259,17 @@ static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 				instance->gain = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
 				instance->cbs.set_parameter(instance->cbs.handle, 0, -60.f + 80.f * instance->gain);
 				puglPostRedisplay(instance->view);
-			}
+			} else if (ev->x >= x + 0.1 * w && ev->x <= x + 0.9 * w
+			    && ev->y >= y + 0.3 * h && ev->y <= y + 0.4 * h) {
+				instance->delay = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
+				instance->cbs.set_parameter(instance->cbs.handle, 1, 1000.f * instance->delay);
+				puglPostRedisplay(instance->view);
+			} else if (ev->x >= x + 0.1 * w && ev->x <= x + 0.9 * w
+			    && ev->y >= y + 0.45 * h && ev->y <= y + 0.55 * h) {
+				instance->cutoff = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
+				instance->cbs.set_parameter(instance->cbs.handle, 2, (632.4555320336746f * instance->cutoff + 20.653108640674372f) / (1.0326554320337158f - instance->cutoff));
+				puglPostRedisplay(instance->view);
+			} 
 		}
 			break;
 		case PUGL_EXPOSE:
