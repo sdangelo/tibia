@@ -247,7 +247,6 @@ static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 		case PUGL_BUTTON_RELEASE:
 		{
 			plugin_ui *instance = (plugin_ui *)puglGetHandle(view);
-			PuglRect frame = puglGetFrame(view);
 			const PuglButtonEvent *ev = (const PuglButtonEvent *)event;
 			double x = instance->x;
 			double y = instance->y;
@@ -269,12 +268,18 @@ static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 				instance->cutoff = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
 				instance->cbs.set_parameter(instance->cbs.handle, 2, (632.4555320336746f * instance->cutoff + 20.653108640674372f) / (1.0326554320337158f - instance->cutoff));
 				puglPostRedisplay(instance->view);
-			} 
+			} else if (ev->x >= x + 0.4 * w && ev->x <= x + 0.6 * w
+			    && ev->y >= y + 0.6 * h && ev->y <= y + 0.7 * h) {
+				instance->bypass = !instance->bypass;
+				instance->cbs.set_parameter(instance->cbs.handle, 3, instance->bypass ? 1.f : 0.f);
+				puglPostRedisplay(instance->view);
+			}
 		}
 			break;
 		case PUGL_EXPOSE:
 		{
 			plugin_ui *instance = (plugin_ui *)puglGetHandle(view);
+			plugin_ui_update_geometry(instance); // I didn't expect this was needed here for X11 to work decently when resizing
 			plugin_ui_draw(instance);
 		}
 			break;

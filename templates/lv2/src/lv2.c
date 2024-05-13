@@ -28,7 +28,10 @@ typedef struct {
 
 #define TEMPLATE_HAS_UI
 #include "data.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 #include "plugin.h"
+#pragma GCC diagnostic pop
 
 #include "lv2/core/lv2.h"
 #if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
@@ -48,6 +51,20 @@ typedef struct {
 #include <xmmintrin.h>
 #include <pmmintrin.h>
 #endif
+
+static inline float clampf(float x, float m, float M) {
+	return x < m ? m : (x > M ? M : x);
+}
+
+static float straighten_param(size_t index, float value) {
+	if (param_data[index].flags & DATA_PARAM_BYPASS)
+		value = value > 0.f ? 0.f : 1.f;
+	else if (param_data[index].flags & DATA_PARAM_TOGGLED)
+		value = value > 0.f ? 1.f : 0.f;
+	else if (param_data[index].flags & DATA_PARAM_INTEGER)
+		value = (int32_t)(value + (value >= 0.f ? 0.5f : -0.5f));
+	return clampf(value, param_data[index].min, param_data[index].max);
+}
 
 typedef struct {
 	plugin				p;
@@ -188,10 +205,6 @@ static void activate(LV2_Handle instance) {
 	plugin_reset(&i->p);
 }
 
-static inline float clampf(float x, float m, float M) {
-	return x < m ? m : (x > M ? M : x);
-}
-
 static void run(LV2_Handle instance, uint32_t sample_count) {
 	plugin_instance * i = (plugin_instance *)instance;
 
@@ -211,17 +224,7 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
 		if (i->c[j] == NULL)
 			continue;
-		float v;
-		if (param_data[j].flags & DATA_PARAM_BYPASS)
-			v = *i->c[j] > 0.f ? 0.f : 1.f;
-		else if (param_data[j].flags & DATA_PARAM_TOGGLED)
-			v = *i->c[j] > 0.f ? 1.f : 0.f;
-		else if (param_data[j].flags & DATA_PARAM_INTEGER)
-			v = (int32_t)(*i->c[j] + (*i->c[j] >= 0.f ? 0.5f : -0.5f));
-		else
-			v = *i->c[j];
-
-		v = clampf(v, param_data[j].min, param_data[j].max);
+		float v = straighten_param(j, *i->c[j]);
 		if (v != i->params[j]) {
 			i->params[j] = v;
 			plugin_set_parameter(&i->p, param_data[j].index, v);
@@ -304,20 +307,31 @@ typedef struct {
 	LV2UI_Controller	controller;
 } ui_instance;
 
+#define CONTROL_INPUT_INDEX_OFFSET ( \
+		DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N \
+		+ DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N \
+		+ DATA_PRODUCT_MIDI_INPUTS_N \
+		+ DATA_PRODUCT_MIDI_OUTPUTS_N )
+#define CONTROL_OUTPUT_INDEX_OFFSET	(CONTROL_INPUT_INDEX_OFFSET + DATA_PRODUCT_CONTROL_INPUTS_N)
+
 static void ui_set_parameter_cb(void *handle, size_t index, float value) {
 	ui_instance *instance = (ui_instance *)handle;
-	instance->write(instance->controller, index_to_param[index], sizeof(float), 0, &value);
+	index = index_to_param[index];
+	value = straighten_param(index - CONTROL_INPUT_INDEX_OFFSET, value);
+	instance->write(instance->controller, index, sizeof(float), 0, &value);
 }
 
 static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const char * plugin_uri, const char * bundle_path, LV2UI_Write_Function write_function, LV2UI_Controller controller, LV2UI_Widget * widget, const LV2_Feature * const * features) {
+	(void)descriptor;
+	(void)plugin_uri;
+	(void)bundle_path;
+
 	char has_parent = 0;
 	void *parent = NULL;
 	for (size_t i = 0; features[i] != NULL; i++)
 		if (!strcmp(features[i]->URI, LV2_UI__parent)) {
 			has_parent = 1;
 			parent = features[i]->data;
-		} else if (!strcmp(features[i]->URI, LV2_UI__resize)) {
-			// TODO...
 		}
 
 	ui_instance *instance = malloc(sizeof(ui_instance));
@@ -349,18 +363,15 @@ static void ui_cleanup(LV2UI_Handle handle) {
 	free(instance);
 }
 
-#define CONTROL_INPUT_INDEX_OFFSET ( \
-		DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N \
-		+ DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N \
-		+ DATA_PRODUCT_MIDI_INPUTS_N \
-		+ DATA_PRODUCT_MIDI_OUTPUTS_N )
-#define CONTROL_OUTPUT_INDEX_OFFSET	(CONTROL_INPUT_INDEX_OFFSET + DATA_PRODUCT_CONTROL_INPUTS_N)
-
 static void ui_port_event(LV2UI_Handle handle, uint32_t port_index, uint32_t buffer_size, uint32_t format, const void * buffer) {
+	(void)buffer_size;
+	(void)format;
+
 	ui_instance *instance = (ui_instance *)handle;
-	if (port_index < CONTROL_OUTPUT_INDEX_OFFSET)
-		plugin_ui_set_parameter(instance->ui, param_data[port_index - CONTROL_INPUT_INDEX_OFFSET].index, *((float *)buffer));
-	else
+	if (port_index < CONTROL_OUTPUT_INDEX_OFFSET) {
+		size_t index = port_index - CONTROL_INPUT_INDEX_OFFSET;
+		plugin_ui_set_parameter(instance->ui, param_data[index].index, straighten_param(index, *((float *)buffer)));
+	} else
 		plugin_ui_set_parameter(instance->ui, param_out_index[port_index - CONTROL_OUTPUT_INDEX_OFFSET], *((float *)buffer));
 }
 
@@ -370,23 +381,10 @@ static int ui_idle(LV2UI_Handle handle) {
 	return 0;
 }
 
-static int ui_resize(LV2UI_Feature_Handle handle, int width, int height) {
-#if DATA_UI_USER_RESIZABLE
-	//TODO
-	//return plugin_ui_resize((plugin_ui *)handle, width, height);
-	return 0;
-#else
-	return -1;
-#endif
-}
-
 static const void * ui_extension_data(const char * uri) {
 	static const LV2UI_Idle_Interface idle = { ui_idle };
-	static const LV2UI_Resize resize = { NULL, ui_resize };
 	if (!strcmp(uri, LV2_UI__idleInterface))
 		return &idle;
-	else if (!strcmp(uri, LV2_UI__resize))
-		return &resize;
 	return NULL;
 }
 
