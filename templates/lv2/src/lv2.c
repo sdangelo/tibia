@@ -26,10 +26,10 @@ typedef struct {
 	void (*set_parameter)(void *handle, size_t index, float value);
 } plugin_ui_callbacks;
 
-#define TEMPLATE_HAS_UI
 #include "data.h"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#define TEMPLATE_HAS_UI
 #include "plugin.h"
 #pragma GCC diagnostic pop
 

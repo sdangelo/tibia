@@ -27,6 +27,11 @@
 #include "vst3_c_api.h"
 #pragma GCC diagnostic pop
 
+typedef struct {
+	void *	handle;
+	void (*set_parameter)(void *handle, size_t index, float value);
+} plugin_ui_callbacks;
+
 #include "data.h"
 #define TEMPLATE_HAS_UI
 #include "plugin.h"
@@ -837,6 +842,27 @@ static Steinberg_Vst_IProcessContextRequirementsVtbl pluginVtblIProcessContextRe
 	/* .getProcessContextRequirements	= */ pluginGetProcessContextRequirements
 };
 
+typedef struct plugView plugView;
+
+typedef struct controller {
+	Steinberg_Vst_IEditControllerVtbl *		vtblIEditController;
+	Steinberg_Vst_IMidiMappingVtbl *		vtblIMidiMapping;
+#ifdef PLUGIN_UI
+	//Steinberg_Vst_IConnectionPointVtbl *		vtblIConnectionPoint;
+#endif
+	Steinberg_uint32				refs;
+	Steinberg_FUnknown *				context;
+#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+	double						parameters[DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N];
+#endif
+	struct Steinberg_Vst_IComponentHandler *	componentHandler;
+#ifdef PLUGIN_UI
+	plugView **					views;
+	size_t						viewsCount;
+#endif
+} controller;
+
+static Steinberg_Vst_IEditControllerVtbl controllerVtblIEditController;
 #ifdef PLUGIN_UI
 # ifdef __linux__
 #  include <X11/Xlib.h>
@@ -910,12 +936,15 @@ typedef struct plugView {
 	Steinberg_uint32		refs;
 	Steinberg_IPlugFrame *		frame;
 	plugin_ui *			ui;
+	controller *			ctrl;
 # ifdef __linux__
 	Steinberg_IRunLoop *		runLoop;
 	timerHandler			timer;
 	Display *			display;
 # endif
 } plugView;
+
+static Steinberg_tresult plugViewRemoved(void* thisInterface);
 
 static Steinberg_tresult plugViewQueryInterface(void *thisInterface, const Steinberg_TUID iid, void ** obj) {
 	TRACE("plugView queryInterface %p\n", thisInterface);
@@ -951,9 +980,13 @@ static Steinberg_uint32 plugViewRelease(void *thisInterface) {
 	v->refs--;
 	if (v->refs == 0) {
 		TRACE(" free %p\n", (void *)v);
-# ifdef __linux__
-		XCloseDisplay(v->display);
-# endif
+		if (v->ui)
+			plugViewRemoved(thisInterface);
+		for (size_t i = 0; i < v->ctrl->viewsCount; i++)
+			if (v->ctrl->views[i] == v) {
+				v->ctrl->views[i] = NULL;
+				break;
+			}
 		free(v);
 		return 0;
 	}
@@ -977,17 +1010,67 @@ static Steinberg_tresult plugViewIsPlatformTypeSupported(void* thisInterface, St
 # endif
 }
 
+# if DATA_PRODUCT_PARAMETERS_N > 0
+static void plugViewUpdateParameter(plugView *view, size_t index) {
+	if (view->ui)
+		plugin_ui_set_parameter(view->ui, parameterData[index].index, view->ctrl->parameters[index]);
+}
+
+static void plugViewUpdateAllParameters(plugView *view) {
+	if (view->ui == NULL)
+		return;
+	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++)
+		plugin_ui_set_parameter(view->ui, parameterData[i].index, view->ctrl->parameters[i]);
+}
+
+static void plugViewSetParameterCb(void *handle, size_t index, float value) {
+	plugView *v = (plugView *)handle;
+#  ifdef DATA_PARAM_LATENCY_INDEX
+	index = index >= DATA_PARAM_LATENCY_INDEX ? index - 1 : index;
+#  endif
+	v->ctrl->componentHandler->lpVtbl->beginEdit(v->ctrl->componentHandler, parameterInfo[index].id);
+	v->ctrl->componentHandler->lpVtbl->performEdit(v->ctrl->componentHandler, parameterInfo[index].id, parameterUnmap(index, parameterAdjust(index, value)));
+	v->ctrl->componentHandler->lpVtbl->endEdit(v->ctrl->componentHandler, parameterInfo[index].id);
+}
+# endif
+
 static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Steinberg_FIDString type) {
+	// GUI needs to be created here, see https://forums.steinberg.net/t/vst-and-hidpi/201916/3
 	TRACE("plugView attached %p\n", thisInterface);
+
+	if (plugViewIsPlatformTypeSupported(thisInterface, type) != Steinberg_kResultOk)
+			return Steinberg_kInvalidArgument;
+
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
-	v->ui = plugin_ui_create(1, parent);
+	if (v->ui)
+		return Steinberg_kInvalidArgument;
+# if DATA_PRODUCT_PARAMETERS_N > 0
+	plugin_ui_callbacks cbs = {
+		/* .handle		= */ (void *)v,
+		/* .set_parameter	= */ plugViewSetParameterCb
+	};
+	v->ui = plugin_ui_create(1, parent, &cbs);
+# else
+	v->ui = plugin_ui_create(1, parent, NULL);
+# endif
 	if (!v->ui)
 		return Steinberg_kResultFalse;
-# ifdef __linux
-	if (v->runLoop->lpVtbl->registerTimer(v->runLoop, (struct Steinberg_ITimerHandler *)&v->timer, 20) != Steinberg_kResultOk) {
+# ifdef __linux__
+	v->display = XOpenDisplay(NULL);
+	if (v->display == NULL) {
 		plugin_ui_free(v->ui);
+		v->ui = NULL;
 		return Steinberg_kResultFalse;
 	}
+	if (v->runLoop->lpVtbl->registerTimer(v->runLoop, (struct Steinberg_ITimerHandler *)&v->timer, 20) != Steinberg_kResultOk) {
+		XCloseDisplay(v->display);
+		plugin_ui_free(v->ui);
+		v->ui = NULL;
+		return Steinberg_kResultFalse;
+	}
+# endif
+# if DATA_PRODUCT_PARAMETERS_N > 0
+	plugViewUpdateAllParameters(v);
 # endif
 	return Steinberg_kResultTrue;
 }
@@ -995,7 +1078,10 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 static Steinberg_tresult plugViewRemoved(void* thisInterface) {
 	TRACE("plugView removed %p\n", thisInterface);
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
+# ifdef __linux__
 	v->runLoop->lpVtbl->unregisterTimer(v->runLoop, (struct Steinberg_ITimerHandler *)&v->timer);
+	XCloseDisplay(v->display);
+# endif
 	plugin_ui_free(v->ui);
 	v->ui = NULL;
 	return Steinberg_kResultTrue;
@@ -1077,6 +1163,8 @@ static Steinberg_tresult plugViewSetFrame(void* thisInterface, struct Steinberg_
 }
 
 static Steinberg_tresult plugViewCanResize(void* thisInterface) {
+	(void) thisInterface;
+
 	TRACE("plugView canResize %p\n", thisInterface);
 # if DATA_UI_USER_RESIZABLE
 	return Steinberg_kResultTrue;
@@ -1121,21 +1209,6 @@ static Steinberg_IPlugViewVtbl plugViewVtblIPlugView = {
 };
 #endif
 
-typedef struct controller {
-	Steinberg_Vst_IEditControllerVtbl *	vtblIEditController;
-	Steinberg_Vst_IMidiMappingVtbl *	vtblIMidiMapping;
-#ifdef PLUGIN_UI
-	//Steinberg_Vst_IConnectionPointVtbl *	vtblIConnectionPoint;
-#endif
-	Steinberg_uint32			refs;
-	Steinberg_FUnknown *			context;
-#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-	double					parameters[DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N];
-#endif
-	struct Steinberg_Vst_IComponentHandler* componentHandler;
-} controller;
-
-static Steinberg_Vst_IEditControllerVtbl controllerVtblIEditController;
 static Steinberg_Vst_IMidiMappingVtbl controllerVtblIMidiMapping;
 #ifdef PLUGIN_UI
 //static Steinberg_Vst_IConnectionPointVtbl controllerVtblIConnectionPoint;
@@ -1176,6 +1249,12 @@ static Steinberg_uint32 controllerRelease(controller *c) {
 	c->refs--;
 	if (c->refs == 0) {
 		TRACE(" free %p\n", (void *)c);
+		if (c->views) {
+			for (size_t i = 0; i < c->viewsCount; i++)
+				if (c->views[i]) // this should not happen but you never know
+					plugViewRelease(c->views[i]);
+			free(c->views);
+		}
 		free(c);
 		return 0;
 	}
@@ -1415,6 +1494,11 @@ static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Stein
 		return Steinberg_kResultFalse;
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
 	c->parameters[pi] = pi >= DATA_PRODUCT_PARAMETERS_N ? value : parameterAdjust(pi, parameterMap(pi, value));
+# ifdef PLUGIN_UI
+	for (size_t i = 0; i < c->viewsCount; i++)
+		if(c->views[i])
+			plugViewUpdateParameter(c->views[i], pi);
+# endif
 	return Steinberg_kResultTrue;
 #else
 	(void)thisInterface;
@@ -1438,8 +1522,6 @@ static Steinberg_tresult controllerSetComponentHandler(void* thisInterface, stru
 }
 
 static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Steinberg_FIDString name) {
-	(void)thisInterface;
-
 	TRACE("controller create view %s\n", name);
 
 #ifdef PLUGIN_UI
@@ -1450,24 +1532,38 @@ static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Ste
 	if (view == NULL)
 		return NULL;
 
+	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
+	size_t i;
+	for (i = 0; i < c->viewsCount; c++)
+		if (c->views[i] == NULL)
+			break;
+	if (i == c->viewsCount) {
+		size_t cnt = i + 1;
+		plugView **views = realloc(c->views, cnt * sizeof(plugView **));
+		if (views == NULL) {
+			free(view);
+			return NULL;
+		}
+		c->views = views;
+		c->viewsCount = cnt;
+	}
+	c->views[i] = view;
+
 	view->vtblIPlugView = &plugViewVtblIPlugView;
 	view->refs = 1;
 	view->frame = NULL;
 	view->ui = NULL;
+	view->ctrl = c;
 # ifdef __linux__
 	view->timer.vtblITimerHandler = &timerHandlerVtblITimerHandler;
 	view->timer.refs = 1;
 	view->timer.cb = plugViewOnTimer;
 	view->timer.data = view;
-	view->display = XOpenDisplay(NULL);
-	if (view->display == NULL) {
-		free(view);
-		return NULL;
-	}
 # endif
 
 	return (struct Steinberg_IPlugView *)view;
 #else
+	(void)thisInterface;
 	(void)name;
 
 	return NULL;
@@ -1726,6 +1822,8 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 		c->refs = 1;
 		c->context = NULL;
 		c->componentHandler = NULL;
+		c->views = NULL;
+		c->viewsCount = 0;
 		*obj = c;
 		TRACE(" instance: %p\n", (void *)c);
 	} else {
