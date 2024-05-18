@@ -56,7 +56,7 @@ static inline float clampf(float x, float m, float M) {
 	return x < m ? m : (x > M ? M : x);
 }
 
-static float straighten_param(size_t index, float value) {
+static float adjust_param(size_t index, float value) {
 	if (param_data[index].flags & DATA_PARAM_BYPASS)
 		value = value > 0.f ? 0.f : 1.f;
 	else if (param_data[index].flags & DATA_PARAM_TOGGLED)
@@ -224,7 +224,7 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
 		if (i->c[j] == NULL)
 			continue;
-		float v = straighten_param(j, *i->c[j]);
+		float v = adjust_param(j, *i->c[j]);
 		if (v != i->params[j]) {
 			i->params[j] = v;
 			plugin_set_parameter(&i->p, param_data[j].index, v);
@@ -303,23 +303,27 @@ LV2_SYMBOL_EXPORT const LV2_Descriptor * lv2_descriptor(uint32_t index) {
 #ifdef PLUGIN_UI
 typedef struct {
 	plugin_ui *		ui;
+# if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	LV2UI_Write_Function	write;
 	LV2UI_Controller	controller;
+# endif
 } ui_instance;
 
-#define CONTROL_INPUT_INDEX_OFFSET ( \
+# define CONTROL_INPUT_INDEX_OFFSET ( \
 		DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N \
 		+ DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N \
 		+ DATA_PRODUCT_MIDI_INPUTS_N \
 		+ DATA_PRODUCT_MIDI_OUTPUTS_N )
-#define CONTROL_OUTPUT_INDEX_OFFSET	(CONTROL_INPUT_INDEX_OFFSET + DATA_PRODUCT_CONTROL_INPUTS_N)
+# define CONTROL_OUTPUT_INDEX_OFFSET	(CONTROL_INPUT_INDEX_OFFSET + DATA_PRODUCT_CONTROL_INPUTS_N)
 
+# if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 static void ui_set_parameter_cb(void *handle, size_t index, float value) {
 	ui_instance *instance = (ui_instance *)handle;
 	index = index_to_param[index];
-	value = straighten_param(index - CONTROL_INPUT_INDEX_OFFSET, value);
+	value = adjust_param(index - CONTROL_INPUT_INDEX_OFFSET, value);
 	instance->write(instance->controller, index, sizeof(float), 0, &value);
 }
+# endif
 
 static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const char * plugin_uri, const char * bundle_path, LV2UI_Write_Function write_function, LV2UI_Controller controller, LV2UI_Widget * widget, const LV2_Feature * const * features) {
 	(void)descriptor;
@@ -340,13 +344,20 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 		return NULL;
 	}
 
+# if DATA_PRODUCT_CONTROL_INPUTS_N > 0
+	instance->write = write_function;
+	instance->controller = controller;
 	plugin_ui_callbacks cbs = {
 		/* .handle		= */ (void *)instance,
 		/* .set_parameter	= */ ui_set_parameter_cb
 	};
-	instance->write = write_function;
-	instance->controller = controller;
 	instance->ui = plugin_ui_create(has_parent, parent, &cbs);
+# else
+	(void)write_function;
+	(void)controller;
+
+	instance->ui = plugin_ui_create(has_parent, parent, NULL);
+# endif
 	if (instance->ui == NULL) {
 		free(instance);
 		*widget = NULL;
@@ -363,6 +374,7 @@ static void ui_cleanup(LV2UI_Handle handle) {
 	free(instance);
 }
 
+# if DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
 static void ui_port_event(LV2UI_Handle handle, uint32_t port_index, uint32_t buffer_size, uint32_t format, const void * buffer) {
 	(void)buffer_size;
 	(void)format;
@@ -370,10 +382,11 @@ static void ui_port_event(LV2UI_Handle handle, uint32_t port_index, uint32_t buf
 	ui_instance *instance = (ui_instance *)handle;
 	if (port_index < CONTROL_OUTPUT_INDEX_OFFSET) {
 		size_t index = port_index - CONTROL_INPUT_INDEX_OFFSET;
-		plugin_ui_set_parameter(instance->ui, param_data[index].index, straighten_param(index, *((float *)buffer)));
+		plugin_ui_set_parameter(instance->ui, param_data[index].index, adjust_param(index, *((float *)buffer)));
 	} else
 		plugin_ui_set_parameter(instance->ui, param_out_index[port_index - CONTROL_OUTPUT_INDEX_OFFSET], *((float *)buffer));
 }
+# endif
 
 static int ui_idle(LV2UI_Handle handle) {
 	ui_instance *instance = (ui_instance *)handle;
@@ -392,7 +405,11 @@ static const LV2UI_Descriptor ui_descriptor = {
 	/* .URI			= */ DATA_LV2_UI_URI,
 	/* .instantiate		= */ ui_instantiate,
 	/* .cleanup		= */ ui_cleanup,
+# if DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
 	/* .port_event		= */ ui_port_event,
+# else
+	/* .port_event		= */ NULL,
+# endif
 	/* .extension_data	= */ ui_extension_data
 };
 
