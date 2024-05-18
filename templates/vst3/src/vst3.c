@@ -1249,12 +1249,14 @@ static Steinberg_uint32 controllerRelease(controller *c) {
 	c->refs--;
 	if (c->refs == 0) {
 		TRACE(" free %p\n", (void *)c);
+#ifdef PLUGIN_UI
 		if (c->views) {
 			for (size_t i = 0; i < c->viewsCount; i++)
 				if (c->views[i]) // this should not happen but you never know
 					plugViewRelease(c->views[i]);
 			free(c->views);
 		}
+#endif
 		free(c);
 		return 0;
 	}
@@ -1822,8 +1824,10 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 		c->refs = 1;
 		c->context = NULL;
 		c->componentHandler = NULL;
+#ifdef PLUGIN_UI
 		c->views = NULL;
 		c->viewsCount = 0;
+#endif
 		*obj = c;
 		TRACE(" instance: %p\n", (void *)c);
 	} else {
