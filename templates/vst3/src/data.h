@@ -220,5 +220,6 @@ static struct {
 {{?}}
 
 {{?it.product.ui}}
+#define DATA_UI
 #define DATA_UI_USER_RESIZABLE			{{=it.product.ui.userResizable ? 1 : 0}}
 {{?}}

@@ -29,8 +29,10 @@ typedef struct {
 #include "data.h"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
-#define TEMPLATE_HAS_UI
 #include "plugin.h"
+#ifdef DATA_UI
+# include "plugin_ui.h"
+#endif
 #pragma GCC diagnostic pop
 
 #include "lv2/core/lv2.h"
@@ -43,7 +45,7 @@ typedef struct {
 #include "lv2/midi/midi.h"
 #include "lv2/urid/urid.h"
 #endif
-#ifdef PLUGIN_UI
+#ifdef DATA_UI
 #include "lv2/ui/ui.h"
 #endif
 
@@ -300,7 +302,7 @@ LV2_SYMBOL_EXPORT const LV2_Descriptor * lv2_descriptor(uint32_t index) {
 	return index == 0 ? &descriptor : NULL;
 }
 
-#ifdef PLUGIN_UI
+#ifdef DATA_UI
 typedef struct {
 	plugin_ui *		ui;
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0

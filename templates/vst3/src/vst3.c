@@ -33,8 +33,10 @@ typedef struct {
 } plugin_ui_callbacks;
 
 #include "data.h"
-#define TEMPLATE_HAS_UI
 #include "plugin.h"
+#ifdef DATA_UI
+# include "plugin_ui.h"
+#endif
 
 #if defined(__i386__) || defined(__x86_64__)
 #include <xmmintrin.h>
@@ -57,7 +59,7 @@ typedef struct {
 #include <pmmintrin.h>
 #endif
 
-#ifdef PLUGIN_UI
+#ifdef DATA_UI
 # ifdef __linux__
 // Why generate the C interface when you can just not give a fuck? Thank you Steinberg!
 
@@ -847,7 +849,7 @@ typedef struct plugView plugView;
 typedef struct controller {
 	Steinberg_Vst_IEditControllerVtbl *		vtblIEditController;
 	Steinberg_Vst_IMidiMappingVtbl *		vtblIMidiMapping;
-#ifdef PLUGIN_UI
+#ifdef DATA_UI
 	//Steinberg_Vst_IConnectionPointVtbl *		vtblIConnectionPoint;
 #endif
 	Steinberg_uint32				refs;
@@ -856,14 +858,14 @@ typedef struct controller {
 	double						parameters[DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N];
 #endif
 	struct Steinberg_Vst_IComponentHandler *	componentHandler;
-#ifdef PLUGIN_UI
+#ifdef DATA_UI
 	plugView **					views;
 	size_t						viewsCount;
 #endif
 } controller;
 
 static Steinberg_Vst_IEditControllerVtbl controllerVtblIEditController;
-#ifdef PLUGIN_UI
+#ifdef DATA_UI
 # ifdef __linux__
 #  include <X11/Xlib.h>
 
@@ -1210,7 +1212,7 @@ static Steinberg_IPlugViewVtbl plugViewVtblIPlugView = {
 #endif
 
 static Steinberg_Vst_IMidiMappingVtbl controllerVtblIMidiMapping;
-#ifdef PLUGIN_UI
+#ifdef DATA_UI
 //static Steinberg_Vst_IConnectionPointVtbl controllerVtblIConnectionPoint;
 #endif
 
@@ -1223,7 +1225,7 @@ static Steinberg_tresult controllerQueryInterface(controller *c, const Steinberg
 		offset = offsetof(controller, vtblIEditController);
 	else if (memcmp(iid, Steinberg_Vst_IMidiMapping_iid, sizeof(Steinberg_TUID)) == 0)
 		offset = offsetof(controller, vtblIMidiMapping);
-#ifdef PLUGIN_UI
+#ifdef DATA_UI
 	/*else if (memcmp(iid, Steinberg_Vst_IConnectionPoint_iid, sizeof(Steinberg_TUID)) == 0)
 		offset = offsetof(controller, vtblIConnectionPoint);*/
 #endif
@@ -1249,7 +1251,7 @@ static Steinberg_uint32 controllerRelease(controller *c) {
 	c->refs--;
 	if (c->refs == 0) {
 		TRACE(" free %p\n", (void *)c);
-#ifdef PLUGIN_UI
+#ifdef DATA_UI
 		if (c->views) {
 			for (size_t i = 0; i < c->viewsCount; i++)
 				if (c->views[i]) // this should not happen but you never know
@@ -1496,7 +1498,7 @@ static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Stein
 		return Steinberg_kResultFalse;
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
 	c->parameters[pi] = pi >= DATA_PRODUCT_PARAMETERS_N ? value : parameterAdjust(pi, parameterMap(pi, value));
-# ifdef PLUGIN_UI
+# ifdef DATA_UI
 	for (size_t i = 0; i < c->viewsCount; i++)
 		if(c->views[i])
 			plugViewUpdateParameter(c->views[i], pi);
@@ -1526,7 +1528,7 @@ static Steinberg_tresult controllerSetComponentHandler(void* thisInterface, stru
 static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Steinberg_FIDString name) {
 	TRACE("controller create view %s\n", name);
 
-#ifdef PLUGIN_UI
+#ifdef DATA_UI
 	if (strcmp(name, "editor"))
 		return NULL;
 
@@ -1649,7 +1651,7 @@ static Steinberg_Vst_IMidiMappingVtbl controllerVtblIMidiMapping = {
 	/* .getMidiControllerAssignment	= */ controllerGetMidiControllerAssignment
 };
 
-#ifdef PLUGIN_UI
+#ifdef DATA_UI
 # if 0
 static Steinberg_tresult controllerIConnectionPointQueryInterface(void* thisInterface, const Steinberg_TUID iid, void** obj) {
 	TRACE("controller IConnectionPoint queryInterface %p\n", thisInterface);
@@ -1818,13 +1820,13 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 			return Steinberg_kOutOfMemory;
 		c->vtblIEditController = &controllerVtblIEditController;
 		c->vtblIMidiMapping = &controllerVtblIMidiMapping;
-#ifdef PLUGIN_UI
+#ifdef DATA_UI
 		//c->vtblIConnectionPoint = &controllerVtblIConnectionPoint;
 #endif
 		c->refs = 1;
 		c->context = NULL;
 		c->componentHandler = NULL;
-#ifdef PLUGIN_UI
+#ifdef DATA_UI
 		c->views = NULL;
 		c->viewsCount = 0;
 #endif
