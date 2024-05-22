@@ -97,7 +97,8 @@ typedef struct Steinberg_IEventHandler
     struct Steinberg_IEventHandlerVtbl* lpVtbl;
 } Steinberg_IEventHandler;
 
-static const Steinberg_TUID Steinberg_IEventHandler_iid = SMTG_INLINE_UID (0x561E65C9, 0x13A0496F, 0x813A2C35, 0x654D7983);
+// not used
+//static const Steinberg_TUID Steinberg_IEventHandler_iid = SMTG_INLINE_UID (0x561E65C9, 0x13A0496F, 0x813A2C35, 0x654D7983);
 
 typedef struct Steinberg_IRunLoopVtbl
 {
@@ -1090,18 +1091,31 @@ static Steinberg_tresult plugViewRemoved(void* thisInterface) {
 }
 
 static Steinberg_tresult plugViewOnWheel(void* thisInterface, float distance) {
+	(void)thisInterface;
+	(void)distance;
+
 	TRACE("plugView onWheel %p\n", thisInterface);
 	//TODO
 	return Steinberg_kResultFalse;
 }
 
 static Steinberg_tresult plugViewOnKeyDown(void* thisInterface, Steinberg_char16 key, Steinberg_int16 keyCode, Steinberg_int16 modifiers) {
+	(void)thisInterface;
+	(void)key;
+	(void)keyCode;
+	(void)modifiers;
+
 	TRACE("plugView onKeyDown %p\n", thisInterface);
 	//TODO
 	return Steinberg_kResultFalse;
 }
 
 static Steinberg_tresult plugViewOnKeyUp(void* thisInterface, Steinberg_char16 key, Steinberg_int16 keyCode, Steinberg_int16 modifiers) {
+	(void)thisInterface;
+	(void)key;
+	(void)keyCode;
+	(void)modifiers;
+
 	TRACE("plugView onKeyUp %p\n", thisInterface);
 	//TODO
 	return Steinberg_kResultFalse;
@@ -1145,6 +1159,9 @@ static Steinberg_tresult plugViewOnSize(void* thisInterface, struct Steinberg_Vi
 }
 
 static Steinberg_tresult plugViewOnFocus(void* thisInterface, Steinberg_TBool state) {
+	(void)thisInterface;
+	(void)state;
+
 	TRACE("plugView onFocus %p\n", thisInterface);
 	//TODO
 	return Steinberg_kResultFalse;
@@ -1176,6 +1193,9 @@ static Steinberg_tresult plugViewCanResize(void* thisInterface) {
 }
 
 static Steinberg_tresult plugViewCheckSizeConstraint(void* thisInterface, struct Steinberg_ViewRect* rect) {
+	(void)thisInterface;
+	(void)rect;
+
 	TRACE("plugView chekSizeContraint %p\n", thisInterface);
 	//TODO
 	return Steinberg_kResultFalse;
