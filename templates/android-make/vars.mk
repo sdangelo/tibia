@@ -21,17 +21,17 @@
 BUNDLE_NAME := {{=it.product.bundleName}}
 JAVA_PACKAGE_NAME := {{=it.android.javaPackageName}}
 
-CFLAGS_EXTRA := {{=it.make && it.make.cflags ? it.make.cflags : ""}} {{=it.android_make && it.android_make.cflags ? it.android_make.cflags : ""}}
-CXXFLAGS_EXTRA := {{=it.make && it.make.cxxflags ? it.make.cxxflags : ""}} {{=it.android_make && it.android_make.cxxflags ? it.android_make.cxxflags : ""}}
-JFLAGS_EXTRA := {{=it.make && it.make.jflags ? it.make.jflags : ""}} {{=it.android_make && it.android_make.jflags ? it.android_make.jflags : ""}}
-LDFLAGS_EXTRA := {{=it.make && it.make.ldflags ? it.make.ldflags : ""}} {{=it.android_make && it.android_make.ldflags ? it.android_make.ldflags : ""}}
+CFLAGS_EXTRA := {{=it.make?.cflags ?? ""}} {{=it.android_make?.cflags ?? ""}}
+CXXFLAGS_EXTRA := {{=it.make?.cxxflags ?? ""}} {{=it.android_make?.cxxflags ?? ""}}
+JFLAGS_EXTRA := {{=it.make?.jflags ?? ""}} {{=it.android_make?.jflags ?? ""}}
+LDFLAGS_EXTRA := {{=it.make?.ldflags ?? ""}} {{=it.android_make?.ldflags ?? ""}}
 
-C_SRCS_EXTRA := {{=it.make && it.make.cSrcs ? it.make.cSrcs : ""}} {{=it.android_make && it.android_make.cSrcs ? it.android_make.cSrcs : ""}}
-CXX_SRCS_EXTRA := {{=it.make && it.make.cxxSrcs ? it.make.cxxSrcs : ""}} {{=it.android_make && it.android_make.cxxSrcs ? it.android_make.cxxSrcs : ""}}
+C_SRCS_EXTRA := {{=it.make?.cSrcs ?? ""}} {{=it.android_make?.cSrcs ?? ""}}
+CXX_SRCS_EXTRA := {{=it.make?.cxxSrcs ?? ""}} {{=it.android_make?.cxxSrcs ?? ""}}
 
-COMMON_DIR := {{=it.android_make && it.android_make.commonDir ? it.android_make.commonDir : (it.make && it.make.commonDir ? it.make.commonDir : "")}}
-DATA_DIR := {{=it.android_make && it.android_make.dataDir ? it.android_make.dataDir : (it.make && it.make.dataDir ? it.make.dataDir : "")}}
-PLUGIN_DIR := {{=it.android_make && it.android_make.pluginDir ? it.android_make.pluginDir : (it.make && it.make.pluginDir ? it.make.pluginDir : "")}}
+COMMON_DIR := {{=it.android_make?.commonDir ?? (it.make?.commonDir ?? "")}}
+DATA_DIR := {{=it.android_make?.dataDir ?? (it.make?.dataDir ?? "")}}
+PLUGIN_DIR := {{=it.android_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
 
 KEY_STORE := {{=it.android_make.keyStore}}
 KEY_ALIAS := {{=it.android_make.keyAlias}}
