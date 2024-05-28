@@ -1197,8 +1197,19 @@ static Steinberg_tresult plugViewCheckSizeConstraint(void* thisInterface, struct
 	(void)rect;
 
 	TRACE("plugView chekSizeContraint %p\n", thisInterface);
-	//TODO
+# if DATA_UI_USER_RESIZABLE
+	return Steinberg_kResultTrue;
+# else
+#  ifdef __linux__
+	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
+
+	XWindowAttributes attr;
+	XGetWindowAttributes(v->display, (Window)(*((char **)v->ui)), &attr);
+	rect->right = rect->left + attr.width;
+	rect->bottom = rect->top + attr.height;
+#  endif
 	return Steinberg_kResultFalse;
+# endif
 }
 
 # ifdef __linux__

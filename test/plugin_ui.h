@@ -196,6 +196,7 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_call
 	instance->view = puglNewView(instance->world);
 	puglSetSizeHint(instance->view, PUGL_DEFAULT_SIZE, WIDTH, HEIGHT);
 	puglSetViewHint(instance->view, PUGL_RESIZABLE, PUGL_TRUE);
+	puglSetHandle(instance->view, instance);
 	puglSetBackend(instance->view, puglCairoBackend());
 	PuglRect frame = { 0, 0, WIDTH, HEIGHT };
 	puglSetFrame(instance->view, frame);
@@ -207,10 +208,10 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_call
 		puglFreeWorld(instance->world);
 		return NULL;
 	}
-	puglShow(instance->view, PUGL_SHOW_RAISE);
-	puglSetHandle(instance->view, instance);
 	instance->widget = (void *)puglGetNativeView(instance->view);
 	instance->cbs = *cbs;
+	puglSetFrame(instance->view, frame); // Intentionally duplicated because of ardour/lv2/mac strange event order call
+	puglShow(instance->view, PUGL_SHOW_RAISE); // Cocoa calls events at this so it's better this happens late
 	return instance;
 }
 
