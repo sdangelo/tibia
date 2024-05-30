@@ -866,6 +866,7 @@ typedef struct controller {
 } controller;
 
 static Steinberg_Vst_IEditControllerVtbl controllerVtblIEditController;
+
 #ifdef DATA_UI
 # ifdef __linux__
 #  include <X11/Xlib.h>
@@ -932,6 +933,8 @@ static Steinberg_ITimerHandlerVtbl timerHandlerVtblITimerHandler = {
 	/* ITimerHandler */
 	/* .onTimer		= */ timerHandlerOnTimer
 };
+# elif defined(__APPLE__)
+#  include <CoreFoundation/CoreFoundation.h>
 # endif
 
 typedef struct plugView {
@@ -944,6 +947,8 @@ typedef struct plugView {
 	Steinberg_IRunLoop *		runLoop;
 	timerHandler			timer;
 	Display *			display;
+# elif defined(__APPLE__)
+	CFRunLoopTimerRef		timer;
 # endif
 } plugView;
 
@@ -1037,12 +1042,18 @@ static void plugViewSetParameterCb(void *handle, size_t index, float value) {
 }
 # endif
 
+# ifdef __APPLE__
+static void plugViewTimerCb(CFRunLoopTimerRef timer, void *info) {
+	plugin_ui_idle(((plugView *)info)->ui);
+}
+# endif
+
 static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Steinberg_FIDString type) {
 	// GUI needs to be created here, see https://forums.steinberg.net/t/vst-and-hidpi/201916/3
 	TRACE("plugView attached %p\n", thisInterface);
 
 	if (plugViewIsPlatformTypeSupported(thisInterface, type) != Steinberg_kResultOk)
-			return Steinberg_kInvalidArgument;
+		return Steinberg_kInvalidArgument;
 
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
 	if (v->ui)
@@ -1071,6 +1082,16 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 		v->ui = NULL;
 		return Steinberg_kResultFalse;
 	}
+# elif defined(__APPLE__)
+	CFRunLoopTimerContext ctx = {
+		/* .version		= */ 0,
+		/* .info		= */ v,
+		/* .retain		= */ NULL,
+		/* .release		= */ NULL,
+		/* .copyDescription	= */ NULL
+	};
+	v->timer = CFRunLoopTimerCreate(NULL, CFAbsoluteTimeGetCurrent(), 20.0 / 1000.0, 0, 0, plugViewTimerCb, &ctx);
+	CFRunLoopAddTimer(CFRunLoopGetCurrent(), v->timer, kCFRunLoopCommonModes);
 # endif
 # if DATA_PRODUCT_PARAMETERS_N > 0
 	plugViewUpdateAllParameters(v);
@@ -1084,6 +1105,9 @@ static Steinberg_tresult plugViewRemoved(void* thisInterface) {
 # ifdef __linux__
 	v->runLoop->lpVtbl->unregisterTimer(v->runLoop, (struct Steinberg_ITimerHandler *)&v->timer);
 	XCloseDisplay(v->display);
+# elif defined(__APPLE__)
+	CFRunLoopTimerInvalidate(v->timer);
+	CFRelease(v->timer);
 # endif
 	plugin_ui_free(v->ui);
 	v->ui = NULL;
