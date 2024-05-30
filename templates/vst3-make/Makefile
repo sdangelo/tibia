@@ -85,9 +85,9 @@ CXX_SRCS = ${CXX_SRCS_EXTRA}
 CXX_OBJS = $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 ifeq ($(UNAME_S), Darwin)
-all: build/${BUNDLE_DIR}/${DLL_FILE} build/${BUNDLE_DIR}/Contents/Info.plist
+all: build/${BUNDLE_DIR}/${DLL_FILE} build/${BUNDLE_DIR}/Contents/Info.plist build/${BUNDLE_DIR}/Contents/PkgInfo
 
-build/${BUNDLE_DIR}/Contents/Info.plist: ${DATA_DIR}/data/Info.plist | build/${BUNDLE_DIR}/Contents
+build/${BUNDLE_DIR}/Contents/%: ${DATA_DIR}/data/% | build/${BUNDLE_DIR}/Contents
 	cp $^ $@
 else
 all: build/${BUNDLE_DIR}/${DLL_FILE}
@@ -113,11 +113,13 @@ install: all
 	mkdir -p -m 0755 "${VST3DIR}/${BUNDLE_DIR}/${DLL_DIR}"
 	install -m 0755 build/${BUNDLE_DIR}/${DLL_FILE} "${VST3DIR}/${BUNDLE_DIR}/${DLL_DIR}"
 	install -m 0644 build/${BUNDLE_DIR}/Contents/Info.plist "${VST3DIR}/${BUNDLE_DIR}/Contents/Info.plist"
+	install -m 0644 build/${BUNDLE_DIR}/Contents/PkgInfo "${VST3DIR}/${BUNDLE_DIR}/Contents/PkgInfo"
 
 install-user: all
 	mkdir -p -m 0755 "${VST3DIR_USER}/${BUNDLE_DIR}/${DLL_DIR}"
 	install -m 0755 build/${BUNDLE_DIR}/${DLL_FILE} "${VST3DIR_USER}/${BUNDLE_DIR}/${DLL_DIR}"
 	install -m 0644 build/${BUNDLE_DIR}/Contents/Info.plist "${VST3DIR_USER}/${BUNDLE_DIR}/Contents/Info.plist"
+	install -m 0644 build/${BUNDLE_DIR}/Contents/PkgInfo "${VST3DIR_USER}/${BUNDLE_DIR}/Contents/PkgInfo"
 
 else
 
