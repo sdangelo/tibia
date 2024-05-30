@@ -1149,6 +1149,7 @@ static Steinberg_tresult plugViewGetSize(void* thisInterface, struct Steinberg_V
 static Steinberg_tresult plugViewOnSize(void* thisInterface, struct Steinberg_ViewRect* newSize) {
 	TRACE("plugView onSize %p\n", thisInterface);
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
+	// TODO: if not resizable by both user and plugin just return false
 	if (!v->ui)
 		return Steinberg_kResultFalse;
 # ifdef __linux__
@@ -1216,6 +1217,21 @@ static Steinberg_tresult plugViewCheckSizeConstraint(void* thisInterface, struct
 static void plugViewOnTimer(void *thisInterface) {
 	TRACE("plugView onTimer %p\n", thisInterface);
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
+
+	// Bitwig doesn't call onSize() as it should, so we compare the editor and parent window and resize if needed
+	Window w = (Window)(*((char **)v->ui));
+	Window root, parent, *children;
+	unsigned nchildren;
+	if (XQueryTree(v->display, w, &root, &parent, &children, &nchildren)) {
+		if (children)
+			XFree(children);
+		XWindowAttributes parent_attr, editor_attr;
+		XGetWindowAttributes(v->display, parent, &parent_attr);
+		XGetWindowAttributes(v->display, w, &editor_attr);
+		if (parent_attr.width != editor_attr.width || parent_attr.height != editor_attr.height)
+			XResizeWindow(v->display, w, parent_attr.width, parent_attr.height);
+	}
+
 	plugin_ui_idle(v->ui);
 }
 # endif
