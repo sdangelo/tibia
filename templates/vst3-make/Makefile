@@ -63,6 +63,9 @@ ifeq ($(UNAME_S), Darwin)
 CFLAGS_ALL := ${CFLAGS_ALL} -arch arm64 -arch x86_64
 LDFLAGS_ALL := ${LDFLAGS_ALL} -arch arm64 -arch x86_64
 CXXFLAGS_ALL := ${CXXFLAGS_ALL} -arch arm64 -arch x86_64
+ ifeq (${HAS_UI}, yes)
+LDFLAGS_ALL := ${LDFLAGS_ALL} -Wl,-framework,Foundation -Wl,-framework,Cocoa -Wl,-framework,Corevideo
+ endif
 endif
 
 ifeq ($(UNAME_S), Linux)
