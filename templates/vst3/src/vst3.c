@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Tibia.  If not, see <http://www.gnu.org/licenses/>.
  *
- * File author: Stefano D'Angelo
+ * File author: Stefano D'Angelo, Paolo Marrone
  */
 
 #include <stddef.h>
@@ -935,6 +935,9 @@ static Steinberg_ITimerHandlerVtbl timerHandlerVtblITimerHandler = {
 };
 # elif defined(__APPLE__)
 #  include <CoreFoundation/CoreFoundation.h>
+#  include <objc/objc.h>
+#  include <objc/runtime.h>
+#  include <objc/message.h>
 # endif
 
 typedef struct plugView {
@@ -1044,6 +1047,8 @@ static void plugViewSetParameterCb(void *handle, size_t index, float value) {
 
 # ifdef __APPLE__
 static void plugViewTimerCb(CFRunLoopTimerRef timer, void *info) {
+	(void)timer;
+
 	plugin_ui_idle(((plugView *)info)->ui);
 }
 # endif
@@ -1179,6 +1184,10 @@ static Steinberg_tresult plugViewOnSize(void* thisInterface, struct Steinberg_Vi
 # ifdef __linux__
 	TRACE(" window %u\n", (Window)(*((char **)v->ui)));
 	XResizeWindow(v->display, (Window)(*((char **)v->ui)), newSize->right - newSize->left, newSize->bottom - newSize->top);
+# elif defined(__APPLE__)
+	CGSize size = { newSize->right - newSize->left, newSize->bottom - newSize->top };
+	void (*f)(id, SEL, CGSize) = (void (*)(id, SEL, CGSize))objc_msgSend;
+	f((id)(*((char**)v->ui)), sel_getUid("setFrameSize:"), size);
 # endif
 	return Steinberg_kResultTrue;
 }
