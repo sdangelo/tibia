@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Tibia.  If not, see <http://www.gnu.org/licenses/>.
  *
- * File author: Stefano D'Angelo
+ * File author: Stefano D'Angelo, Paolo Marrone
  */
 
 #include <pugl/pugl.h>
@@ -141,6 +141,7 @@ static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 		{
 			plugin_ui *instance = (plugin_ui *)puglGetHandle(view);
 			plugin_ui_update_geometry(instance);
+			puglPostRedisplay(instance->view);
 		}
 			break;
 		case PUGL_BUTTON_RELEASE:

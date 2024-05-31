@@ -868,7 +868,9 @@ typedef struct controller {
 static Steinberg_Vst_IEditControllerVtbl controllerVtblIEditController;
 
 #ifdef DATA_UI
+
 # ifdef __linux__
+
 #  include <X11/Xlib.h>
 
 typedef struct {
@@ -933,11 +935,18 @@ static Steinberg_ITimerHandlerVtbl timerHandlerVtblITimerHandler = {
 	/* ITimerHandler */
 	/* .onTimer		= */ timerHandlerOnTimer
 };
+
 # elif defined(__APPLE__)
+
 #  include <CoreFoundation/CoreFoundation.h>
 #  include <objc/objc.h>
 #  include <objc/runtime.h>
 #  include <objc/message.h>
+
+# elif defined(_WIN32) || defined(__CYGWIN__)
+
+#  include <windows.h>
+
 # endif
 
 typedef struct plugView {
@@ -952,6 +961,8 @@ typedef struct plugView {
 	Display *			display;
 # elif defined(__APPLE__)
 	CFRunLoopTimerRef		timer;
+# elif defined(_WIN32) || defined(__CYGWIN__)
+	UINT_PTR			timer;
 # endif
 } plugView;
 
@@ -1008,7 +1019,7 @@ static Steinberg_tresult plugViewIsPlatformTypeSupported(void* thisInterface, St
 	(void)thisInterface;
 
 	TRACE("plugView isPlatformTypeSupported %p %s\n", thisInterface, type);
-# if defined(_WIN32)
+# if defined(_WIN32) || defined(__CYGWIN__)
 	return strcmp(type, "HWND") ? Steinberg_kResultFalse : Steinberg_kResultTrue;
 # elif defined(__APPLE__) && defined(__MACH__)
 	return strcmp(type, "NSView") ? Steinberg_kResultFalse : Steinberg_kResultTrue;
@@ -1050,6 +1061,14 @@ static void plugViewTimerCb(CFRunLoopTimerRef timer, void *info) {
 	(void)timer;
 
 	plugin_ui_idle(((plugView *)info)->ui);
+}
+# elif defined(_WIN32) || defined(__CYGWIN__)
+static void plugViewTimerCb(HWND p1, UINT p2, UINT_PTR p3, DWORD p4) {
+	(void)p1;
+	(void)p2;
+	(void)p4;
+
+	plugin_ui_idle(((plugView *)p3)->ui);
 }
 # endif
 
@@ -1097,6 +1116,13 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 	};
 	v->timer = CFRunLoopTimerCreate(NULL, CFAbsoluteTimeGetCurrent(), 20.0 / 1000.0, 0, 0, plugViewTimerCb, &ctx);
 	CFRunLoopAddTimer(CFRunLoopGetCurrent(), v->timer, kCFRunLoopCommonModes);
+# elif defined(_WIN32) || defined(__CYGWIN__)
+	v->timer = SetTimer((HWND)*((char **)v->ui), (UINT_PTR)v, 20, (TIMERPROC)plugViewTimerCb);
+	if (v->timer == 0) {
+		plugin_ui_free(v->ui);
+		v->ui = NULL;
+		return Steinberg_kResultFalse;
+	}
 # endif
 # if DATA_PRODUCT_PARAMETERS_N > 0
 	plugViewUpdateAllParameters(v);
@@ -1113,6 +1139,8 @@ static Steinberg_tresult plugViewRemoved(void* thisInterface) {
 # elif defined(__APPLE__)
 	CFRunLoopTimerInvalidate(v->timer);
 	CFRelease(v->timer);
+# elif defined(_WIN32) || defined(__CYGWIN__)
+	KillTimer((HWND)(*((char **)v->ui)), (UINT_PTR)v);
 # endif
 	plugin_ui_free(v->ui);
 	v->ui = NULL;
@@ -1187,7 +1215,9 @@ static Steinberg_tresult plugViewOnSize(void* thisInterface, struct Steinberg_Vi
 # elif defined(__APPLE__)
 	CGSize size = { newSize->right - newSize->left, newSize->bottom - newSize->top };
 	void (*f)(id, SEL, CGSize) = (void (*)(id, SEL, CGSize))objc_msgSend;
-	f((id)(*((char**)v->ui)), sel_getUid("setFrameSize:"), size);
+	f((id)(*((char **)v->ui)), sel_getUid("setFrameSize:"), size);
+# elif defined(_WIN32) || defined(__CYGWIN__)
+	SetWindowPos((HWND)*((char **)v->ui), HWND_TOP, 0, 0, newSize->right - newSize->left, newSize->bottom - newSize->top, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER);
 # endif
 	return Steinberg_kResultTrue;
 }
@@ -2021,10 +2051,10 @@ static Steinberg_IPluginFactory3Vtbl factoryVtbl = {
 };
 static Steinberg_IPluginFactory3 factory = { &factoryVtbl };
 
-#ifdef _WIN32
-#define EXPORT __declspec(dllexport)
+#if defined(_WIN32) || defined(__CYGWIN__)
+# define EXPORT __declspec(dllexport)
 #else
-#define EXPORT __attribute__((visibility("default")))
+# define EXPORT __attribute__((visibility("default")))
 #endif
 
 EXPORT
@@ -2032,7 +2062,7 @@ Steinberg_IPluginFactory * GetPluginFactory(void) {
 	return (Steinberg_IPluginFactory *)&factory;
 }
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__CYGWIN__)
 # if defined(__APPLE__)
 #  define ENTRY bundleEntry
 #  define EXIT bundleExit
