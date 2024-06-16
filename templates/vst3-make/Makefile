@@ -93,6 +93,8 @@ ifeq ($(UNAME_S), Darwin)
 ALL := $(ALL) build/$(BUNDLE_DIR)/Contents/Info.plist build/$(BUNDLE_DIR)/Contents/PkgInfo
 endif
 
+-include $(COMMON_DIR)/vars-extra.mk
+
 all: $(ALL)
 
 ifeq ($(CXX_OBJS),)
@@ -132,7 +134,7 @@ install-user: all
 		install -m $$m -t "$(VST3DIR_USER)/$$d" -D $$f; \
 	done
 
--include rules-extra.mk
+-include $(COMMON_DIR)/rules-extra.mk
 
 .PHONY: all clean install install-user
 
@@ -146,4 +148,4 @@ $(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$
 $(CXX_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cpp,$$(CXX_SRCS)) | build/obj
 	$(CXX) $^ -o $@ -c $(CXXFLAGS_ALL)
 
--include rules-secondexp-extra.mk
+-include $(COMMON_DIR)/rules-secondexp-extra.mk

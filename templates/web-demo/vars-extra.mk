@@ -18,24 +18,4 @@
 # File author: Stefano D'Angelo
 #
 
-include vars.mk
-
-TARGET := $(BUNDLE_NAME)
-
-COMMON_DIR := $(or $(COMMON_DIR),.)
-DATA_DIR := $(or $(DATA_DIR),.)
-PLUGIN_DIR := $(or $(PLUGIN_DIR),src)
-
-CPP_SOURCES := $(COMMON_DIR)/src/main.cpp $(CXX_SRCS_EXTRA)
-
-SYSTEM_FILES_DIR := $(LIBDAISY_DIR)/core
-
-include $(SYSTEM_FILES_DIR)/Makefile
-
-C_SOURCES += $(C_SRCS_EXTRA)
-
-CFLAGS += -I$(DATA_DIR)/src -I$(PLUGIN_DIR) $(CFLAGS_EXTRA)
-LDFLAGS += $(LDFLAGS_EXTRA)
-CXXFLAGS += -I$(DATA_DIR)/src -I$(PLUGIN_DIR) $(CXXFLAGS_EXTRA)
-
--include $(COMMON_DIR)/extra.mk
+ALL := $(ALL) build/web/index.html build/web/cert.pem build/web/key.pem

@@ -78,7 +78,7 @@ CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 ALL := build/$(BUNDLE_DIR)/manifest.ttl build/$(BUNDLE_DIR)/$(DLL_FILE)
 
--include vars-extra.mk
+-include $(COMMON_DIR)/vars-extra.mk
 
 all: $(ALL)
 
@@ -117,7 +117,7 @@ install-user: all
 		install -m $$m -t "$(LV2DIR_USER)/$$d" -D $$f; \
 	done
 
--include rules-extra.mk
+-include $(COMMON_DIR)/rules-extra.mk
 
 .PHONY: all clean install install-user
 
@@ -131,4 +131,4 @@ $(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$
 $(CXX_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cpp,$$(CXX_SRCS)) | build/obj
 	$(CXX) $^ -o $@ -c $(CXXFLAGS_ALL)
 
--include rules-secondexp-extra.mk
+-include $(COMMON_DIR)/rules-secondexp-extra.mk

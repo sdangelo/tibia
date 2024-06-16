@@ -25,20 +25,24 @@ DATA_DIR := $(or $(DATA_DIR),.)
 PLUGIN_DIR := $(or $(PLUGIN_DIR),src)
 
 SOURCES := \
-	${DATA_DIR}/src/data.h \
-	${DATA_DIR}/src/index.html \
-	${COMMON_DIR}/src/app.swift \
-	${COMMON_DIR}/src/native.mm \
-	${COMMON_DIR}/src/app-Bridging-Header.h \
-	${PLUGIN_DIR}/plugin.h \
-	${C_SRCS_EXTRA} \
-	${CXX_SRCS_EXTRA} \
-	${SRCS_EXTRA}
-SOURCES_OUT = $(addprefix build/gen/src/, $(notdir $(SOURCES)))
+	$(DATA_DIR)/src/data.h \
+	$(DATA_DIR)/src/index.html \
+	$(COMMON_DIR)/src/app.swift \
+	$(COMMON_DIR)/src/native.mm \
+	$(COMMON_DIR)/src/app-Bridging-Header.h \
+	$(PLUGIN_DIR)/plugin.h \
+	$(C_SRCS_EXTRA) \
+	$(CXX_SRCS_EXTRA) \
+	$(SRCS_EXTRA)
+SOURCES_OUT := $(addprefix build/gen/src/, $(notdir $(SOURCES)))
 
-all: build/gen/${BUNDLE_NAME}.xcodeproj
+ALL = build/gen/$(BUNDLE_NAME).xcodeproj
 
-build/gen/${BUNDLE_NAME}.xcodeproj: ${SOURCES_OUT}
+-include $(COMMON_DIR)/vars-extra.mk
+
+all: $(ALL)
+
+build/gen/$(BUNDLE_NAME).xcodeproj: $(SOURCES_OUT)
 	xcodegen generate --spec project.yml -r build/gen -p build/gen
 
 build/gen/src:
@@ -46,6 +50,8 @@ build/gen/src:
 
 clean:
 	rm -fr build
+
+-include $(COMMON_DIR)/rules-extra.mk
 
 .PHONY: all clean
 
@@ -55,3 +61,5 @@ PERCENT := %
 
 $(SOURCES_OUT): build/gen/src/%: $$(filter $$(PERCENT)/%,$$(SOURCES)) | build/gen/src
 	cp -R $^ $@
+
+-include $(COMMON_DIR)/rules-secondexp-extra.mk

@@ -18,8 +18,6 @@
 # File author: Stefano D'Angelo
 #
 
-ALL += build/web/index.html build/web/cert.pem build/web/key.pem
-
 build/web/index.html: ${DATA_DIR}/src/index.html | build/web
 	cp $^ $@
 
