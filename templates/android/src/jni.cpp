@@ -21,6 +21,13 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+typedef struct {
+	void *		handle;
+	const char *	format;
+	const char * (*get_bindir)(void *handle);
+	const char * (*get_datadir)(void *handle);
+} plugin_callbacks;
+
 #include "data.h"
 #include "plugin.h"
 
@@ -225,7 +232,13 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 	if (ma_device_init(NULL, &deviceConfig, &device) != MA_SUCCESS)
 		return false;
 
-	plugin_init(&instance);
+	plugin_callbacks cbs = {
+		/* .handle		= */ NULL,
+		/* .format		= */ "android",
+		/* .get_bindir		= */ NULL,
+		/* .get_datadir		= */ NULL
+	};
+	plugin_init(&instance, &cbs);
 
 #if PARAMETERS_N > 0
 	for (size_t i = 0; i < PARAMETERS_N; i++) {

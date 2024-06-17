@@ -21,6 +21,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+typedef struct {
+	void *		handle;
+	const char *	format;
+	const char * (*get_bindir)(void *handle);
+	const char * (*get_datadir)(void *handle);
+} plugin_callbacks;
+
 #include "data.h"
 #include "plugin.h"
 
@@ -49,7 +56,13 @@ instance * processor_new(float sample_rate) {
 	if (i == NULL)
 		return NULL;
 
-	plugin_init(&i->p);
+	plugin_callbacks cbs = {
+		/* .handle		= */ NULL,
+		/* .format		= */ "web",
+		/* .get_bindir		= */ NULL,
+		/* .get_datadir		= */ NULL
+	};
+	plugin_init(&i->p, &cbs);
 
 #if DATA_PRODUCT_PARAMETERS_N > 0
 	for (size_t j = 0; j < DATA_PRODUCT_PARAMETERS_N; j++)

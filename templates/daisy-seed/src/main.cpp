@@ -21,6 +21,13 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+typedef struct {
+	void *		handle;
+	const char *	format;
+	const char * (*get_bindir)(void *handle);
+	const char * (*get_datadir)(void *handle);
+} plugin_callbacks;
+
 #include "data.h"
 #include "plugin.h"
 
@@ -168,7 +175,13 @@ int main() {
 	hardware.SetAudioBlockSize(BLOCK_SIZE);
 	float sample_rate = hardware.AudioSampleRate();
 
-	plugin_init(&instance);
+	plugin_callbacks cbs = {
+		/* .handle		= */ NULL,
+		/* .format		= */ "daisy-seed",
+		/* .get_bindir		= */ NULL,
+		/* .get_datadir		= */ NULL
+	};
+	plugin_init(&instance, &cbs);
 
 	plugin_set_sample_rate(&instance, sample_rate);
 	if (plugin_mem_req(&instance) != 0)

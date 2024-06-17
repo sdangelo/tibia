@@ -21,6 +21,13 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+typedef struct {
+	void *		handle;
+	const char *	format;
+	const char * (*get_bindir)(void *handle);
+	const char * (*get_datadir)(void *handle);
+} plugin_callbacks;
+
 #include "data.h"
 #include "plugin.h"
 #if PARAMETERS_N > 0
@@ -251,9 +258,15 @@ char audioStart() {
 		}
 	}
 #endif
-	
-	plugin_init(&instance);
-	
+
+	plugin_callbacks cbs = {
+		/* .handle		= */ NULL,
+		/* .format		= */ "ios",
+		/* .get_bindir		= */ NULL,
+		/* .get_datadir		= */ NULL
+	};
+	plugin_init(&instance, &cbs);
+
 #if PARAMETERS_N > 0
 	for (size_t i = 0; i < PARAMETERS_N; i++) {
 		if (!param_data[i].out)
@@ -356,7 +369,7 @@ void audioPause() {
 
 extern "C"
 void audioResume() {
-	// TODO: couldn't this could fail?...
+	// TODO: could this fail?...
 	if (device_inited) {
 		ma_device_init(NULL, &deviceConfig, &device);
 		ma_device_start(&device);
