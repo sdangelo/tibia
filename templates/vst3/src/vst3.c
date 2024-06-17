@@ -18,17 +18,21 @@
  * File author: Stefano D'Angelo, Paolo Marrone
  */
 
-#include <stddef.h>
 #include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
-#include "vst3_c_api.h"
-#pragma GCC diagnostic pop
+#include <stdint.h>
 
 typedef struct {
-	void *	handle;
+	void *		handle;
+	const char *	format;
+	const char * (*get_bindir)(void *handle);
+	const char * (*get_datadir)(void *handle);
+} plugin_callbacks;
+
+typedef struct {
+	void *		handle;
+	const char *	format;
+	const char * (*get_bindir)(void *handle);
+	const char * (*get_datadir)(void *handle);
 	void (*set_parameter)(void *handle, size_t index, float value);
 } plugin_ui_callbacks;
 
@@ -36,6 +40,17 @@ typedef struct {
 #include "plugin.h"
 #ifdef DATA_UI
 # include "plugin_ui.h"
+#endif
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#include "vst3_c_api.h"
+#pragma GCC diagnostic pop
+
+#include <string.h>
+#include <math.h>
+#if defined(_WIN32) || defined(__CYGWIN__)
+# include <windows.h>
 #endif
 
 #if defined(__i386__) || defined(__x86_64__)
@@ -52,11 +67,6 @@ typedef struct {
 # define TRACE(...)	printf(__VA_ARGS__); fflush(stdout);
 #else
 # define TRACE(...)	/* do nothing */
-#endif
-
-#if defined(__i386__) || defined(__x86_64__)
-#include <xmmintrin.h>
-#include <pmmintrin.h>
 #endif
 
 #ifdef DATA_UI
@@ -122,6 +132,22 @@ typedef struct Steinberg_IRunLoop
 static const Steinberg_TUID Steinberg_IRunLoop_iid = SMTG_INLINE_UID (0x18C35366, 0x97764F1A, 0x9C5B8385, 0x7A871389);
 # endif
 #endif
+
+static char *x_asprintf(const char * restrict format, ...) {
+	va_list args, tmp;
+	va_start(args, format);
+	va_copy(tmp, args);
+	int len = vsprintf(NULL, format, tmp);
+	va_end(tmp);
+	char *s = malloc(len + 1);
+	if (s != NULL)
+		vsprintf(s, format, args);
+	va_end(args);
+	return s;
+}
+
+static char *bindir;
+static char *datadir;
 
 static double clamp(double x, double m, double M) {
 	return x < m ? m : (x > M ? M : x);
@@ -237,12 +263,15 @@ static Steinberg_uint32 pluginIComponentRelease(void *thisInterface) {
 	return pluginRelease((pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent)));
 }
 
+//XXX
+
 static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_FUnknown *context) {
 	TRACE("plugin initialize\n");
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
 	if (p->context != NULL)
 		return Steinberg_kResultFalse;
 	p->context = context;
+	//XXX
 	plugin_init(&p->p);
 #if DATA_PRODUCT_PARAMETERS_N > 0
 	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
@@ -943,10 +972,6 @@ static Steinberg_ITimerHandlerVtbl timerHandlerVtblITimerHandler = {
 #  include <objc/runtime.h>
 #  include <objc/message.h>
 
-# elif defined(_WIN32) || defined(__CYGWIN__)
-
-#  include <windows.h>
-
 # endif
 
 typedef struct plugView {
@@ -1072,6 +1097,8 @@ static void plugViewTimerCb(HWND p1, UINT p2, UINT_PTR p3, DWORD p4) {
 }
 # endif
 
+//XXX
+
 static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Steinberg_FIDString type) {
 	// GUI needs to be created here, see https://forums.steinberg.net/t/vst-and-hidpi/201916/3
 	TRACE("plugView attached %p\n", thisInterface);
@@ -1082,17 +1109,23 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
 	if (v->ui)
 		return Steinberg_kInvalidArgument;
-# if DATA_PRODUCT_PARAMETERS_N > 0
+
 	plugin_ui_callbacks cbs = {
 		/* .handle		= */ (void *)v,
+		/* .format		= */ "vst3",
+		/* .get_bindir		= */ ui_get_bindir_cb,
+		/* .get_datadir		= */ ui_get_datadir_cb,
+# if DATA_PRODUCT_PARAMETERS_N > 0
 		/* .set_parameter	= */ plugViewSetParameterCb
-	};
-	v->ui = plugin_ui_create(1, parent, &cbs);
 # else
-	v->ui = plugin_ui_create(1, parent, NULL);
+		/* .set_parameter	= */ NULL
 # endif
+	};
+	//XXX
+	v->ui = plugin_ui_create(1, parent, &cbs);
 	if (!v->ui)
 		return Steinberg_kResultFalse;
+
 # ifdef __linux__
 	v->display = XOpenDisplay(NULL);
 	if (v->display == NULL) {
@@ -2062,25 +2095,88 @@ Steinberg_IPluginFactory * GetPluginFactory(void) {
 	return (Steinberg_IPluginFactory *)&factory;
 }
 
-#if !defined(_WIN32) && !defined(__CYGWIN__)
-# if defined(__APPLE__)
-#  define ENTRY bundleEntry
-#  define EXIT bundleExit
-# else
-#  define ENTRY ModuleEntry
-#  define EXIT ModuleExit
-# endif
+static int refs = 0; 
+
+static char exit() {
+	refs--;
+	if (refs == 0) {
+		free(bindir);
+		free(datadir);
+		return 0;
+	}
+	return 1;
+}
+
+#if defined(_WIN32) || defined(__CYGWIN__)
+
+XXX int APIENTRY
+DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved) {
+	(void)hInstance;
+	(void)lpReserved;
+	if (dwReason == DLL_PROCESS_ATTACH) {
+		if (refs == 0) {
+			//XXX
+		}
+		refs++;
+	} else if (dwReason == DLL_PROCESS_DETACH)
+		exit();
+	return 1;
+}
+
+#elif defined(__APPLE__)
 
 EXPORT
-char ENTRY(void *handle) {
-	(void)handle;
-
+char bundleEntry(CFBundleRef ref) {
+	(void)ref;
+	if (refs == 0) {
+		//XXX
+	}
+	refs++;
 	return 1;
 }
 
 EXPORT
-char EXIT(void) {
+char bundleExit(void) {
+	return exit();
+}
+
+#else
+
+EXPORT
+char ModuleEntry(void *handle) {
+	(void)handle;
+	if (refs == 0) {
+		Dl_info info;
+		if (dladdr((void *)ModuleEntry, &info) == 0)
+			return 0;
+		char *file = realpath(info.dli_fname, NULL);
+		if (file == NULL)
+			return 0;
+		char *c = strrchr(file, '/');
+		*c = '\0';
+		bindir = strdup(file);
+		if (bindir == NULL)
+			goto err_bindir;
+		char *c = strrchr(file, '/');
+		*c = '\0';
+		datadir = x_asprintf("%s/Resources", file);
+		if (datadir == NULL)
+			goto err_datadir;
+		free(file);
+	}
+	refs++;
 	return 1;
+
+err_datadir:
+	free(bindir);
+err_bindir:
+	free(file);
+	return 0;
+}
+
+EXPORT
+char ModuleExit(void) {
+	return exit();
 }
 
 #endif

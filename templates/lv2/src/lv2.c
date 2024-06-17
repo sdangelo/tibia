@@ -22,7 +22,17 @@
 #include <stdint.h>
 
 typedef struct {
-	void *	handle;
+	void *		handle;
+	const char *	format;
+	const char * (*get_bindir)(void *handle);
+	const char * (*get_datadir)(void *handle);
+} plugin_callbacks;
+
+typedef struct {
+	void *		handle;
+	const char *	format;
+	const char * (*get_bindir)(void *handle);
+	const char * (*get_datadir)(void *handle);
 	void (*set_parameter)(void *handle, size_t index, float value);
 } plugin_ui_callbacks;
 
@@ -47,9 +57,9 @@ typedef struct {
 #endif
 #ifdef DATA_UI
 # include "lv2/ui/ui.h"
-
-# include <string.h>
 #endif
+
+#include <string.h>
 
 #if defined(__i386__) || defined(__x86_64__)
 # include <xmmintrin.h>
@@ -91,6 +101,7 @@ typedef struct {
 	float				params[DATA_PRODUCT_CONTROL_INPUTS_N];
 #endif
 	void *				mem;
+	char *				bundle_path;
 #if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUT_N > 0
 	LV2_URID_Map *			map;
 	LV2_Log_Logger			logger;
@@ -98,13 +109,22 @@ typedef struct {
 #endif
 } plugin_instance;
 
+static const char * get_bundle_path_cb(void *handle) {
+	plugin_instance *instance = (plugin_instance *)handle;
+	return instance->bundle_path;
+}
+
 static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double sample_rate, const char * bundle_path, const LV2_Feature * const * features) {
 	(void)descriptor;
 	(void)bundle_path;
 
 	plugin_instance *instance = malloc(sizeof(plugin_instance));
 	if (instance == NULL)
-		return NULL;
+		goto err_instance;
+
+	instance->bundle_path = strdup(bundle_path);
+	if (instance->bundle_path == NULL)
+		goto err_bundle_path;
 
 #if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUT_N > 0
 	// from https://lv2plug.in/book
@@ -116,8 +136,7 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	lv2_log_logger_set_map(&instance->logger, instance->map);
 	if (missing) {
 		lv2_log_error(&instance->logger, "Missing feature <%s>\n", missing);
-		free(instance);
-		return NULL;
+		goto err_urid;
 	}
 
 	instance->uri_midi_MidiEvent = instance->map->map(instance->map->handle, LV2_MIDI__MidiEvent);
@@ -125,15 +144,21 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	(void)features;
 #endif
 
-	plugin_init(&instance->p);
+	plugin_callbacks cbs = {
+		/* .handle		= */ (void *)instance,
+		/* .format		= */ "lv2",
+		/* .get_bindir		= */ get_bundle_path_cb,
+		/* .get_datadir		= */ get_bundle_path_cb
+	};
+	plugin_init(&instance->p, &cbs);
 
 	plugin_set_sample_rate(&instance->p, sample_rate);
 	size_t req = plugin_mem_req(&instance->p);
 	if (req != 0) {
 		instance->mem = malloc(req);
 		if (instance->mem == NULL) {
-			plugin_fini(&instance->p);
-			return NULL;
+			lv2_log_error(&instance->logger, "Not enough memory\n");
+			goto err_mem;
 		}
 		plugin_mem_set(&instance->p, instance->mem);
 	} else
@@ -161,6 +186,15 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 #endif
 
 	return instance;
+
+err_mem:
+	plugin_fini(&instance->p);
+err_urid:
+	free(instance->bundle_path);
+err_bundle_path:
+	free(instance);
+err_instance:
+	return NULL;
 }
 
 static void connect_port(LV2_Handle instance, uint32_t port, void * data_location) {
@@ -286,6 +320,7 @@ static void cleanup(LV2_Handle instance) {
 	plugin_fini(&i->p);
 	if (i->mem)
 		free(i->mem);
+	free(i->bundle_path);
 	free(instance);
 }
 
@@ -307,6 +342,7 @@ LV2_SYMBOL_EXPORT const LV2_Descriptor * lv2_descriptor(uint32_t index) {
 #ifdef DATA_UI
 typedef struct {
 	plugin_ui *		ui;
+	char *			bundle_path;
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	LV2UI_Write_Function	write;
 	LV2UI_Controller	controller;
@@ -319,6 +355,11 @@ typedef struct {
 		+ DATA_PRODUCT_MIDI_INPUTS_N \
 		+ DATA_PRODUCT_MIDI_OUTPUTS_N )
 # define CONTROL_OUTPUT_INDEX_OFFSET	(CONTROL_INPUT_INDEX_OFFSET + DATA_PRODUCT_CONTROL_INPUTS_N)
+
+static const char * ui_get_bundle_path_cb(void *handle) {
+	ui_instance *instance = (ui_instance *)handle;
+	return instance->bundle_path;
+}
 
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 static void ui_set_parameter_cb(void *handle, size_t index, float value) {
@@ -343,38 +384,51 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 		}
 
 	ui_instance *instance = malloc(sizeof(ui_instance));
-	if (instance == NULL) {
-		*widget = NULL;
-		return NULL;
-	}
+	if (instance == NULL)
+		goto err_instance;
 
+	instance->bundle_path = strdup(bundle_path);
+	if (instance->bundle_path == NULL)
+		goto err_bundle_path;
+
+	plugin_ui_callbacks cbs = {
+		/* .handle		= */ (void *)instance,
+		/* .format		= */ "lv2",
+		/* .get_bindir		= */ ui_get_bundle_path_cb,
+		/* .get_datadir		= */ ui_get_bundle_path_cb,
+# if DATA_PRODUCT_CONTROL_INPUTS_N > 0
+		/* .set_parameter	= */ ui_set_parameter_cb
+# else
+		/* .set_parameter	= */ NULL
+# endif
+	};
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	instance->write = write_function;
 	instance->controller = controller;
-	plugin_ui_callbacks cbs = {
-		/* .handle		= */ (void *)instance,
-		/* .set_parameter	= */ ui_set_parameter_cb
-	};
-	instance->ui = plugin_ui_create(has_parent, parent, &cbs);
 # else
 	(void)write_function;
 	(void)controller;
-
-	instance->ui = plugin_ui_create(has_parent, parent, NULL);
 # endif
-	if (instance->ui == NULL) {
-		free(instance);
-		*widget = NULL;
-		return NULL;
-	}
+	instance->ui = plugin_ui_create(has_parent, parent, &cbs);
+	if (instance->ui == NULL)
+		goto err_create;
 
 	*widget = instance->ui->widget;
 	return instance;
+
+err_create:
+	free(instance->bundle_path);
+err_bundle_path:
+	free(instance);
+err_instance:
+	*widget = NULL;
+	return NULL;
 }
 
 static void ui_cleanup(LV2UI_Handle handle) {
 	ui_instance *instance = (ui_instance *)handle;
 	plugin_ui_free(instance->ui);
+	free(instance->bundle_path);
 	free(instance);
 }
 

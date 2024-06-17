@@ -34,8 +34,9 @@ typedef struct plugin {
 	float	yz1;
 } plugin;
 
-static void plugin_init(plugin *instance) {
+static void plugin_init(plugin *instance, plugin_callbacks *cbs) {
 	(void)instance;
+	(void)cbs;
 }
 
 static void plugin_fini(plugin *instance) {
