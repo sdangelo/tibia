@@ -24,7 +24,7 @@
 typedef struct {
 	void *		handle;
 	const char *	format;
-	const char * (*get_nindir)(void *handle);
+	const char * (*get_bindir)(void *handle);
 	const char * (*get_datadir)(void *handle);
 } plugin_callbacks;
 
