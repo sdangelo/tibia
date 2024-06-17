@@ -69,6 +69,7 @@ LDFLAGS_ALL := $(LDFLAGS_ALL) -Wl,-framework,Foundation -Wl,-framework,Cocoa -Wl
 endif
 
 ifeq ($(UNAME_S), Linux)
+CFLAGS_ALL := $(CFLAGS_ALL) -D_GNU_SOURCE
  ifeq ($(HAS_UI), yes)
 CFLAGS_ALL := $(CFLAGS_ALL) $(shell pkg-config --cflags x11)
 LDFLAGS_ALL := $(LDFLAGS_ALL) $(shell pkg-config --libs x11)

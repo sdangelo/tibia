@@ -24,7 +24,7 @@
 typedef struct {
 	void *		handle;
 	const char *	format;
-	const char * (*get_bindir)(void *handle);
+	const char * (*get_nindir)(void *handle);
 	const char * (*get_datadir)(void *handle);
 } plugin_callbacks;
 
@@ -36,21 +36,25 @@ typedef struct {
 	void (*set_parameter)(void *handle, size_t index, float value);
 } plugin_ui_callbacks;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#include "vst3_c_api.h"
+#pragma GCC diagnostic pop
+
 #include "data.h"
 #include "plugin.h"
 #ifdef DATA_UI
 # include "plugin_ui.h"
 #endif
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
-#include "vst3_c_api.h"
-#pragma GCC diagnostic pop
-
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 #include <math.h>
 #if defined(_WIN32) || defined(__CYGWIN__)
 # include <windows.h>
+#elif !defined(__APPLE__)
+# include <dlfcn.h>
 #endif
 
 #if defined(__i386__) || defined(__x86_64__)
@@ -63,7 +67,6 @@ typedef struct {
 //   https://devblogs.microsoft.com/oldnewthing/20040205-00/?p=40733
 
 #ifdef TIBIA_TRACE
-# include <stdio.h>
 # define TRACE(...)	printf(__VA_ARGS__); fflush(stdout);
 #else
 # define TRACE(...)	/* do nothing */
@@ -137,7 +140,7 @@ static char *x_asprintf(const char * restrict format, ...) {
 	va_list args, tmp;
 	va_start(args, format);
 	va_copy(tmp, args);
-	int len = vsprintf(NULL, format, tmp);
+	int len = vsnprintf(NULL, 0, format, tmp);
 	va_end(tmp);
 	char *s = malloc(len + 1);
 	if (s != NULL)
@@ -148,6 +151,16 @@ static char *x_asprintf(const char * restrict format, ...) {
 
 static char *bindir;
 static char *datadir;
+
+static const char * get_bindir_cb(void *handle) {
+	(void)handle;
+	return bindir;
+}
+
+static const char * get_datadir_cb(void *handle) {
+	(void)handle;
+	return datadir;
+}
 
 static double clamp(double x, double m, double M) {
 	return x < m ? m : (x > M ? M : x);
@@ -263,16 +276,21 @@ static Steinberg_uint32 pluginIComponentRelease(void *thisInterface) {
 	return pluginRelease((pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent)));
 }
 
-//XXX
-
 static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_FUnknown *context) {
 	TRACE("plugin initialize\n");
+
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
 	if (p->context != NULL)
 		return Steinberg_kResultFalse;
 	p->context = context;
-	//XXX
-	plugin_init(&p->p);
+
+	plugin_callbacks cbs = {
+		/* .handle		= */ (void *)p,
+		/* .format		= */ "vst3",
+		/* .get_bindir		= */ get_bindir_cb,
+		/* .get_datadir		= */ get_datadir_cb
+	};
+	plugin_init(&p->p, &cbs);
 #if DATA_PRODUCT_PARAMETERS_N > 0
 	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
 		p->parameters[i] = parameterData[i].def;
@@ -1097,8 +1115,6 @@ static void plugViewTimerCb(HWND p1, UINT p2, UINT_PTR p3, DWORD p4) {
 }
 # endif
 
-//XXX
-
 static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Steinberg_FIDString type) {
 	// GUI needs to be created here, see https://forums.steinberg.net/t/vst-and-hidpi/201916/3
 	TRACE("plugView attached %p\n", thisInterface);
@@ -1113,15 +1129,14 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 	plugin_ui_callbacks cbs = {
 		/* .handle		= */ (void *)v,
 		/* .format		= */ "vst3",
-		/* .get_bindir		= */ ui_get_bindir_cb,
-		/* .get_datadir		= */ ui_get_datadir_cb,
+		/* .get_bindir		= */ get_bindir_cb,
+		/* .get_datadir		= */ get_datadir_cb,
 # if DATA_PRODUCT_PARAMETERS_N > 0
 		/* .set_parameter	= */ plugViewSetParameterCb
 # else
 		/* .set_parameter	= */ NULL
 # endif
 	};
-	//XXX
 	v->ui = plugin_ui_create(1, parent, &cbs);
 	if (!v->ui)
 		return Steinberg_kResultFalse;
@@ -2097,7 +2112,7 @@ Steinberg_IPluginFactory * GetPluginFactory(void) {
 
 static int refs = 0; 
 
-static char exit() {
+static char vstExit() {
 	refs--;
 	if (refs == 0) {
 		free(bindir);
@@ -2119,7 +2134,7 @@ DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved) {
 		}
 		refs++;
 	} else if (dwReason == DLL_PROCESS_DETACH)
-		exit();
+		vstExit();
 	return 1;
 }
 
@@ -2137,7 +2152,7 @@ char bundleEntry(CFBundleRef ref) {
 
 EXPORT
 char bundleExit(void) {
-	return exit();
+	return vstExit();
 }
 
 #else
@@ -2145,11 +2160,14 @@ char bundleExit(void) {
 EXPORT
 char ModuleEntry(void *handle) {
 	(void)handle;
+	char *file;
 	if (refs == 0) {
 		Dl_info info;
-		if (dladdr((void *)ModuleEntry, &info) == 0)
+		union { void *d; char (*f)(void *); } v;
+		v.f = ModuleEntry;
+		if (dladdr(v.d, &info) == 0)
 			return 0;
-		char *file = realpath(info.dli_fname, NULL);
+		file = realpath(info.dli_fname, NULL);
 		if (file == NULL)
 			return 0;
 		char *c = strrchr(file, '/');
@@ -2157,7 +2175,7 @@ char ModuleEntry(void *handle) {
 		bindir = strdup(file);
 		if (bindir == NULL)
 			goto err_bindir;
-		char *c = strrchr(file, '/');
+		c = strrchr(file, '/');
 		*c = '\0';
 		datadir = x_asprintf("%s/Resources", file);
 		if (datadir == NULL)
@@ -2176,7 +2194,7 @@ err_bindir:
 
 EXPORT
 char ModuleExit(void) {
-	return exit();
+	return vstExit();
 }
 
 #endif
