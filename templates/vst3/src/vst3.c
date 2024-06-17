@@ -136,6 +136,7 @@ static const Steinberg_TUID Steinberg_IRunLoop_iid = SMTG_INLINE_UID (0x18C35366
 # endif
 #endif
 
+#if defined(__linux__)
 static char *x_asprintf(const char * restrict format, ...) {
 	va_list args, tmp;
 	va_start(args, format);
@@ -148,6 +149,7 @@ static char *x_asprintf(const char * restrict format, ...) {
 	va_end(args);
 	return s;
 }
+#endif
 
 static char *bindir;
 static char *datadir;
@@ -2112,7 +2114,7 @@ Steinberg_IPluginFactory * GetPluginFactory(void) {
 
 static int refs = 0; 
 
-static char vstExit() {
+static char vstExit(void) {
 	refs--;
 	if (refs == 0) {
 		free(bindir);
