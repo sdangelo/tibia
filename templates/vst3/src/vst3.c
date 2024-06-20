@@ -2176,7 +2176,7 @@ char ModuleEntry(void *handle) {
 	char *file;
 	if (refs == 0) {
 		Dl_info info;
-		union { void* d; char (*f)(); } v;
+		union { void* d; char (*f)(void); } v;
 		v.f = vstExit;
 		if (dladdr((void*) v.d, &info) == 0)
 			return 0;
