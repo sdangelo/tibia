@@ -1229,7 +1229,7 @@ static Steinberg_tresult plugViewOnKeyUp(void* thisInterface, Steinberg_char16 k
 }
 
 static Steinberg_tresult plugViewGetSize(void* thisInterface, struct Steinberg_ViewRect* size) {
-	TRACE("plugView getSize %p %p\n", thisInterface, size);
+	TRACE("plugView getSize %p %p\n", thisInterface, (void*) size);
 	if (!size)
 		return Steinberg_kInvalidArgument;
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
@@ -2075,7 +2075,7 @@ static Steinberg_tresult factorySetHostContext(void* thisInterface, struct Stein
 	(void)thisInterface;
 	(void)context;
 
-	TRACE("factory set host context %p %p\n", thisInterface, context);
+	TRACE("factory set host context %p %p\n", thisInterface, (void*) context);
 
 	return Steinberg_kNotImplemented;
 }
@@ -2126,17 +2126,39 @@ static char vstExit(void) {
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 
-XXX int APIENTRY
+EXPORT APIENTRY BOOL
 DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved) {
 	(void)hInstance;
 	(void)lpReserved;
 	if (dwReason == DLL_PROCESS_ATTACH) {
 		if (refs == 0) {
-			//XXX
+			int pathLength;
+			char path[260];
+			HMODULE hm = NULL;
+			if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR) &bindir, &hm) == 0) {
+			    TRACE("GetModuleHandle failed, error = %lu\n", GetLastError());
+			    return 0;
+			}
+			if ((pathLength = GetModuleFileName(hm, path, sizeof(path))) == 0) {
+			    TRACE("GetModuleFileName failed, error = %lu\n", GetLastError());
+			    return 0;
+			}
+			char *c = strrchr(path, '\\');
+			*c = '\0';
+			bindir = (char*) malloc(strlen(path) + 1);
+			memcpy(bindir, path, strlen(path));
+			bindir[strlen(path)] = '\0';
+			c = strrchr(path, '\\');
+			*c = '\0';
+			static char* res = "\\Resources";
+			datadir = malloc(strlen(path) + strlen(res) + 1);
+			sprintf(datadir, "%s%s", path, res);
+			TRACE("bindir = %s \ndatadir = %s\n", bindir, datadir);
 		}
 		refs++;
-	} else if (dwReason == DLL_PROCESS_DETACH)
+	} else if (dwReason == DLL_PROCESS_DETACH) {
 		vstExit();
+	}
 	return 1;
 }
 
