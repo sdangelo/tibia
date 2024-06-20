@@ -66,6 +66,7 @@ typedef struct {
 //   https://github.com/rubberduck-vba/Rubberduck/wiki/COM-in-plain-C
 //   https://devblogs.microsoft.com/oldnewthing/20040205-00/?p=40733
 
+//#define TIBIA_TRACE
 #ifdef TIBIA_TRACE
 # define TRACE(...)	printf(__VA_ARGS__); fflush(stdout);
 #else
@@ -2167,14 +2168,17 @@ DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved) {
 EXPORT
 # if defined(__APPLE__)
 char bundleEntry(CFBundleRef ref) {
+	(void)ref;
 # else
 char ModuleEntry(void *handle) {
+	(void)handle;
 # endif
-	(void)ref;
 	char *file;
 	if (refs == 0) {
 		Dl_info info;
-		if (dladdr((void*) bindir, &info) == 0)
+		union { void* d; char (*f)(); } v;
+		v.f = vstExit;
+		if (dladdr((void*) v.d, &info) == 0)
 			return 0;
 		file = realpath(info.dli_fname, NULL);
 		if (file == NULL)
