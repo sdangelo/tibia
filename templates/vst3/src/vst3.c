@@ -53,7 +53,7 @@ typedef struct {
 #include <math.h>
 #if defined(_WIN32) || defined(__CYGWIN__)
 # include <windows.h>
-#elif !defined(__APPLE__)
+#else
 # include <dlfcn.h>
 #endif
 
@@ -136,7 +136,7 @@ static const Steinberg_TUID Steinberg_IRunLoop_iid = SMTG_INLINE_UID (0x18C35366
 # endif
 #endif
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
 static char *x_asprintf(const char * restrict format, ...) {
 	va_list args, tmp;
 	va_start(args, format);
@@ -2162,34 +2162,19 @@ DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved) {
 	return 1;
 }
 
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__linux__)
 
 EXPORT
+# if defined(__APPLE__)
 char bundleEntry(CFBundleRef ref) {
-	(void)ref;
-	if (refs == 0) {
-		//XXX
-	}
-	refs++;
-	return 1;
-}
-
-EXPORT
-char bundleExit(void) {
-	return vstExit();
-}
-
-#else
-
-EXPORT
+# else
 char ModuleEntry(void *handle) {
-	(void)handle;
+# endif
+	(void)ref;
 	char *file;
 	if (refs == 0) {
 		Dl_info info;
-		union { void *d; char (*f)(void *); } v;
-		v.f = ModuleEntry;
-		if (dladdr(v.d, &info) == 0)
+		if (dladdr((void*) bindir, &info) == 0)
 			return 0;
 		file = realpath(info.dli_fname, NULL);
 		if (file == NULL)
@@ -2205,6 +2190,7 @@ char ModuleEntry(void *handle) {
 		if (datadir == NULL)
 			goto err_datadir;
 		free(file);
+		TRACE("bindir = %s \ndatadir = %s\n", bindir, datadir);
 	}
 	refs++;
 	return 1;
@@ -2217,7 +2203,11 @@ err_bindir:
 }
 
 EXPORT
+# if defined(__APPLE__)
+char bundleExit(void) {
+# else
 char ModuleExit(void) {
+# endif
 	return vstExit();
 }
 
