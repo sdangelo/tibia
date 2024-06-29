@@ -86,7 +86,8 @@ ifeq ($(OS), Windows_NT)
 .PHONY: all clean
 else
 install: all
-	install -m 0755 -t $(BINDIR) -D build/$(PROGRAM)
+	mkdir -m 0755 -p $(BINDIR)
+	install -m 0755 build/$(PROGRAM) $(BINDIR)
 
 .PHONY: all clean install
 endif
