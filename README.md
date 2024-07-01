@@ -1,3 +1,8 @@
+> [!WARNING]
+> This repository is archived. Development continues at: https://git.orastron.com/orastron/tibia. See you there.
+
+---
+
 # Tibia
 
 Tibia is a template-based generator of sound generation/processing software in the form of applications and audio plugins. You supply it with a modest amount of JSON metadata and C code and it spits out an entire project with all the necessary boilerplate. Its purpose is to minimize the amount of code to be written and abstract away target APIs/platforms.
