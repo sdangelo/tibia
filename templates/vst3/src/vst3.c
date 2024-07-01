@@ -50,6 +50,8 @@ typedef struct {
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stddef.h>
 #include <math.h>
 #if defined(_WIN32) || defined(__CYGWIN__)
 # include <windows.h>
